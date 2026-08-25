@@ -1,18 +1,32 @@
 <?php
 /**
  * SentryIQ first-run bootstrap.
- * Creates the private engine/template in the administrator-selected directory.
+ * The web-root config is only a non-secret pointer to the secure storage directory.
+ * The secure directory contains the authoritative installation configuration.
  */
 if (!defined('SENTRYIQ_CONFIG_FILE')) define('SENTRYIQ_CONFIG_FILE', __DIR__ . '/sentryiq_config.php');
-$config = is_file(SENTRYIQ_CONFIG_FILE) ? (require SENTRYIQ_CONFIG_FILE) : [];
-$configuredDir = is_array($config) ? trim((string)($config['data_dir'] ?? '')) : '';
-$engineTarget = $configuredDir !== '' ? rtrim($configuredDir, '/') . '/vault_engine.php' : '';
-$templateTarget = $configuredDir !== '' ? rtrim($configuredDir, '/') . '/email_template.php' : '';
 
-// Existing configuration: repair/create the two private reference files automatically.
+$pointerConfig = is_file(SENTRYIQ_CONFIG_FILE) ? (require SENTRYIQ_CONFIG_FILE) : [];
+$configuredDir = is_array($pointerConfig) ? trim((string)($pointerConfig['data_dir'] ?? '')) : '';
+
+function sentryiq_reference_files_available(): bool {
+    return is_file(__DIR__ . '/private_data/vault_engine.php') && is_file(__DIR__ . '/private_data/email_template.php');
+}
+
+function sentryiq_write_private_config(string $directory, string $username, string $email): bool {
+    $config = "<?php\nreturn [\n    'installed' => true,\n    'username' => " . var_export($username, true) . ",\n    'two_fa_email' => " . var_export($email, true) . ",\n    'data_dir' => " . var_export(rtrim($directory, '/'), true) . ",\n    'two_fa_token_expiry' => 300,\n];\n";
+    $path = rtrim($directory, '/') . '/sentryiq_config.php';
+    if (@file_put_contents($path, $config, LOCK_EX) === false) return false;
+    @chmod($path, 0600);
+    return true;
+}
+
+// Existing installation: repair missing private runtime files and leave normal login alone.
 if ($configuredDir !== '' && is_dir($configuredDir) && is_writable($configuredDir)) {
     $engineSource = __DIR__ . '/private_data/vault_engine.php';
     $templateSource = __DIR__ . '/private_data/email_template.php';
+    $engineTarget = rtrim($configuredDir, '/') . '/vault_engine.php';
+    $templateTarget = rtrim($configuredDir, '/') . '/email_template.php';
     if (!is_file($engineTarget) && is_file($engineSource)) @copy($engineSource, $engineTarget);
     if (!is_file($templateTarget) && is_file($templateSource)) @copy($templateSource, $templateTarget);
     @chmod($engineTarget, 0600);
@@ -33,6 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_first_run'])
     elseif ($directory === '' || $directory[0] !== '/' || preg_match('#/(public_html|htdocs|www)(/|$)#i', $directory)) $setupError = 'Secure storage must be an absolute directory outside the web root.';
     elseif (strlen($password) < 12) $setupError = 'The master vault password must be at least 12 characters long.';
     elseif ($password !== $confirm) $setupError = 'The master vault passwords do not match.';
+    elseif (!sentryiq_reference_files_available()) $setupError = 'The bundled private_data reference files are missing.';
     elseif (!is_dir($directory) && !@mkdir($directory, 0700, true)) $setupError = 'SentryIQ could not create the selected secure storage directory.';
     elseif (!is_dir($directory) || !is_writable($directory)) $setupError = 'The selected secure storage directory is not writable.';
     else {
@@ -40,14 +55,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_first_run'])
         $templateSource = __DIR__ . '/private_data/email_template.php';
         $engineTarget = $directory . '/vault_engine.php';
         $templateTarget = $directory . '/email_template.php';
-        if (!is_file($engineSource) || !is_file($templateSource)) $setupError = 'The bundled private_data reference files are missing.';
-        elseif ((!is_file($engineTarget) && !@copy($engineSource, $engineTarget)) || (!is_file($templateTarget) && !@copy($templateSource, $templateTarget))) $setupError = 'SentryIQ could not create its private vault files.';
-        else {
+        if ((!is_file($engineTarget) && !@copy($engineSource, $engineTarget)) || (!is_file($templateTarget) && !@copy($templateSource, $templateTarget))) {
+            $setupError = 'SentryIQ could not create its private vault files.';
+        } elseif (!sentryiq_write_private_config($directory, $username, $email)) {
+            $setupError = 'SentryIQ could not save the private installation configuration.';
+        } else {
             @chmod($engineTarget, 0600); @chmod($templateTarget, 0600);
             if (!is_dir($directory . '/vault_icons')) @mkdir($directory . '/vault_icons', 0700, true);
-            $configBody = "<?php\nreturn [\n    'data_dir' => " . var_export($directory, true) . ",\n];\n";
-            if (@file_put_contents(SENTRYIQ_CONFIG_FILE, $configBody, LOCK_EX) === false) $setupError = 'SentryIQ could not save its secure storage configuration.';
-            else {
+            if (!@file_put_contents(SENTRYIQ_CONFIG_FILE, "<?php\nreturn ['data_dir' => " . var_export($directory, true) . "];\n", LOCK_EX)) {
+                $setupError = 'SentryIQ could not save its installation pointer.';
+            } else {
                 @chmod(SENTRYIQ_CONFIG_FILE, 0600);
                 require_once $engineTarget;
                 $_SESSION['master_key'] = hash('sha256', $password, true);
@@ -55,13 +72,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_first_run'])
                     'id' => 'sys_config_node', 'type' => 'system_config', 'app_username' => $username,
                     '2fa_email' => $email, 'imap_password' => '', 'two_fa_token_expiry' => 300,
                 ]];
-                if (!save_passwords($systemRecord)) { @unlink(SENTRYIQ_CONFIG_FILE); $setupError = 'SentryIQ could not initialize the encrypted vault file.'; }
-                else { unset($_SESSION['master_key']); header('Location: index.php?setup=complete'); exit; }
+                if (!save_passwords($systemRecord)) {
+                    @unlink(SENTRYIQ_CONFIG_FILE);
+                    $setupError = 'SentryIQ could not initialize the encrypted vault file.';
+                } else {
+                    unset($_SESSION['master_key']);
+                    header('Location: index.php?setup=complete');
+                    exit;
+                }
             }
         }
     }
 }
-
 ?>
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>SentryIQ — First Run</title><link rel="stylesheet" href="pm_style.css"></head>
