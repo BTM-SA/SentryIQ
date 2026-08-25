@@ -32,19 +32,27 @@ require_once 'auth_controller.php';
         function switchVaultTab(tabName) {
             document.querySelectorAll('.vault-panel').forEach(panel => panel.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            
+
             var targetPanel = document.getElementById(tabName + '-panel');
             if(targetPanel) targetPanel.classList.add('active');
-            
+
             var btnElement = document.getElementById(tabName + '-btn');
             if(btnElement) btnElement.classList.add('active');
         }
 
-        function viewRecordDetails(label, username, password, url, id) {
+        function viewRecordDetails(label, username, password, url, notes, id) {
             document.getElementById('det-label').textContent = label;
             document.getElementById('det-username').textContent = username ? username : '[None Stored]';
             document.getElementById('det-password').textContent = password;
-            
+            document.getElementById('det-notes').textContent = notes ? notes : '[No Notes]';
+
+            var icon = document.getElementById('det-icon');
+            icon.src = 'vault-icon.php?id=' + encodeURIComponent(id);
+            icon.style.display = 'block';
+            icon.onerror = function() {
+                this.style.display = 'none';
+            };
+
             var urlLink = document.getElementById('det-url');
             if (url) {
                 urlLink.href = url;
@@ -54,7 +62,7 @@ require_once 'auth_controller.php';
                 urlLink.textContent = '[None Stored]';
                 urlLink.removeAttribute('href');
             }
-            
+
             document.getElementById('det-delete-id').value = id;
             switchVaultTab('details');
         }
@@ -63,7 +71,7 @@ require_once 'auth_controller.php';
 <body>
 <div class="box">
     <?php if (!$vault_authenticated): ?>
-        
+
         <!-- LIVE DISK RE-CHECK: Instantly open configuration screen if file was deleted -->
         <?php if (!file_exists(DATA_FILE) || $vault_missing_error): ?>
             <h2>⚙️ Create New Vault Store</h2>
@@ -75,7 +83,7 @@ require_once 'auth_controller.php';
                 </div>
                 <button type="submit" name="initialize_new_vault" class="btn btn-primary">Initialize Vault File</button>
             </form>
-            
+
         <?php elseif (!isset($_SESSION['pending_key'])): ?>
             <h2>🔒 Open Secure Vault</h2>
             <?php if ($decryption_failed) echo "<p class='error'>Incorrect master key. Decryption failed.</p>"; ?>
@@ -86,7 +94,7 @@ require_once 'auth_controller.php';
                 </div>
                 <button type="submit" name="login_step_1" class="btn btn-primary">Decrypt Vault</button>
             </form>
-            
+
         <?php else: ?>
             <h2>Verification Checkpoint</h2>
             <p>An encrypted execution tracking code has been dispatched to your master email account frame.</p>
@@ -99,7 +107,7 @@ require_once 'auth_controller.php';
                 <button type="submit" name="login_step_2" class="btn btn-primary">Verify & Mount Data</button>
             </form>
         <?php endif; ?>
-        
+
     <?php else: ?>
         <!-- Render the complete Dashboard view split into two files to avoid size cut-offs -->
         <?php require_once 'dashboard_list.php'; ?>
