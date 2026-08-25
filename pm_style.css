@@ -1,4 +1,5 @@
 /* Base Core Typography */
+* { box-sizing: border-box; }
 body { 
     font-family: Arial, sans-serif; 
     margin: 40px; 
@@ -8,7 +9,7 @@ body {
 .box { 
     background: white; 
     padding: 30px; 
-    max-width: 600px; 
+    max-width: 1000px; 
     margin: auto; 
     border-radius: 8px; 
     box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
@@ -39,6 +40,7 @@ body {
     border-bottom: 2px solid #dee2e6; 
     margin-top: 20px; 
     margin-bottom: 20px; 
+    overflow-x: auto;
 }
 .tab-btn { 
     padding: 10px 20px; 
@@ -49,6 +51,8 @@ body {
     font-weight: bold; 
     color: #495057; 
     transition: all 0.2s ease; 
+    white-space: nowrap;
+    flex: 0 0 auto;
 }
 .tab-btn:hover { background: #dee2e6; }
 .tab-btn.active { background: #0066cc; color: white; }
@@ -68,7 +72,7 @@ body {
     margin-bottom: 8px; 
     box-shadow: 0 1px 3px rgba(0,0,0,0.02); 
 }
-.entry-identity { display: flex; align-items: center; gap: 12px; }
+.entry-identity { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .favicon-icon { width: 24px; height: 24px; border-radius: 50%; object-fit: contain; display: inline-block; vertical-align: middle; }
 .entry-label { font-weight: bold; color: #2c3e50; font-size: 15px; }
 
@@ -77,9 +81,8 @@ body {
 .detail-row { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #f1f3f5; }
 .detail-row:last-child { border-bottom: none; margin-bottom: 0; }
 .detail-label { font-size: 11px; text-transform: uppercase; color: #888; font-weight: bold; display: block; margin-bottom: 4px; }
-.detail-value { font-size: 15px; font-weight: 600; color: #222; }
-.secret-badge { background: #e9ecef; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 14px; }
-/* Circular CSS Initial Letter Badges */
+.detail-value { font-size: 15px; font-weight: 600; color: #222; overflow-wrap: anywhere; word-break: break-word; }
+.secret-badge { background: #e9ecef; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 14px; overflow-wrap: anywhere; }
 .initial-badge {
     width: 28px;
     height: 24px;
@@ -93,5 +96,33 @@ body {
     vertical-align: middle;
     text-shadow: 0 1px 2px rgba(0,0,0,0.1);
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    padding-bottom: 4px; /* Perfectly centers the text baseline */
+    padding-bottom: 4px;
+}
+
+/* Mobile layout */
+@media (max-width: 700px) {
+    body { margin: 0; padding: 10px; }
+    .box { width: 100%; max-width: none; padding: 16px; border-radius: 6px; }
+    h2 { font-size: 20px; }
+    h3 { font-size: 18px; }
+    .vault-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; gap: 6px; border-bottom: 0; }
+    .tab-btn { width: 100%; min-height: 44px; padding: 10px 8px; border-radius: 6px; font-size: 13px; }
+    .vault-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+    .entry-card { width: 100%; }
+    .og-preview-holder { height: 84px !important; }
+    .form-box, .detail-card { padding: 14px; }
+    .detail-card > div[style*="display:flex"] { flex-direction: column; }
+    .detail-card > div[style*="display:flex"] .btn { width: 100%; }
+    .detail-card > div[style*="display:flex"] form { width: 100%; }
+    .detail-card > div[style*="display:flex"] form .btn { width: 100%; }
+    .input-field { font-size: 16px; }
+    .entry-row { flex-direction: column; align-items: stretch; gap: 10px; }
+}
+
+@media (max-width: 420px) {
+    body { padding: 6px; }
+    .box { padding: 12px; }
+    .vault-tabs { grid-template-columns: 1fr; }
+    .tab-btn { font-size: 14px; }
+    .btn { width: 100%; }
 }
