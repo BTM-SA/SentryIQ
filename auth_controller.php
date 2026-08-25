@@ -358,6 +358,7 @@ if ($vault_authenticated) {
         $label = trim($_POST['label']);
         $password = trim($_POST['password']);
         $url = trim($_POST['url']);
+        $notes = trim($_POST['notes'] ?? '');
 
         if (!empty($label) && !empty($password)) {
             $entryId = uniqid();
@@ -369,6 +370,7 @@ if ($vault_authenticated) {
                 'username' => trim($_POST['username']),
                 'password' => $password,
                 'url' => $url,
+                'notes' => $notes,
                 'icon_type' => $icon['icon_type'],
                 'icon_path' => $icon['icon_path'],
                 'icon_source' => $icon['icon_source'],
@@ -388,6 +390,7 @@ if ($vault_authenticated) {
         $password = trim($_POST['password']);
         $url = trim($_POST['url']);
         $username = trim($_POST['username']);
+        $notes = trim($_POST['notes'] ?? '');
 
         if (!empty($entry_id) && !empty($label) && !empty($password)) {
             foreach ($passwords as $index => $item) {
@@ -397,6 +400,7 @@ if ($vault_authenticated) {
                     $passwords[$index]['username'] = $username;
                     $passwords[$index]['password'] = $password;
                     $passwords[$index]['url'] = $url;
+                    $passwords[$index]['notes'] = $notes;
 
                     if ($url !== $oldUrl) {
                         if (!empty($item['icon_path']) && is_file($item['icon_path'])) {
