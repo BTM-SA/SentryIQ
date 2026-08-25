@@ -20,27 +20,22 @@
         <p style="text-align:center; padding:20px; color:#777;">Secure vault database is currently empty.</p>
     <?php else: ?>
         <div class="vault-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; margin-top: 15px;">
-            <?php foreach ($passwords as $row): 
-                $cleanDomain = clean_domain($row['url'] ?? '');
+            <?php foreach ($passwords as $row):
                 $label = $row['label'] ?? 'Vault';
-                
+
                 $hash = md5($label);
                 $hue1 = hexdec(substr($hash, 0, 2)) % 360;
                 $hue2 = ($hue1 + 90) % 360;
                 $cardGradient = "linear-gradient(135deg, hsl({$hue1}, 60%, 40%) 0%, hsl({$hue2}, 65%, 25%) 100%)";
-                
+
                 $words = explode(' ', trim(preg_replace('/[^a-zA-Z0-9 ]/', '', $label)));
                 $initials = strtoupper(substr($words[0] ?? 'V', 0, 1) . (isset($words[1]) ? substr($words[1], 0, 1) : ''));
-
-                // Fetch the website favicon using the stored domain.
-                $favicon_url = !empty($cleanDomain)
-                    ? "https://www.google.com/s2/favicons?domain=" . rawurlencode($cleanDomain) . "&sz=64"
-                    : "";
+                $hasStoredIcon = !empty($row['icon_path']) && !empty($row['id']);
             ?>
-                <div class="entry-card" style="background:#ffffff; border:1px solid #e9ecef; border-radius:12px; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; box-shadow: 0 4px 6px rgba(0,0,0,0.02); position:relative;">
+                <div class="entry-card" style="background:#ffffff; border:1px solid #e9ecef; border-radius:12px; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 6px rgba(0,0,0,0.02); position:relative;">
                     <div class="og-preview-holder" style="height:100px; background:<?php echo $cardGradient; ?>; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative;">
-                        <?php if (!empty($favicon_url)): ?>
-                            <img src="<?php echo htmlspecialchars($favicon_url, ENT_QUOTES, 'UTF-8'); ?>" style="width:36px; height:36px; object-fit:contain; position:relative; z-index:2; filter:drop-shadow(0 4px 6px rgba(0,0,0,0.15));" alt="Website icon" onerror="this.style.display='none';">
+                        <?php if ($hasStoredIcon): ?>
+                            <img src="vault-icon.php?id=<?php echo rawurlencode((string)$row['id']); ?>" style="width:36px; height:36px; object-fit:contain; position:relative; z-index:2; filter:drop-shadow(0 4px 6px rgba(0,0,0,0.15));" alt="Stored website icon" onerror="this.style.display='none';">
                         <?php endif; ?>
                         <span style="position:absolute; color:#ffffff; font-size:28px; font-weight:700; font-family:monospace; opacity:0.3; z-index:1;"><?php echo htmlspecialchars($initials); ?></span>
                     </div>
@@ -51,12 +46,12 @@
                     </div>
 
                     <div style="padding:12px; display:flex; gap:8px;">
-                        <button type="button" class="btn" style="flex:1; padding:8px 0; font-size:12px; font-weight:bold; border-radius:6px; background:#e3faf2; color:#0ca678; border:1px solid #c3fae8;" 
+                        <button type="button" class="btn" style="flex:1; padding:8px 0; font-size:12px; font-weight:bold; border-radius:6px; background:#e3faf2; color:#0ca678; border:1px solid #c3fae8;"
                                 onclick="copyVaultString(this, '<?php echo addslashes($row['password'] ?? ''); ?>')">
                             📋 Copy Pass
                         </button>
-                        
-                        <button type="button" class="btn btn-primary" style="flex:1; padding:8px 0; font-size:12px; border-radius:6px; background:#0066cc;" 
+
+                        <button type="button" class="btn btn-primary" style="flex:1; padding:8px 0; font-size:12px; border-radius:6px; background:#0066cc;"
                                 onclick="viewRecordDetails(
                                     '<?php echo addslashes(htmlspecialchars($label)); ?>',
                                     '<?php echo addslashes(htmlspecialchars($row['username'] ?? '')); ?>',
