@@ -1,3 +1,36 @@
+<?php
+/** Normalize legacy vault records before they reach the UI. */
+function sentryiq_normalize_dashboard_records($records): array {
+    if (!is_array($records)) return [];
+    $isList = array_keys($records) === range(0, count($records) - 1);
+    if ($isList && count($records) >= 5 && count($records) <= 6 && !is_array($records[0])) $records = [$records];
+    $out = [];
+    foreach ($records as $item) {
+        if (is_string($item)) {
+            $parts = str_getcsv($item);
+            if (count($parts) >= 5) $item = $parts;
+        }
+        if (!is_array($item)) continue;
+        $assoc = array_keys($item) !== range(0, count($item) - 1);
+        if ($assoc && (($item['type'] ?? '') === 'system_config')) continue;
+        if (!$assoc && count($item) >= 5) {
+            $out[] = [
+                'label' => (string)($item[0] ?? ''),
+                'username' => (string)($item[1] ?? ''),
+                'password' => (string)($item[2] ?? ''),
+                'url' => (string)($item[3] ?? ''),
+                'notes' => (string)($item[4] ?? ''),
+                'id' => (string)($item[5] ?? bin2hex(random_bytes(8))),
+            ];
+        } elseif ($assoc && isset($item['label'])) {
+            if (empty($item['id'])) $item['id'] = bin2hex(random_bytes(8));
+            $out[] = $item;
+        }
+    }
+    return $out;
+}
+$passwords = sentryiq_normalize_dashboard_records($passwords);
+?>
 <!-- Location: /home/bicheveb/public_html/pm/dashboard_list.php -->
 <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
     <h2>📂 Decrypted Vault Store</h2>
@@ -17,7 +50,6 @@
     <button id="details-btn" class="tab-btn" style="display:none;" onclick="switchVaultTab('details')">👁️ Entry Inspection</button>
 </div>
 
-<!-- PANEL SECTION 1: MASTER LIST VIEWER -->
 <div id="view-panel" class="vault-panel <?php echo ($active_pane === 'view') ? 'active' : ''; ?>">
     <?php if (empty($passwords)): ?>
         <p style="text-align:center; padding:20px; color:#777;">Secure vault database is currently empty.</p>
@@ -36,18 +68,11 @@
             ?>
                 <div class="entry-card" style="background:#fff; border:1px solid #e9ecef; border-radius:12px; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 6px rgba(0,0,0,.02); position:relative;">
                     <div class="og-preview-holder" style="height:100px; background:<?php echo $cardGradient; ?>; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative;">
-                        <?php if ($hasStoredIcon): ?>
-                            <img src="vault-icon.php?id=<?php echo rawurlencode((string)$row['id']); ?>" style="width:36px;height:36px;object-fit:contain;position:relative;z-index:2;filter:drop-shadow(0 4px 6px rgba(0,0,0,.15));" alt="Stored website icon" onerror="this.style.display='none';">
-                        <?php endif; ?>
+                        <?php if ($hasStoredIcon): ?><img src="vault-icon.php?id=<?php echo rawurlencode((string)$row['id']); ?>" style="width:36px;height:36px;object-fit:contain;position:relative;z-index:2;filter:drop-shadow(0 4px 6px rgba(0,0,0,.15));" alt="Stored website icon" onerror="this.style.display='none';"><?php endif; ?>
                         <span style="position:absolute;color:#fff;font-size:28px;font-weight:700;font-family:monospace;opacity:.3;z-index:1;"><?php echo htmlspecialchars($initials); ?></span>
                     </div>
-                    <div style="padding:12px 15px 4px;">
-                        <span class="entry-label" style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;color:#212529;"><?php echo htmlspecialchars($label); ?></span>
-                        <small style="color:#868e96;font-size:11px;display:block;overflow:hidden;text-overflow:ellipsis;"><?php echo htmlspecialchars($row['username'] ?? '[No Username]'); ?></small>
-                    </div>
-                    <div style="padding:12px;">
-                        <button type="button" class="btn btn-primary" style="width:100%;padding:8px 0;font-size:12px;border-radius:6px;background:#0066cc;" onclick='viewRecordDetails(<?php echo htmlspecialchars(json_encode($inspectArgs, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, "UTF-8"); ?>)'>👁️ Inspect</button>
-                    </div>
+                    <div style="padding:12px 15px 4px;"><span class="entry-label" style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;color:#212529;"><?php echo htmlspecialchars($label); ?></span><small style="color:#868e96;font-size:11px;display:block;overflow:hidden;text-overflow:ellipsis;"><?php echo htmlspecialchars($row['username'] ?? '[No Username]'); ?></small></div>
+                    <div style="padding:12px;"><button type="button" class="btn btn-primary" style="width:100%;padding:8px 0;font-size:12px;border-radius:6px;background:#0066cc;" onclick='viewRecordDetails(<?php echo htmlspecialchars(json_encode($inspectArgs, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, "UTF-8"); ?>)'>👁️ Inspect</button></div>
                 </div>
             <?php endforeach; ?>
         </div>
