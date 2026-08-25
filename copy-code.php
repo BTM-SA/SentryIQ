@@ -1,20 +1,21 @@
 <?php
 /**
- * Vault Studio Manager - 2FA Link Interception Node
- * Location: /home/bicheveb/public_html/pm/copy-code.php
+ * SentryIQ - 2FA one-time token retrieval endpoint
+ * This file remains in the web root; token storage remains outside it.
  */
 header("Content-Type: text/html; charset=UTF-8");
 
-// 1. Verify URL token parameters exist
 if (!isset($_GET['t']) || empty($_GET['t'])) {
     die("<h3 style='color:#dc3545; font-family:sans-serif; text-align:center; margin-top:50px;'>❌ Security Alert: Missing tracking parameter.</h3>");
 }
 
-// Sanitize token string strictly to match valid token filenames
 $inbound_token = preg_replace('/[^a-f0-9]/i', '', trim($_GET['t']));
-$token_file = '/home/bicheveb/private_data/token_' . $inbound_token . '.json';
+$configFile = '/home/bicheveb/public_html/pm/sentryiq_config.php';
+$config = is_file($configFile) ? (require $configFile) : [];
+$dataDir = is_array($config) ? trim((string)($config['data_dir'] ?? '')) : '';
+$dataDir = $dataDir !== '' ? rtrim($dataDir, '/') : '/home/bicheveb/private_data';
+$token_file = $dataDir . '/token_' . $inbound_token . '.json';
 
-// 2. Locate the specific token file on disk
 if (!file_exists($token_file) || !is_readable($token_file)) {
     die("<h3 style='color:#dc3545; font-family:sans-serif; text-align:center; margin-top:50px;'>❌ Authentication Error: Token signature invalid, expired, or already consumed.</h3>");
 }
@@ -23,16 +24,21 @@ $file_contents = trim(file_get_contents($token_file));
 $data = json_decode($file_contents, true);
 
 if (!$data || !isset($data['code'], $data['expires'])) {
+    @unlink($token_file);
     die("<h3 style='color:#dc3545; font-family:sans-serif; text-align:center; margin-top:50px;'>❌ System Fault: Checkpoint record corrupted or unreadable.</h3>");
 }
 
-// 3. Validate Token Expiry (5 Minute Lifespan)
 if (time() > $data['expires']) {
-    @unlink($token_file); // Clean up expired token file safely from disk
+    @unlink($token_file);
     die("<h3 style='color:#dc3545; font-family:sans-serif; text-align:center; margin-top:50px;'>⏰ Token Expired: Secure authorization windows close after 5 minutes.</h3>");
 }
 
-// 4. Output the validation UI with native clipboard execution
+// The token is consumed when this protected endpoint successfully reads it.
+// A refresh/replay therefore cannot retrieve the same verification code.
+$verification_code = (string)$data['code'];
+if (!@unlink($token_file)) {
+    die("<h3 style='color:#dc3545; font-family:sans-serif; text-align:center; margin-top:50px;'>❌ Security Error: The one-time token could not be consumed.</h3>");
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -53,44 +59,26 @@ if (time() > $data['expires']) {
     <div class="card">
         <h2 style="color: #0066cc; margin-top: 0; font-size: 22px;">🔒 2FA Access Authorized</h2>
         <p style="font-size: 15px; color: #495057;">Your verification session is ready. Click the button below to copy the code instantly:</p>
-        
-        <!-- Target string value block container -->
-        <div id="auth-code" class="code-display"><?php echo htmlspecialchars($data['code']); ?></div>
-        
-        <!-- 🔥 ONE-CLICK COPY OPERATION INTERFACE -->
-        <button type="button" id="copy-btn" class="btn-copy" onclick="copyVerificationCode()">
-            📋 Copy Verification Code
-        </button>
-        
+        <div id="auth-code" class="code-display"><?php echo htmlspecialchars($verification_code, ENT_QUOTES, 'UTF-8'); ?></div>
+        <button type="button" id="copy-btn" class="btn-copy" onclick="copyVerificationCode()">📋 Copy Verification Code</button>
         <p class="hint">Return to your initial login terminal framework page and paste this sequence into the 6-digit checkpoint input field.</p>
     </div>
-
     <script>
     function copyVerificationCode() {
         const codeText = document.getElementById('auth-code').textContent.trim();
         const btn = document.getElementById('copy-btn');
-
         if (!navigator.clipboard) {
-            // Native fallback sequence if browser security context restricts direct API access
             alert("Clipboard management unsupported by this browser instance context layout.");
             return;
         }
-
-        navigator.clipboard.writeText(codeText)
-            .then(() => {
-                btn.innerHTML = "✅ Code Copied!";
-                btn.style.background = "#2b8a3e";
-                
-                // Revert interface styling back smoothly after 2 seconds
-                setTimeout(() => {
-                    btn.innerHTML = "📋 Copy Verification Code";
-                    btn.style.background = "#0066cc";
-                }, 2000);
-            })
-            .catch(err => {
-                console.error("Failed to copy credential string execution block:", err);
-                alert("Clipboard copy transaction rejected by active security parameters.");
-            });
+        navigator.clipboard.writeText(codeText).then(() => {
+            btn.innerHTML = "✅ Code Copied!";
+            btn.style.background = "#2b8a3e";
+            setTimeout(() => {
+                btn.innerHTML = "📋 Copy Verification Code";
+                btn.style.background = "#0066cc";
+            }, 2000);
+        }).catch(() => alert("Clipboard copy transaction rejected by active security parameters."));
     }
     </script>
 </body>
