@@ -21,6 +21,22 @@ function sentryiq_write_private_config(string $directory, string $username, stri
     return true;
 }
 
+function sentryiq_remove_reference_directory(): bool {
+    $referenceDir = __DIR__ . '/private_data';
+    if (!is_dir($referenceDir)) return true;
+    $files = ['vault_engine.php', 'email_template.php'];
+    foreach ($files as $file) {
+        $path = $referenceDir . '/' . $file;
+        if (is_file($path) && !@unlink($path)) return false;
+    }
+    // Remove the bundled directory only when it is empty. Never recurse or remove
+    // anything other than the two known reference files.
+    $remaining = @scandir($referenceDir);
+    if ($remaining === false) return false;
+    $remaining = array_values(array_diff($remaining, ['.', '..']));
+    return count($remaining) === 0 ? @rmdir($referenceDir) : false;
+}
+
 // Existing installation: repair missing private runtime files and leave normal login alone.
 if ($configuredDir !== '' && is_dir($configuredDir) && is_writable($configuredDir)) {
     $engineSource = __DIR__ . '/private_data/vault_engine.php';
@@ -31,7 +47,12 @@ if ($configuredDir !== '' && is_dir($configuredDir) && is_writable($configuredDi
     if (!is_file($templateTarget) && is_file($templateSource)) @copy($templateSource, $templateTarget);
     @chmod($engineTarget, 0600);
     @chmod($templateTarget, 0600);
-    if (is_file($engineTarget) && is_file($templateTarget)) return;
+    if (is_file($engineTarget) && is_file($templateTarget)) {
+        // If the secure runtime is already known-good, the web-root reference files
+        // are no longer needed. Remove them only after both destination files exist.
+        sentryiq_remove_reference_directory();
+        return;
+    }
 }
 
 $setupError = '';
@@ -57,12 +78,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_first_run'])
         $templateTarget = $directory . '/email_template.php';
         if ((!is_file($engineTarget) && !@copy($engineSource, $engineTarget)) || (!is_file($templateTarget) && !@copy($templateSource, $templateTarget))) {
             $setupError = 'SentryIQ could not create its private vault files.';
+        } elseif (!is_file($engineTarget) || !is_file($templateTarget)) {
+            $setupError = 'SentryIQ could not verify that its private vault files were created successfully.';
         } elseif (!sentryiq_write_private_config($directory, $username, $email)) {
             $setupError = 'SentryIQ could not save the private installation configuration.';
         } else {
             @chmod($engineTarget, 0600); @chmod($templateTarget, 0600);
-            if (!is_dir($directory . '/vault_icons')) @mkdir($directory . '/vault_icons', 0700, true);
-            if (!@file_put_contents(SENTRYIQ_CONFIG_FILE, "<?php\nreturn ['data_dir' => " . var_export($directory, true) . "];\n", LOCK_EX)) {
+            if (!is_dir($directory . '/vault_icons') && !@mkdir($directory . '/vault_icons', 0700, true) && !is_dir($directory . '/vault_icons')) {
+                $setupError = 'SentryIQ could not create its private icon directory.';
+            } elseif (!@file_put_contents(SENTRYIQ_CONFIG_FILE, "<?php\nreturn ['data_dir' => " . var_export($directory, true) . "];\n", LOCK_EX)) {
                 $setupError = 'SentryIQ could not save its installation pointer.';
             } else {
                 @chmod(SENTRYIQ_CONFIG_FILE, 0600);
@@ -72,13 +96,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_first_run'])
                     'id' => 'sys_config_node', 'type' => 'system_config', 'app_username' => $username,
                     '2fa_email' => $email, 'imap_password' => '', 'two_fa_token_expiry' => 300,
                 ]];
-                if (!save_passwords($systemRecord)) {
+                if (!save_passwords($systemRecord) || !is_file(DATA_FILE)) {
                     @unlink(SENTRYIQ_CONFIG_FILE);
-                    $setupError = 'SentryIQ could not initialize the encrypted vault file.';
+                    $setupError = 'SentryIQ could not initialize and verify the encrypted vault file.';
                 } else {
                     unset($_SESSION['master_key']);
-                    header('Location: index.php?setup=complete');
-                    exit;
+                    // Final safety gate: only remove the bundled reference directory
+                    // after the secure directory, runtime files, configuration and
+                    // encrypted vault have all been successfully created and verified.
+                    if (!sentryiq_remove_reference_directory()) {
+                        $setupError = 'SentryIQ was initialized successfully, but could not remove the bundled private_data reference directory.';
+                    } else {
+                        header('Location: index.php?setup=complete');
+                        exit;
+                    }
                 }
             }
         }
