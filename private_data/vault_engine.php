@@ -4,15 +4,24 @@
  * Reference copy. Production installs this file into the configured secure storage directory.
  */
 
-$configFile = defined('SENTRYIQ_CONFIG_FILE') ? SENTRYIQ_CONFIG_FILE : (__DIR__ . '/sentryiq_config.php');
+// The production copy lives inside the secure data directory, so its authoritative
+// configuration is beside it. The web-root sentryiq_config.php is only a pointer.
+$configFile = __DIR__ . '/sentryiq_config.php';
 $config = is_file($configFile) ? (require $configFile) : [];
 $configuredDataDir = is_array($config) ? trim((string)($config['data_dir'] ?? '')) : '';
+
+if ($configuredDataDir === '') {
+    // Reference-copy fallback only. A completed installation always has a private config.
+    $pointerFile = defined('SENTRYIQ_CONFIG_FILE') ? SENTRYIQ_CONFIG_FILE : '';
+    $pointer = ($pointerFile !== '' && is_file($pointerFile)) ? require $pointerFile : [];
+    $configuredDataDir = is_array($pointer) ? trim((string)($pointer['data_dir'] ?? '')) : '';
+}
 
 define('SENTRYIQ_DATA_DIR', $configuredDataDir !== '' ? rtrim($configuredDataDir, '/') : '/home/bicheveb/private_data');
 define('DATA_FILE', SENTRYIQ_DATA_DIR . '/passwords.enc');
 define('LOG_FILE', SENTRYIQ_DATA_DIR . '/security_audit.log');
-define('TWO_FA_EMAIL', 'mail@adress.com');
-define('TWO_FA_TOKEN_LIFETIME', 300);
+define('TWO_FA_EMAIL', is_array($config) && !empty($config['two_fa_email']) ? trim((string)$config['two_fa_email']) : '');
+define('TWO_FA_TOKEN_LIFETIME', is_array($config) && !empty($config['two_fa_token_expiry']) ? max(60, (int)$config['two_fa_token_expiry']) : 300);
 
 function get_visitor_ip(): string {
     if (!empty($_SERVER['HTTP_CLIENT_IP'])) { $ip = $_SERVER['HTTP_CLIENT_IP']; }
