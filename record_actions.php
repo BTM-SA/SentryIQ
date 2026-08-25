@@ -5,7 +5,10 @@ ini_set('session.cookie_httponly', '1');
 ini_set('session.cookie_samesite', 'Lax');
 session_start();
 date_default_timezone_set('Africa/Johannesburg');
-require_once '/home/bicheveb/private_data/vault_engine.php';
+
+// vault_engine.php is application code; SENTRYIQ_DATA_DIR is the configured
+// storage location and may be different from the engine's physical location.
+require_once __DIR__ . '/private_data/vault_engine.php';
 
 if (!isset($_SESSION['master_key'])) {
     header('Location: index.php');
@@ -31,7 +34,10 @@ if ($action === 'edit') {
 
     if ($label !== '' && $password !== '') {
         foreach ($passwords as $index => $item) {
-            if (($item['id'] ?? '') !== $entryId) continue;
+            if (($item['id'] ?? '') !== $entryId) {
+                continue;
+            }
+
             $found = true;
             $oldUrl = trim((string)($item['url'] ?? ''));
             $passwords[$index]['label'] = $label;
@@ -39,21 +45,31 @@ if ($action === 'edit') {
             $passwords[$index]['password'] = $password;
             $passwords[$index]['url'] = $url;
             $passwords[$index]['notes'] = $notes;
+
             if ($url !== $oldUrl) {
-                if (!empty($item['icon_path']) && is_file($item['icon_path'])) @unlink($item['icon_path']);
+                if (!empty($item['icon_path']) && is_file($item['icon_path'])) {
+                    @unlink($item['icon_path']);
+                }
+
                 $icon = cache_vault_icon($url, $entryId);
                 $passwords[$index]['icon_type'] = $icon['icon_type'];
                 $passwords[$index]['icon_path'] = $icon['icon_path'];
                 $passwords[$index]['icon_source'] = $icon['icon_source'];
                 $passwords[$index]['icon_fetched_at'] = $icon['icon_fetched_at'];
             }
+
             $passwords[$index]['updated_at'] = date('Y-m-d H:i:s');
             break;
         }
     }
 
     if ($found && save_passwords($passwords)) {
-        log_security_event('VAULT_RECORD_UPDATED', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown', ['entry_id' => $entryId]);
+        log_security_event(
+            'VAULT_RECORD_UPDATED',
+            get_visitor_ip(),
+            $_SESSION['app_username'] ?? 'unknown',
+            ['entry_id' => $entryId]
+        );
         header('Location: index.php?status=updated&pane=view');
         exit;
     }
@@ -64,16 +80,29 @@ if ($action === 'edit') {
 
 if ($action === 'delete') {
     $found = false;
+
     foreach ($passwords as $index => $item) {
-        if (($item['id'] ?? '') !== $entryId) continue;
+        if (($item['id'] ?? '') !== $entryId) {
+            continue;
+        }
+
         $found = true;
-        if (!empty($item['icon_path']) && is_file($item['icon_path'])) @unlink($item['icon_path']);
+
+        if (!empty($item['icon_path']) && is_file($item['icon_path'])) {
+            @unlink($item['icon_path']);
+        }
+
         unset($passwords[$index]);
         break;
     }
 
     if ($found && save_passwords(array_values($passwords))) {
-        log_security_event('VAULT_RECORD_DELETED', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown', ['entry_id' => $entryId]);
+        log_security_event(
+            'VAULT_RECORD_DELETED',
+            get_visitor_ip(),
+            $_SESSION['app_username'] ?? 'unknown',
+            ['entry_id' => $entryId]
+        );
         header('Location: index.php?status=deleted&pane=view');
         exit;
     }
