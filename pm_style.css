@@ -1,0 +1,97 @@
+/* Base Core Typography */
+body { 
+    font-family: Arial, sans-serif; 
+    margin: 40px; 
+    background-color: #f4f6f9; 
+    color: #333; 
+}
+.box { 
+    background: white; 
+    padding: 30px; 
+    max-width: 600px; 
+    margin: auto; 
+    border-radius: 8px; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+}
+.form-group { margin-bottom: 15px; }
+.form-group label { display: block; font-weight: bold; margin-bottom: 5px; }
+.input-field { 
+    width: 100%; 
+    padding: 8px; 
+    box-sizing: border-box; 
+    border: 1px solid #ccc; 
+    border-radius: 4px; 
+}
+
+/* Button & Status Control Tokens */
+.btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+.btn-primary { background: #0066cc; color: white; }
+.btn-primary:hover { background: #0052a3; }
+.btn-danger { background: #dc3545; color: white; }
+.btn-danger:hover { background: #bd2130; }
+.error { color: #dc3545; font-weight: bold; margin-bottom: 15px; }
+.success { color: #28a745; font-weight: bold; margin-bottom: 15px; }
+
+/* Interactive Vault Layout Tabs */
+.vault-tabs { 
+    display: flex; 
+    gap: 5px; 
+    border-bottom: 2px solid #dee2e6; 
+    margin-top: 20px; 
+    margin-bottom: 20px; 
+}
+.tab-btn { 
+    padding: 10px 20px; 
+    background: #e9ecef; 
+    border: none; 
+    border-radius: 5px 5px 0 0; 
+    cursor: pointer; 
+    font-weight: bold; 
+    color: #495057; 
+    transition: all 0.2s ease; 
+}
+.tab-btn:hover { background: #dee2e6; }
+.tab-btn.active { background: #0066cc; color: white; }
+.vault-panel { display: none; }
+.vault-panel.active { display: block; }
+.form-box { background: #f8f9fa; padding: 20px; border-radius: 6px; border: 1px solid #e3e6f0; }
+
+/* Clean List Row Components */
+.entry-row { 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    padding: 12px 15px; 
+    background: #ffffff; 
+    border: 1px solid #e3e6f0; 
+    border-radius: 6px; 
+    margin-bottom: 8px; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02); 
+}
+.entry-identity { display: flex; align-items: center; gap: 12px; }
+.favicon-icon { width: 24px; height: 24px; border-radius: 50%; object-fit: contain; display: inline-block; vertical-align: middle; }
+.entry-label { font-weight: bold; color: #2c3e50; font-size: 15px; }
+
+/* Inspector Detail View Fields */
+.detail-card { background: #ffffff; border: 1px solid #ccd1d9; border-radius: 6px; padding: 20px; margin-top: 15px; }
+.detail-row { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #f1f3f5; }
+.detail-row:last-child { border-bottom: none; margin-bottom: 0; }
+.detail-label { font-size: 11px; text-transform: uppercase; color: #888; font-weight: bold; display: block; margin-bottom: 4px; }
+.detail-value { font-size: 15px; font-weight: 600; color: #222; }
+.secret-badge { background: #e9ecef; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 14px; }
+/* Circular CSS Initial Letter Badges */
+.initial-badge {
+    width: 28px;
+    height: 24px;
+    border-radius: 50%;
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    padding-bottom: 4px; /* Perfectly centers the text baseline */
+}

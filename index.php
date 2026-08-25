@@ -1,0 +1,110 @@
+<?php
+// FORCE SECURE GLOBAL SESSION MAPPING
+ini_set('session.cookie_path', '/');
+ini_set('session.cookie_secure', '1');
+ini_set('session.cookie_httponly', '1');
+ini_set('session.cookie_samesite', 'Lax');
+session_start();
+
+date_default_timezone_set('Africa/Johannesburg');
+
+// Include private system configurations
+require_once '/home/bicheveb/private_data/vault_engine.php';
+require_once '/home/bicheveb/private_data/email_template.php';
+
+// Handle Logout Route
+if (isset($_GET['action']) && $_GET['action'] === 'logout') {
+    session_destroy();
+    header("Location: index.php");
+    exit;
+}
+
+// Mount the Backend Controller logic
+require_once 'auth_controller.php';
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Vault Studio Manager</title>
+    <link rel="stylesheet" href="pm_style.css">
+    <script>
+        function switchVaultTab(tabName) {
+            document.querySelectorAll('.vault-panel').forEach(panel => panel.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            
+            var targetPanel = document.getElementById(tabName + '-panel');
+            if(targetPanel) targetPanel.classList.add('active');
+            
+            var btnElement = document.getElementById(tabName + '-btn');
+            if(btnElement) btnElement.classList.add('active');
+        }
+
+        function viewRecordDetails(label, username, password, url, id) {
+            document.getElementById('det-label').textContent = label;
+            document.getElementById('det-username').textContent = username ? username : '[None Stored]';
+            document.getElementById('det-password').textContent = password;
+            
+            var urlLink = document.getElementById('det-url');
+            if (url) {
+                urlLink.href = url;
+                urlLink.textContent = url;
+                urlLink.style.display = 'inline';
+            } else {
+                urlLink.textContent = '[None Stored]';
+                urlLink.removeAttribute('href');
+            }
+            
+            document.getElementById('det-delete-id').value = id;
+            switchVaultTab('details');
+        }
+    </script>
+</head>
+<body>
+<div class="box">
+    <?php if (!$vault_authenticated): ?>
+        
+        <!-- LIVE DISK RE-CHECK: Instantly open configuration screen if file was deleted -->
+        <?php if (!file_exists(DATA_FILE) || $vault_missing_error): ?>
+            <h2>⚙️ Create New Vault Store</h2>
+            <p class="error">No secure database file detected at your data file location.</p>
+            <form method="POST">
+                <div class="form-group">
+                    <label>Set Master Vault Key:</label>
+                    <input type="password" name="init_password" class="input-field" required autofocus>
+                </div>
+                <button type="submit" name="initialize_new_vault" class="btn btn-primary">Initialize Vault File</button>
+            </form>
+            
+        <?php elseif (!isset($_SESSION['pending_key'])): ?>
+            <h2>🔒 Open Secure Vault</h2>
+            <?php if ($decryption_failed) echo "<p class='error'>Incorrect master key. Decryption failed.</p>"; ?>
+            <form method="POST">
+                <div class="form-group">
+                    <label>Master Vault Key:</label>
+                    <input type="password" name="master_password" class="input-field" required autofocus>
+                </div>
+                <button type="submit" name="login_step_1" class="btn btn-primary">Decrypt Vault</button>
+            </form>
+            
+        <?php else: ?>
+            <h2>Verification Checkpoint</h2>
+            <p>An encrypted execution tracking code has been dispatched to your master email account frame.</p>
+            <?php if (!empty($error_step_2)) echo "<p class='error'>$error_step_2</p>"; ?>
+            <form method="POST">
+                <div class="form-group">
+                    <label>Enter 6-Digit Code:</label>
+                    <input type="text" name="verification_code" maxlength="6" autocomplete="off" class="input-field" required autofocus>
+                </div>
+                <button type="submit" name="login_step_2" class="btn btn-primary">Verify & Mount Data</button>
+            </form>
+        <?php endif; ?>
+        
+    <?php else: ?>
+        <!-- Render the complete Dashboard view split into two files to avoid size cut-offs -->
+        <?php require_once 'dashboard_list.php'; ?>
+        <?php require_once 'dashboard_actions.php'; ?>
+    <?php endif; ?>
+</div>
+</body>
+</html>
