@@ -1,11 +1,14 @@
 <?php
 /**
  * Vault Studio Manager - Core Security Engine
+ * Location: /home/bicheveb/private_data/vault_engine.php
  */
 
-// Base directory can be overridden by SENTRYIQ_DATA_DIR before this file is loaded.
-// Defaults to the historical private_data directory for backwards compatibility.
-define('SENTRYIQ_DATA_DIR', getenv('SENTRYIQ_DATA_DIR') ?: '/home/bicheveb/private_data');
+$configFile = '/home/bicheveb/public_html/pm/sentryiq_config.php';
+$config = is_file($configFile) ? (require $configFile) : [];
+$configuredDataDir = is_array($config) ? trim((string)($config['data_dir'] ?? '')) : '';
+
+define('SENTRYIQ_DATA_DIR', $configuredDataDir !== '' ? rtrim($configuredDataDir, '/') : '/home/bicheveb/private_data');
 define('DATA_FILE', SENTRYIQ_DATA_DIR . '/passwords.enc');
 define('LOG_FILE', SENTRYIQ_DATA_DIR . '/security_audit.log');
 define('TWO_FA_EMAIL', 'mail@adress.com');
