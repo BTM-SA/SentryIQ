@@ -6,18 +6,73 @@ ini_set('session.cookie_samesite', 'Lax');
 session_start();
 date_default_timezone_set('Africa/Johannesburg');
 
-// The vault engine is stored outside the web root. The configured data
-// directory is storage only; it must not be used as an include path.
-require_once '/home/bicheveb/private_data/vault_engine.php';
+// Always resolve the configured secure storage location. Never hard-code a
+// production user's private_data path here.
+$pointerConfigFile = __DIR__ . '/sentryiq_config.php';
+if (!is_file($pointerConfigFile)) {
+    header('Location: index.php?status=error&pane=view');
+    exit;
+}
+$pointerConfig = require $pointerConfigFile;
+$dataDir = is_array($pointerConfig) ? rtrim((string)($pointerConfig['data_dir'] ?? ''), '/') : '';
+if ($dataDir === '' || !is_file($dataDir . '/vault_engine.php')) {
+    header('Location: index.php?status=error&pane=view');
+    exit;
+}
+require_once $dataDir . '/vault_engine.php';
 
 if (!isset($_SESSION['master_key'])) {
     header('Location: index.php');
     exit;
 }
 
+/** Convert every historical record shape into the canonical associative form. */
+function sentryiq_normalize_action_records($records): array {
+    if (!is_array($records)) return [];
+
+    // A single legacy record may itself be the top-level numeric array.
+    $isList = array_keys($records) === range(0, count($records) - 1);
+    if ($isList && count($records) >= 5 && count($records) <= 6 && !is_array($records[0])) {
+        $records = [$records];
+    }
+
+    $out = [];
+    foreach ($records as $item) {
+        if (is_string($item)) {
+            $parts = str_getcsv($item);
+            if (count($parts) >= 5) $item = $parts;
+        }
+        if (!is_array($item)) continue;
+
+        $assoc = array_keys($item) !== range(0, count($item) - 1);
+        if ($assoc && isset($item['type']) && $item['type'] === 'system_config') {
+            $out[] = $item;
+            continue;
+        }
+
+        if (!$assoc && count($item) >= 5) {
+            $out[] = [
+                'label' => (string)($item[0] ?? ''),
+                'username' => (string)($item[1] ?? ''),
+                'password' => (string)($item[2] ?? ''),
+                'url' => (string)($item[3] ?? ''),
+                'notes' => (string)($item[4] ?? ''),
+                'id' => (string)($item[5] ?? bin2hex(random_bytes(8))),
+            ];
+            continue;
+        }
+
+        if ($assoc && isset($item['label'])) {
+            if (empty($item['id'])) $item['id'] = bin2hex(random_bytes(8));
+            $out[] = $item;
+        }
+    }
+    return $out;
+}
+
 $action = $_POST['action'] ?? '';
 $entryId = trim((string)($_POST['entry_id'] ?? ''));
-$passwords = load_passwords();
+$passwords = sentryiq_normalize_action_records(load_passwords());
 
 if (!is_array($passwords) || $entryId === '') {
     header('Location: index.php?status=error&pane=view');
