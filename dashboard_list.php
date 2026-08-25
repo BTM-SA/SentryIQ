@@ -45,18 +45,14 @@
                         <small style="color:#868e96; font-size:11px; display:block; overflow:hidden; text-overflow:ellipsis;"><?php echo htmlspecialchars($row['username'] ?? '[No Username]'); ?></small>
                     </div>
 
-                    <div style="padding:12px; display:flex; gap:8px;">
-                        <button type="button" class="btn" style="flex:1; padding:8px 0; font-size:12px; font-weight:bold; border-radius:6px; background:#e3faf2; color:#0ca678; border:1px solid #c3fae8;"
-                                onclick="copyVaultString(this, '<?php echo addslashes($row['password'] ?? ''); ?>')">
-                            📋 Copy Pass
-                        </button>
-
-                        <button type="button" class="btn btn-primary" style="flex:1; padding:8px 0; font-size:12px; border-radius:6px; background:#0066cc;"
+                    <div style="padding:12px;">
+                        <button type="button" class="btn btn-primary" style="width:100%; padding:8px 0; font-size:12px; border-radius:6px; background:#0066cc;"
                                 onclick="viewRecordDetails(
                                     '<?php echo addslashes(htmlspecialchars($label)); ?>',
                                     '<?php echo addslashes(htmlspecialchars($row['username'] ?? '')); ?>',
                                     '<?php echo addslashes(htmlspecialchars($row['password'] ?? '')); ?>',
                                     '<?php echo addslashes(htmlspecialchars($row['url'] ?? '')); ?>',
+                                    '<?php echo addslashes(htmlspecialchars($row['notes'] ?? '')); ?>',
                                     '<?php echo $row['id']; ?>'
                                 )">👁️ Inspect</button>
                     </div>
