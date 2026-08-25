@@ -17,24 +17,36 @@ function read_security_log():array{if(!is_file(LOG_FILE))return[];$lines=@file(L
 function normalize_vault_records(array $records):array{
     $normalized=[];$changed=false;
     $isSequential=array_keys($records)===range(0,count($records)-1);
-    if($isSequential&&count($records)>=6&&!is_array($records[0])){
-        $records=[$records];
-    }
+    if($isSequential&&count($records)>=5&&!is_array($records[0])){$records=[$records];}
     foreach($records as $record){
         if(is_array($record)){
             $keys=array_keys($record);
             $isSequentialRecord=$keys===range(0,count($record)-1);
-            if(array_key_exists('label',$record)||array_key_exists('type',$record)|| (array_key_exists('id',$record)&&!$isSequentialRecord)){$normalized[]=$record;continue;}
-            if($isSequentialRecord&&count($record)>=6){
-                $normalized[]=['id'=>trim((string)$record[5]),'label'=>trim((string)$record[0]),'username'=>trim((string)$record[1]),'password'=>trim((string)$record[2]),'url'=>trim((string)$record[3]),'notes'=>trim((string)$record[4]),'created_at'=>null,'updated_at'=>null,'icon_type'=>null,'icon_path'=>null,'icon_source'=>null,'icon_fetched_at'=>null];
+            if(array_key_exists('type',$record)){$normalized[]=$record;continue;}
+            if(!$isSequentialRecord&&array_key_exists('label',$record)){
+                // Some intermediate builds accidentally wrapped a complete legacy
+                // CSV row inside the label field. Recover that row before it reaches
+                // Inspect/Edit/Delete.
+                $label=(string)($record['label']??'');
+                $parts=str_getcsv($label,',','"','\\');
+                $looksLikeLegacy=count($parts)>=5 && ($record['username']??'')==='' && ($record['password']??'')==='' && ($record['url']??'')==='' && ($record['notes']??'')==='';
+                if($looksLikeLegacy){
+                    $normalized[]=['id'=>trim((string)($parts[5]??($record['id']??bin2hex(random_bytes(8)))),'label'=>trim((string)($parts[0]??'')),'username'=>trim((string)($parts[1]??'')),'password'=>trim((string)($parts[2]??'')),'url'=>trim((string)($parts[3]??'')),'notes'=>trim((string)($parts[4]??'')),'created_at'=>$record['created_at']??null,'updated_at'=>$record['updated_at']??null,'icon_type'=>$record['icon_type']??null,'icon_path'=>$record['icon_path']??null,'icon_source'=>$record['icon_source']??null,'icon_fetched_at'=>$record['icon_fetched_at']??null];
+                    $changed=true;continue;
+                }
+                if(empty($record['id'])){$record['id']=bin2hex(random_bytes(8));$changed=true;}
+                $normalized[]=$record;continue;
+            }
+            if($isSequentialRecord&&count($record)>=5){
+                $normalized[]=['id'=>trim((string)($record[5]??bin2hex(random_bytes(8)))),'label'=>trim((string)($record[0]??'')),'username'=>trim((string)($record[1]??'')),'password'=>trim((string)($record[2]??'')),'url'=>trim((string)($record[3]??'')),'notes'=>trim((string)($record[4]??'')),'created_at'=>null,'updated_at'=>null,'icon_type'=>null,'icon_path'=>null,'icon_source'=>null,'icon_fetched_at'=>null];
                 $changed=true;continue;
             }
             $normalized[]=$record;continue;
         }
         if(!is_string($record)){$normalized[]=$record;continue;}
         $parts=str_getcsv($record,',','"','\\');
-        if(count($parts)<6){$normalized[]=$record;continue;}
-        $normalized[]=['id'=>trim((string)$parts[5]),'label'=>trim((string)$parts[0]),'username'=>trim((string)$parts[1]),'password'=>trim((string)$parts[2]),'url'=>trim((string)$parts[3]),'notes'=>trim((string)$parts[4]),'created_at'=>null,'updated_at'=>null,'icon_type'=>null,'icon_path'=>null,'icon_source'=>null,'icon_fetched_at'=>null];
+        if(count($parts)<5){$normalized[]=$record;continue;}
+        $normalized[]=['id'=>trim((string)($parts[5]??bin2hex(random_bytes(8)))),'label'=>trim((string)($parts[0]??'')),'username'=>trim((string)($parts[1]??'')),'password'=>trim((string)($parts[2]??'')),'url'=>trim((string)($parts[3]??'')),'notes'=>trim((string)($parts[4]??'')),'created_at'=>null,'updated_at'=>null,'icon_type'=>null,'icon_path'=>null,'icon_source'=>null,'icon_fetched_at'=>null];
         $changed=true;
     }
     return[$normalized,$changed];
