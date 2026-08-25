@@ -1,10 +1,10 @@
 <?php
 /**
  * Vault Studio Manager - Core Security Engine
- * Location: /home/bicheveb/private_data/vault_engine.php
+ * Reference copy. Production installs this file into the configured secure storage directory.
  */
 
-$configFile = '/home/bicheveb/public_html/pm/sentryiq_config.php';
+$configFile = defined('SENTRYIQ_CONFIG_FILE') ? SENTRYIQ_CONFIG_FILE : (__DIR__ . '/sentryiq_config.php');
 $config = is_file($configFile) ? (require $configFile) : [];
 $configuredDataDir = is_array($config) ? trim((string)($config['data_dir'] ?? '')) : '';
 
@@ -22,6 +22,17 @@ function get_visitor_ip(): string {
 
 function ensure_sentryiq_data_directory(): bool {
     return is_dir(SENTRYIQ_DATA_DIR) || (@mkdir(SENTRYIQ_DATA_DIR, 0700, true) && is_dir(SENTRYIQ_DATA_DIR));
+}
+
+function cleanup_expired_tokens(): void {
+    if (!ensure_sentryiq_data_directory()) return;
+    foreach (glob(SENTRYIQ_DATA_DIR . '/token_*.json') ?: [] as $tokenFile) {
+        $raw = @file_get_contents($tokenFile);
+        $token = is_string($raw) ? json_decode($raw, true) : null;
+        if (!is_array($token) || empty($token['expires']) || (int)$token['expires'] <= time()) {
+            @unlink($tokenFile);
+        }
+    }
 }
 
 function log_security_event(string $event_type, string $ip_address, ?string $username = null, array $context = []): void {
@@ -50,33 +61,14 @@ function read_security_log(): array {
     return $events;
 }
 
-/**
- * Convert the original six-field comma-separated vault records into the
- * structured record format used by the current UI. Existing structured
- * records and system configuration records are left untouched.
- */
 function normalize_vault_records(array $records): array {
     $normalized = [];
     $changed = false;
-
     foreach ($records as $record) {
-        if (is_array($record)) {
-            $normalized[] = $record;
-            continue;
-        }
-
-        if (!is_string($record)) {
-            $normalized[] = $record;
-            continue;
-        }
-
+        if (is_array($record)) { $normalized[] = $record; continue; }
+        if (!is_string($record)) { $normalized[] = $record; continue; }
         $parts = str_getcsv($record, ',', '"', '\\');
-        if (count($parts) < 6) {
-            $normalized[] = $record;
-            continue;
-        }
-
-        // Legacy order: label, username, password, url, notes, id
+        if (count($parts) < 6) { $normalized[] = $record; continue; }
         $normalized[] = [
             'id' => trim((string)$parts[5]),
             'label' => trim((string)$parts[0]),
@@ -93,7 +85,6 @@ function normalize_vault_records(array $records): array {
         ];
         $changed = true;
     }
-
     return [$normalized, $changed];
 }
 
@@ -106,18 +97,10 @@ function load_passwords(?string $explicit_key = null): array|bool {
     if (!$payload || !isset($payload['ciphertext'], $payload['iv'], $payload['tag'])) return false;
     $decrypted = openssl_decrypt(base64_decode($payload['ciphertext']), 'aes-256-gcm', $master_key, OPENSSL_RAW_DATA, base64_decode($payload['iv']), base64_decode($payload['tag']));
     if ($decrypted === false) return false;
-
     $records = json_decode($decrypted, true);
     if (!is_array($records)) return [];
-
     [$normalized, $changed] = normalize_vault_records($records);
-
-    // Persist the migration once an authenticated session is available.
-    // This keeps old vaults compatible without requiring a separate migration step.
-    if ($changed && $explicit_key === null && isset($_SESSION['master_key'])) {
-        save_passwords($normalized);
-    }
-
+    if ($changed && $explicit_key === null && isset($_SESSION['master_key'])) save_passwords($normalized);
     return $normalized;
 }
 
