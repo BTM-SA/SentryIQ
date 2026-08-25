@@ -32,16 +32,17 @@
                 $words = explode(' ', trim(preg_replace('/[^a-zA-Z0-9 ]/', '', $label)));
                 $initials = strtoupper(substr($words[0] ?? 'V', 0, 1) . (isset($words[1]) ? substr($words[1], 0, 1) : ''));
 
-                $favicon_url = !empty($cleanDomain) 
-                    ? "https://google.com" . urlencode($cleanDomain) . "&sz=64" 
+                // Fetch the website favicon using the stored domain.
+                $favicon_url = !empty($cleanDomain)
+                    ? "https://www.google.com/s2/favicons?domain=" . rawurlencode($cleanDomain) . "&sz=64"
                     : "";
             ?>
                 <div class="entry-card" style="background:#ffffff; border:1px solid #e9ecef; border-radius:12px; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; box-shadow: 0 4px 6px rgba(0,0,0,0.02); position:relative;">
                     <div class="og-preview-holder" style="height:100px; background:<?php echo $cardGradient; ?>; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative;">
                         <?php if (!empty($favicon_url)): ?>
-                            <img src="<?php echo $favicon_url; ?>" style="width:36px; height:36px; object-fit:contain; filter:drop-shadow(0 4px 6px rgba(0,0,0,0.15));" alt="Logo" onerror="this.style.display='none';">
+                            <img src="<?php echo htmlspecialchars($favicon_url, ENT_QUOTES, 'UTF-8'); ?>" style="width:36px; height:36px; object-fit:contain; position:relative; z-index:2; filter:drop-shadow(0 4px 6px rgba(0,0,0,0.15));" alt="Website icon" onerror="this.style.display='none';">
                         <?php endif; ?>
-                        <span style="position:absolute; color:#ffffff; font-size:28px; font-weight:700; font-family:monospace; opacity:0.3; z-index:0;"><?php echo htmlspecialchars($initials); ?></span>
+                        <span style="position:absolute; color:#ffffff; font-size:28px; font-weight:700; font-family:monospace; opacity:0.3; z-index:1;"><?php echo htmlspecialchars($initials); ?></span>
                     </div>
 
                     <div style="padding:12px 15px 4px 15px;">
