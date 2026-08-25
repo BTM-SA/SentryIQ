@@ -5,7 +5,9 @@
 </div>
 
 <?php if (isset($_GET['status']) && $_GET['status'] == 'saved') echo "<p class='success'>Entry stored successfully!</p>"; ?>
-<?php if (isset($_GET['status']) && $_GET['status'] == 'deleted') echo "<p class='error'>Entry deleted safely from disk.</p>"; ?>
+<?php if (isset($_GET['status']) && $_GET['status'] == 'updated') echo "<p class='success'>Entry updated successfully!</p>"; ?>
+<?php if (isset($_GET['status']) && $_GET['status'] == 'deleted') echo "<p class='success'>Entry deleted safely from disk.</p>"; ?>
+<?php if (isset($_GET['status']) && $_GET['status'] == 'error') echo "<p class='error'>The requested vault record operation could not be completed.</p>"; ?>
 
 <div class="vault-tabs">
     <button id="view-btn" class="tab-btn <?php echo ($active_pane === 'view') ? 'active' : ''; ?>" onclick="switchVaultTab('view')">📋 View Stored Entries</button>
@@ -30,14 +32,7 @@
                 $words = explode(' ', trim(preg_replace('/[^a-zA-Z0-9 ]/', '', $label)));
                 $initials = strtoupper(substr($words[0] ?? 'V', 0, 1) . (isset($words[1]) ? substr($words[1], 0, 1) : ''));
                 $hasStoredIcon = !empty($row['icon_path']) && !empty($row['id']);
-                $inspectArgs = [
-                    $label,
-                    $row['username'] ?? '',
-                    $row['password'] ?? '',
-                    $row['url'] ?? '',
-                    $row['notes'] ?? '',
-                    (string)($row['id'] ?? '')
-                ];
+                $inspectArgs = [$label,$row['username'] ?? '',$row['password'] ?? '',$row['url'] ?? '',$row['notes'] ?? '',(string)($row['id'] ?? '')];
             ?>
                 <div class="entry-card" style="background:#fff; border:1px solid #e9ecef; border-radius:12px; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 6px rgba(0,0,0,.02); position:relative;">
                     <div class="og-preview-holder" style="height:100px; background:<?php echo $cardGradient; ?>; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative;">
