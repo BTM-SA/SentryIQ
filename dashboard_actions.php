@@ -4,6 +4,11 @@
 <div id="details-panel" class="vault-panel">
     <div class="detail-card">
         <h3 id="det-title" style="margin-top:0; border-bottom:2px solid #f1f3f5; padding-bottom:8px; color:#0066cc;">Vault Record Profile</h3>
+
+        <div style="display:flex; justify-content:center; margin:8px 0 18px;">
+            <img id="det-icon" src="" alt="Stored website icon" style="display:none; width:72px; height:72px; object-fit:contain; border-radius:12px; padding:8px; background:#f8f9fa; border:1px solid #e9ecef;">
+        </div>
+
         <div class="detail-row"><span class="detail-label">Resource Label:</span><span id="det-label" class="detail-value"></span></div>
         <div class="detail-row"><span class="detail-label">Stored Username / User ID:</span><span id="det-username" class="detail-value"></span></div>
         <div class="detail-row">
@@ -11,13 +16,10 @@
             <span id="det-password" class="detail-value secret-badge" style="cursor:pointer;" title="Click to copy to clipboard" onclick="copyVaultString(this, this.textContent)"></span>
         </div>
         <div class="detail-row"><span class="detail-label">Destination Web URL Link:</span><a id="det-url" href="#" target="_blank" class="detail-value" style="color:#0066cc; text-decoration:underline;"></a></div>
+        <div class="detail-row" style="align-items:flex-start;"><span class="detail-label">Notes:</span><span id="det-notes" class="detail-value" style="white-space:pre-wrap;"></span></div>
         <div style="margin-top:20px; display:flex; gap:10px;">
             <button type="button" class="btn" style="background:#6c757d; color:#fff;" onclick="switchVaultTab('view')">← Back to List</button>
-            
-            <!-- NEW EDIT TRIGGER: Launches the editor panel populated with this item's specific data strings -->
             <button type="button" class="btn" style="background:#fcc419; color:#212529; font-weight:bold;" onclick="prepareVaultEditNode()">✏️ Edit Record</button>
-            
-            <!-- UPDATED POP-UP ALERT TEXT: Changed from Wipe to Delete -->
             <form method="POST" onsubmit="return confirm('Are you sure you want to delete this record completely out of your secure database?');" style="display:inline;">
                 <input type="hidden" name="entry_id" id="det-delete-id" value="">
                 <button type="submit" name="delete_entry" class="btn btn-danger">🗑️ Delete</button>
@@ -35,6 +37,7 @@
             <div class="form-group"><label>Username / Login ID:</label><input type="text" name="username" class="input-field"></div>
             <div class="form-group"><label>Resource Password:</label><input type="text" name="password" class="input-field" required></div>
             <div class="form-group"><label>Destination Web URL Address:</label><input type="text" name="url" placeholder="https://..." class="input-field"></div>
+            <div class="form-group"><label>Notes:</label><textarea name="notes" class="input-field" rows="5" placeholder="Optional notes about this resource"></textarea></div>
             <button type="submit" name="add_entry" class="btn btn-primary" style="margin-top: 10px;">💾 Save Secure Entry</button>
         </form>
     </div>
@@ -58,25 +61,12 @@
     <div class="form-box">
         <h3>📝 Modify Vault Entry Data</h3>
         <form method="POST">
-            <!-- Hidden tracker field ensuring the system updates the right entry ID tag row -->
             <input type="hidden" name="entry_id" id="edit-entry-id">
-            
-            <div class="form-group">
-                <label>Resource Label:</label>
-                <input type="text" name="label" id="edit-label" class="input-field" required>
-            </div>
-            <div class="form-group">
-                <label>Username / Login ID:</label>
-                <input type="text" name="username" id="edit-username" class="input-field">
-            </div>
-            <div class="form-group">
-                <label>Resource Password:</label>
-                <input type="text" name="password" id="edit-password" class="input-field" required>
-            </div>
-            <div class="form-group">
-                <label>Destination Web URL Address:</label>
-                <input type="text" name="url" id="edit-url" class="input-field">
-            </div>
+            <div class="form-group"><label>Resource Label:</label><input type="text" name="label" id="edit-label" class="input-field" required></div>
+            <div class="form-group"><label>Username / Login ID:</label><input type="text" name="username" id="edit-username" class="input-field"></div>
+            <div class="form-group"><label>Resource Password:</label><input type="text" name="password" id="edit-password" class="input-field" required></div>
+            <div class="form-group"><label>Destination Web URL Address:</label><input type="text" name="url" id="edit-url" class="input-field"></div>
+            <div class="form-group"><label>Notes:</label><textarea name="notes" id="edit-notes" class="input-field" rows="5" placeholder="Optional notes about this resource"></textarea></div>
             <div style="margin-top: 15px; display:flex; gap:10px;">
                 <button type="submit" name="edit_entry" class="btn btn-primary">🔄 Update Record</button>
                 <button type="button" class="btn" style="background:#6c757d; color:#fff;" onclick="switchVaultTab('details')">Cancel</button>
@@ -87,19 +77,19 @@
 
 <!-- NATIVE ASYNCHRONOUS CLIPBOARD MANAGEMENT ENGINE -->
 <script>
-// Maps the text content from the inspector into the editor fields smoothly
 function prepareVaultEditNode() {
     document.getElementById('edit-entry-id').value = document.getElementById('det-delete-id').value;
     document.getElementById('edit-label').value = document.getElementById('det-label').textContent;
-    
+
     const unparsedUser = document.getElementById('det-username').textContent;
     document.getElementById('edit-username').value = (unparsedUser === '[None Stored]') ? '' : unparsedUser;
-    
+
     document.getElementById('edit-password').value = document.getElementById('det-password').textContent;
-    
+
     const urlReference = document.getElementById('det-url');
     document.getElementById('edit-url').value = urlReference.hasAttribute('href') ? urlReference.href : '';
-    
+    document.getElementById('edit-notes').value = document.getElementById('det-notes').textContent;
+
     switchVaultTab('edit');
 }
 
@@ -113,13 +103,11 @@ function copyVaultString(buttonElement, targetSecretText) {
         .then(() => {
             const isButton = buttonElement.tagName.toLowerCase() === 'button';
             const defaultButtonTextHtml = buttonElement.innerHTML;
-            
             if (isButton) {
                 buttonElement.innerHTML = "✅ Copied!";
                 buttonElement.style.background = "#2b8a3e";
                 buttonElement.style.color = "#ffffff";
                 buttonElement.style.borderColor = "#2b8a3e";
-
                 setTimeout(() => {
                     buttonElement.innerHTML = defaultButtonTextHtml;
                     buttonElement.style.background = "#e3faf2";
@@ -138,7 +126,7 @@ function copyVaultString(buttonElement, targetSecretText) {
         });
 }
 
-window.addEventListener('DOMContentLoaded', () => { 
-    switchVaultTab('<?php echo $active_pane; ?>'); 
+window.addEventListener('DOMContentLoaded', () => {
+    switchVaultTab('<?php echo $active_pane; ?>');
 });
 </script>
