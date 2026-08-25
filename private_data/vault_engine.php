@@ -50,6 +50,53 @@ function read_security_log(): array {
     return $events;
 }
 
+/**
+ * Convert the original six-field comma-separated vault records into the
+ * structured record format used by the current UI. Existing structured
+ * records and system configuration records are left untouched.
+ */
+function normalize_vault_records(array $records): array {
+    $normalized = [];
+    $changed = false;
+
+    foreach ($records as $record) {
+        if (is_array($record)) {
+            $normalized[] = $record;
+            continue;
+        }
+
+        if (!is_string($record)) {
+            $normalized[] = $record;
+            continue;
+        }
+
+        $parts = str_getcsv($record, ',', '"', '\\');
+        if (count($parts) < 6) {
+            $normalized[] = $record;
+            continue;
+        }
+
+        // Legacy order: label, username, password, url, notes, id
+        $normalized[] = [
+            'id' => trim((string)$parts[5]),
+            'label' => trim((string)$parts[0]),
+            'username' => trim((string)$parts[1]),
+            'password' => trim((string)$parts[2]),
+            'url' => trim((string)$parts[3]),
+            'notes' => trim((string)$parts[4]),
+            'created_at' => null,
+            'updated_at' => null,
+            'icon_type' => null,
+            'icon_path' => null,
+            'icon_source' => null,
+            'icon_fetched_at' => null,
+        ];
+        $changed = true;
+    }
+
+    return [$normalized, $changed];
+}
+
 function load_passwords(?string $explicit_key = null): array|bool {
     $master_key = $explicit_key ?? ($_SESSION['master_key'] ?? null);
     if (!$master_key || !file_exists(DATA_FILE)) return $explicit_key ? false : [];
@@ -58,7 +105,20 @@ function load_passwords(?string $explicit_key = null): array|bool {
     $payload = json_decode($raw, true);
     if (!$payload || !isset($payload['ciphertext'], $payload['iv'], $payload['tag'])) return false;
     $decrypted = openssl_decrypt(base64_decode($payload['ciphertext']), 'aes-256-gcm', $master_key, OPENSSL_RAW_DATA, base64_decode($payload['iv']), base64_decode($payload['tag']));
-    return $decrypted === false ? false : (json_decode($decrypted, true) ?? []);
+    if ($decrypted === false) return false;
+
+    $records = json_decode($decrypted, true);
+    if (!is_array($records)) return [];
+
+    [$normalized, $changed] = normalize_vault_records($records);
+
+    // Persist the migration once an authenticated session is available.
+    // This keeps old vaults compatible without requiring a separate migration step.
+    if ($changed && $explicit_key === null && isset($_SESSION['master_key'])) {
+        save_passwords($normalized);
+    }
+
+    return $normalized;
 }
 
 function save_passwords(array $data_matrix): bool {
