@@ -9,4 +9,21 @@ function viewRecordDetails(label,username,password,url,notes,id){document.getEle
 <?php if(!file_exists(DATA_FILE)||$vault_missing_error): ?><h2>⚙️ Create New Vault Store</h2><p class="error">No secure database file detected at your data file location.</p><form method="POST"><div class="form-group"><label>Set Master Vault Key:</label><input type="password" name="init_password" class="input-field" required autofocus></div><button type="submit" name="initialize_new_vault" class="btn btn-primary">Initialize Vault File</button></form>
 <?php elseif(!isset($_SESSION['pending_key'])): ?><h2>🔒 Open Secure Vault</h2><?php if($decryption_failed)echo "<p class='error'>Incorrect master key. Decryption failed.</p>"; ?><form method="POST"><div class="form-group"><label>Master Vault Key:</label><input type="password" name="master_password" class="input-field" required autofocus></div><button type="submit" name="login_step_1" class="btn btn-primary">Decrypt Vault</button></form>
 <?php else: ?><h2>Verification Checkpoint</h2><p>An encrypted execution tracking code has been dispatched to your master email account frame.</p><?php if(!empty($error_step_2))echo "<p class='error'>$error_step_2</p>"; ?><form method="POST"><div class="form-group"><label>Enter 6-Digit Code:</label><input type="text" name="verification_code" maxlength="6" autocomplete="off" class="input-field" required autofocus></div><button type="submit" name="login_step_2" class="btn btn-primary">Verify & Mount Data</button></form><?php endif; ?>
-<?php else: ?><?php require_once 'dashboard_list.php'; ?><?php require_once 'dashboard_actions.php'; ?><?php endif; ?></div></body></html>
+<?php else: ?><?php require_once 'dashboard_list.php'; ?><?php require_once 'dashboard_actions.php'; ?><script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('form').forEach(function (form) {
+        if (form.querySelector('button[name="edit_entry"]')) {
+            form.action = 'record_actions.php';
+            var action = document.createElement('input');
+            action.type = 'hidden'; action.name = 'action'; action.value = 'edit';
+            form.appendChild(action);
+        }
+        if (form.querySelector('button[name="delete_entry"]')) {
+            form.action = 'record_actions.php';
+            var action = document.createElement('input');
+            action.type = 'hidden'; action.name = 'action'; action.value = 'delete';
+            form.appendChild(action);
+        }
+    });
+});
+</script><?php endif; ?></div></body></html>
