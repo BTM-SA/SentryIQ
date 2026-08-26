@@ -16,15 +16,19 @@ function first_run_validate_directory(string $directory): bool
     if ($directory === '' || !str_starts_with($directory, '/')) return false;
     if (preg_match('#/(public_html|htdocs|www)(/|$)#i', $directory)) return false;
     if (is_link($directory)) return false;
-    if (!is_dir($directory) && !@mkdir($directory, 0700, true)) return false;
+
+    if (!is_dir($directory)) {
+        if (!@mkdir($directory, 0700, true)) return false;
+        if (!@chmod($directory, 0700)) return false;
+    } else {
+        if (!@chmod($directory, 0700)) return false;
+    }
+
     if (!is_dir($directory) || !is_writable($directory) || is_link($directory)) return false;
+
     $real = realpath($directory);
     if ($real === false || rtrim($real, '/') !== rtrim($directory, '/')) return false;
 
-    // The installer creates the final storage directory itself. Verify the
-    // resulting permissions, but do not require PHP's effective UID to match
-    // the parent account UID; shared-hosting PHP workers commonly run under
-    // an account-specific execution context with different reporting semantics.
     $perms = @fileperms($directory);
     if ($perms === false || (($perms & 0x0077) !== 0)) return false;
 
