@@ -1,5 +1,5 @@
 <?php
-/** Normalize legacy vault records before they reach the UI. */
+/** Normalize legacy and intermediate vault records before they reach the UI. */
 function sentryiq_normalize_dashboard_records($records): array {
     if (!is_array($records)) return [];
     $isList = array_keys($records) === range(0, count($records) - 1);
@@ -22,7 +22,33 @@ function sentryiq_normalize_dashboard_records($records): array {
                 'notes' => (string)($item[4] ?? ''),
                 'id' => (string)($item[5] ?? bin2hex(random_bytes(8))),
             ];
-        } elseif ($assoc && isset($item['label'])) {
+            continue;
+        }
+        if ($assoc && isset($item['label'])) {
+            // Recover records produced by the intermediate build where the complete
+            // six-field legacy row was accidentally stored inside the label field.
+            $label = (string)$item['label'];
+            $parts = str_getcsv($label);
+            if (count($parts) >= 5) {
+                $hasSeparateFields = false;
+                foreach (['username','password','url','notes'] as $field) {
+                    if (isset($item[$field]) && (string)$item[$field] !== '') {
+                        $hasSeparateFields = true;
+                        break;
+                    }
+                }
+                if (!$hasSeparateFields) {
+                    $out[] = [
+                        'label' => (string)($parts[0] ?? ''),
+                        'username' => (string)($parts[1] ?? ''),
+                        'password' => (string)($parts[2] ?? ''),
+                        'url' => (string)($parts[3] ?? ''),
+                        'notes' => (string)($parts[4] ?? ''),
+                        'id' => (string)($parts[5] ?? ($item['id'] ?? bin2hex(random_bytes(8)))),
+                    ];
+                    continue;
+                }
+            }
             if (empty($item['id'])) $item['id'] = bin2hex(random_bytes(8));
             $out[] = $item;
         }
