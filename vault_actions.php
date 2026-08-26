@@ -142,9 +142,15 @@ if ($action === 'save_settings') {
     $username = trim((string)($_POST['app_username'] ?? ''));
     $email = filter_var(trim((string)($_POST['two_fa_email_field'] ?? '')), FILTER_VALIDATE_EMAIL);
     $imapPassword = (string)($_POST['imap_password_field'] ?? '');
+    $requestedBaseUrl = rtrim(trim((string)($_POST['base_url_field'] ?? '')), '/');
     $requestedDirectory = rtrim(trim((string)($_POST['data_directory'] ?? '')), '/');
+    $baseParts = parse_url($requestedBaseUrl);
 
     if (!preg_match('/^[A-Za-z0-9._-]{2,64}$/', $username) || !$email) {
+        header('Location: index.php?status=error&pane=settings');
+        exit;
+    }
+    if (!filter_var($requestedBaseUrl, FILTER_VALIDATE_URL) || !is_array($baseParts) || strtolower((string)($baseParts['scheme'] ?? '')) !== 'https' || empty($baseParts['host']) || isset($baseParts['user']) || isset($baseParts['pass'])) {
         header('Location: index.php?status=error&pane=settings');
         exit;
     }
@@ -174,6 +180,8 @@ if ($action === 'save_settings') {
     }
 
     $_SESSION['app_username'] = $username;
+    $effectiveDirectory = SENTRYIQ_DATA_DIR;
+    $movedDirectory = false;
 
     if ($requestedDirectory !== '' && $requestedDirectory !== SENTRYIQ_DATA_DIR) {
         if (!sentryiq_is_trusted_data_directory($requestedDirectory)) {
@@ -210,19 +218,33 @@ if ($action === 'save_settings') {
                 @mkdir($newIconDir, 0700, true);
             }
 
-            $privateConfig = "<?php\nreturn [\n    'installed' => true,\n    'username' => " . var_export($username, true) . ",\n    'two_fa_email' => " . var_export((string)$email, true) . ",\n    'base_url' => " . var_export((string)($config['base_url'] ?? ''), true) . ",\n    'data_dir' => " . var_export($newDir, true) . ",\n    'two_fa_token_expiry' => 300,\n];\n";
-            if (!$ok || @file_put_contents($newDir . '/sentryiq_config.php', $privateConfig, LOCK_EX) === false) $ok = false;
-            @chmod($newDir . '/sentryiq_config.php', 0600);
-
             if ($ok) {
-                $pointer = "<?php\nreturn [\n    'data_dir' => " . var_export($newDir, true) . ",\n    'base_url' => " . var_export((string)($config['base_url'] ?? ''), true) . ",\n];\n";
-                $tmp = __DIR__ . '/sentryiq_config.php.tmp-' . bin2hex(random_bytes(8));
-                if (@file_put_contents($tmp, $pointer, LOCK_EX) === false || !@chmod($tmp, 0600) || !@rename($tmp, $configFile)) $ok = false;
+                $effectiveDirectory = $newDir;
+                $movedDirectory = true;
             }
-
-            if ($ok) log_security_event('DATA_DIRECTORY_CHANGED', get_visitor_ip(), $username, ['from'=>SENTRYIQ_DATA_DIR,'to'=>$newDir]);
         }
     }
+
+    $privateConfig = "<?php\nreturn [\n    'installed' => true,\n    'username' => " . var_export($username, true) . ",\n    'two_fa_email' => " . var_export((string)$email, true) . ",\n    'base_url' => " . var_export($requestedBaseUrl, true) . ",\n    'data_dir' => " . var_export($effectiveDirectory, true) . ",\n    'two_fa_token_expiry' => 300,\n];\n";
+
+    if (@file_put_contents($effectiveDirectory . '/sentryiq_config.php', $privateConfig, LOCK_EX) === false) {
+        header('Location: index.php?status=error&pane=settings');
+        exit;
+    }
+    @chmod($effectiveDirectory . '/sentryiq_config.php', 0600);
+
+    $pointer = "<?php\nreturn [\n    'data_dir' => " . var_export($effectiveDirectory, true) . ",\n    'base_url' => " . var_export($requestedBaseUrl, true) . ",\n];\n";
+    $tmp = __DIR__ . '/sentryiq_config.php.tmp-' . bin2hex(random_bytes(8));
+    if (@file_put_contents($tmp, $pointer, LOCK_EX) === false || !@chmod($tmp, 0600) || !@rename($tmp, $configFile)) {
+        @unlink($tmp);
+        header('Location: index.php?status=error&pane=settings');
+        exit;
+    }
+
+    if ($movedDirectory) {
+        log_security_event('DATA_DIRECTORY_CHANGED', get_visitor_ip(), $username, ['from'=>SENTRYIQ_DATA_DIR,'to'=>$effectiveDirectory]);
+    }
+    log_security_event('SYSTEM_SETTINGS_CHANGED', get_visitor_ip(), $username, ['base_url'=>$requestedBaseUrl]);
 
     header('Location: index.php?status=saved&pane=settings');
     exit;
