@@ -137,7 +137,10 @@ function first_run_runtime_diagnostic(string $password): void
     first_run_diag('RUNTIME_DIRECTORY_CHECK', ['exists' => is_dir($dir), 'is_link' => is_link($dir), 'realpath' => realpath($dir) ?: 'false', 'configured_path' => $dir, 'permissions' => is_dir($dir) ? decoct((int)(fileperms($dir) & 0x01ff)) : 'unknown', 'writable' => is_dir($dir) ? is_writable($dir) : false]);
 
     $parts = vault_read_envelope();
-    if ($parts === false) { first_run_diag('RUNTIME_ENVELOPE_READ_FAILED'); throw new RuntimeException('runtime_envelope_validation_failed'); }
+    if ($parts === false) {
+        first_run_diag('RUNTIME_ENVELOPE_READ_FAILED');
+        throw new RuntimeException('runtime_envelope_validation_failed');
+    }
     first_run_diag('RUNTIME_ENVELOPE_READ_COMPLETED', ['opslimit' => (int)$parts['kdf']['opslimit'], 'memlimit' => (int)$parts['kdf']['memlimit'], 'aad_length' => strlen($parts['aad']), 'ciphertext_length' => strlen($parts['ciphertext']), 'tag_length' => strlen($parts['tag']), 'nonce_length' => strlen($parts['nonce'])]);
 
     try { $key = vault_derive_key($password, $parts['salt'], (int)$parts['kdf']['opslimit'], (int)$parts['kdf']['memlimit']); }
@@ -187,8 +190,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_first_run'])
         $secureConfig = $directory . '/sentryiq_config.php';
         $pointerConfig = "<?php\nreturn [\n    'data_dir' => " . var_export($directory, true) . ",\n    'base_url' => " . var_export($baseUrl, true) . ",\n];\n";
         try {
-            if (!is_file($engineTarget) && !@copy(__DIR__ . '/private_data/vault_engine.php', $engineTarget)) throw new RuntimeException('runtime_copy_failed');
-            if (!is_file($templateTarget) && !@copy(__DIR__ . '/private_data/email_template.php', $templateTarget)) throw new RuntimeException('template_copy_failed');
+            if (!@copy(__DIR__ . '/private_data/vault_engine.php', $engineTarget)) throw new RuntimeException('runtime_copy_failed');
+            if (!@copy(__DIR__ . '/private_data/email_template.php', $templateTarget)) throw new RuntimeException('template_copy_failed');
             @chmod($engineTarget, 0600); @chmod($templateTarget, 0600);
             first_run_diag('RUNTIME_FILES_READY', ['engine_exists' => is_file($engineTarget), 'template_exists' => is_file($templateTarget)]);
             if (!first_run_write_secure_config($secureConfig, $username, $email, $baseUrl, $directory)) throw new RuntimeException('secure_config_failed');
