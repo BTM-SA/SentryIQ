@@ -62,125 +62,70 @@ function read_security_log(): array
     return $events;
 }
 
-/** Convert every historical/intermediate vault record into one canonical associative shape. */
 function normalize_vault_records(array $records): array
 {
     $normalized = [];
-    $keys = array_keys($records);
-    $isSequential = ($keys === range(0, count($records) - 1));
 
-    if ($isSequential && count($records) >= 5 && !is_array($records[0] ?? null)) $records = [$records];
-
-    foreach ($records as $record) {
-        if (is_string($record)) {
-            $parts = str_getcsv($record);
-            if (count($parts) >= 5) {
-                $normalized[] = [
-                    'id'=>trim((string)($parts[5] ?? bin2hex(random_bytes(8)))),
-                    'label'=>trim((string)($parts[0] ?? '')),
-                    'username'=>trim((string)($parts[1] ?? '')),
-                    'password'=>trim((string)($parts[2] ?? '')),
-                    'url'=>trim((string)($parts[3] ?? '')),
-                    'notes'=>trim((string)($parts[4] ?? '')),
-                    'created_at'=>null,'updated_at'=>null,'icon_type'=>null,'icon_path'=>null,'icon_source'=>null,'icon_fetched_at'=>null,
-                ];
-            }
-            continue;
-        }
-
+    foreach ($records as $key => $record) {
         if (!is_array($record)) continue;
-        $recordKeys = array_keys($record);
-        $isSequentialRecord = ($recordKeys === range(0, count($record) - 1));
-
-        /*
-         * A legacy record can arrive as an associative wrapper whose label
-         * contains the complete six-field CSV payload. Normalize that form
-         * before any other record handling so the packed payload can never
-         * reach the UI as the resource label.
-         */
-        if (isset($record['label']) && is_string($record['label'])) {
-            $packed = str_getcsv($record['label']);
-            if (count($packed) >= 6 && trim((string)($packed[5] ?? '')) !== '') {
-                $normalized[] = [
-                    'id'=>trim((string)$packed[5]),
-                    'label'=>trim((string)($packed[0] ?? '')),
-                    'username'=>trim((string)($packed[1] ?? '')),
-                    'password'=>trim((string)($packed[2] ?? '')),
-                    'url'=>trim((string)($packed[3] ?? '')),
-                    'notes'=>trim((string)($packed[4] ?? '')),
-                    'created_at'=>$record['created_at'] ?? null,
-                    'updated_at'=>$record['updated_at'] ?? null,
-                    'icon_type'=>$record['icon_type'] ?? null,
-                    'icon_path'=>$record['icon_path'] ?? null,
-                    'icon_source'=>$record['icon_source'] ?? null,
-                    'icon_fetched_at'=>$record['icon_fetched_at'] ?? null,
-                ];
-                continue;
-            }
-        }
 
         if (($record['type'] ?? '') === 'system_config') {
             $normalized[] = $record;
             continue;
         }
 
-        if ($isSequentialRecord && count($record) >= 5) {
-            $normalized[] = [
-                'id'=>trim((string)($record[5] ?? bin2hex(random_bytes(8)))),
-                'label'=>trim((string)($record[0] ?? '')),
-                'username'=>trim((string)($record[1] ?? '')),
-                'password'=>trim((string)($record[2] ?? '')),
-                'url'=>trim((string)($record[3] ?? '')),
-                'notes'=>trim((string)($record[4] ?? '')),
-                'created_at'=>null,'updated_at'=>null,'icon_type'=>null,'icon_path'=>null,'icon_source'=>null,'icon_fetched_at'=>null,
-            ];
+        // A canonical vault record is already associative. Never reinterpret
+        // one of its fields as another record merely because that field is an array.
+        if (array_key_exists('label', $record)) {
+            if (!isset($record['id']) || !is_scalar($record['id']) || trim((string)$record['id']) === '') {
+                $record['id'] = bin2hex(random_bytes(8));
+            }
+            foreach (['label','username','password','url','notes'] as $field) {
+                if (!array_key_exists($field, $record) || is_array($record[$field]) || is_object($record[$field])) {
+                    $record[$field] = '';
+                } else {
+                    $record[$field] = trim((string)$record[$field]);
+                }
+            }
+            $normalized[] = $record;
             continue;
         }
 
-        if (array_key_exists('label', $record)) {
-            if (is_array($record['label']) && count($record['label']) >= 5) {
-                $parts = array_values($record['label']);
-                $normalized[] = [
-                    'id'=>trim((string)($parts[5] ?? $record['id'] ?? bin2hex(random_bytes(8)))),
-                    'label'=>trim((string)($parts[0] ?? '')),
-                    'username'=>trim((string)($parts[1] ?? $record['username'] ?? '')),
-                    'password'=>trim((string)($parts[2] ?? $record['password'] ?? '')),
-                    'url'=>trim((string)($parts[3] ?? $record['url'] ?? '')),
-                    'notes'=>trim((string)($parts[4] ?? $record['notes'] ?? '')),
-                    'created_at'=>$record['created_at'] ?? null,
-                    'updated_at'=>$record['updated_at'] ?? null,
-                    'icon_type'=>$record['icon_type'] ?? null,
-                    'icon_path'=>$record['icon_path'] ?? null,
-                    'icon_source'=>$record['icon_source'] ?? null,
-                    'icon_fetched_at'=>$record['icon_fetched_at'] ?? null,
-                ];
-                continue;
-            }
-
-            $parts = str_getcsv((string)($record['label'] ?? ''));
-            $looksLikePackedRecord = count($parts) >= 6 && trim((string)($parts[5] ?? '')) !== '';
-
-            if ($looksLikePackedRecord) {
-                $normalized[] = [
-                    'id'=>trim((string)$parts[5]),
-                    'label'=>trim((string)($parts[0] ?? '')),
-                    'username'=>trim((string)($parts[1] ?? '')),
-                    'password'=>trim((string)($parts[2] ?? '')),
-                    'url'=>trim((string)($parts[3] ?? '')),
-                    'notes'=>trim((string)($parts[4] ?? '')),
-                    'created_at'=>$record['created_at'] ?? null,
-                    'updated_at'=>$record['updated_at'] ?? null,
-                    'icon_type'=>$record['icon_type'] ?? null,
-                    'icon_path'=>$record['icon_path'] ?? null,
-                    'icon_source'=>$record['icon_source'] ?? null,
-                    'icon_fetched_at'=>$record['icon_fetched_at'] ?? null,
-                ];
-                continue;
-            }
-
-            if (empty($record['id'])) $record['id'] = bin2hex(random_bytes(8));
-            $normalized[] = $record;
+        // Legacy indexed record: [label, username, password, url, notes, id]
+        if (array_keys($record) === range(0, count($record) - 1) && count($record) >= 5) {
+            $normalized[] = [
+                'id' => trim((string)($record[5] ?? bin2hex(random_bytes(8)))),
+                'label' => trim((string)($record[0] ?? '')),
+                'username' => trim((string)($record[1] ?? '')),
+                'password' => trim((string)($record[2] ?? '')),
+                'url' => trim((string)($record[3] ?? '')),
+                'notes' => trim((string)($record[4] ?? '')),
+                'created_at' => null,
+                'updated_at' => null,
+                'icon_type' => null,
+                'icon_path' => null,
+                'icon_source' => null,
+                'icon_fetched_at' => null,
+            ];
         }
+    }
+
+    // Handle the case where the decrypted vault itself is one indexed record.
+    if (!$normalized && array_keys($records) === range(0, count($records) - 1) && count($records) >= 5 && !is_array($records[0] ?? null)) {
+        return [[
+            'id' => trim((string)($records[5] ?? bin2hex(random_bytes(8)))),
+            'label' => trim((string)($records[0] ?? '')),
+            'username' => trim((string)($records[1] ?? '')),
+            'password' => trim((string)($records[2] ?? '')),
+            'url' => trim((string)($records[3] ?? '')),
+            'notes' => trim((string)($records[4] ?? '')),
+            'created_at' => null,
+            'updated_at' => null,
+            'icon_type' => null,
+            'icon_path' => null,
+            'icon_source' => null,
+            'icon_fetched_at' => null,
+        ]];
     }
 
     return array_values($normalized);
