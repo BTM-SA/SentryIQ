@@ -26,22 +26,30 @@ function first_run_base_url(): string
     return 'https://' . $host . ($path === '/' ? '' : $path);
 }
 
+function first_run_log_path(string $dir): string
+{
+    return rtrim($dir, '/') . '/install_debug.log';
+}
+
 function first_run_diag(string $stage, array $details = []): void
 {
-    $path = first_run_data_dir() . '/install_debug.log';
+    $dir = first_run_data_dir();
+    if ($dir === '') return;
+
     $record = [
         'timestamp' => date('c'),
         'stage' => $stage,
         'php_version' => PHP_VERSION,
         'sapi' => PHP_SAPI,
     ];
+
     foreach ($details as $key => $value) {
         if (is_scalar($value) || $value === null) $record[$key] = $value;
     }
+
     $line = json_encode($record, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    if (!is_string($line)) return;
-    if (@file_put_contents($path, $line . PHP_EOL, FILE_APPEND | LOCK_EX) !== false) {
-        @chmod($path, 0600);
+    if (is_string($line) && @file_put_contents(first_run_log_path($dir), $line . PHP_EOL, FILE_APPEND | LOCK_EX) !== false) {
+        @chmod(first_run_log_path($dir), 0600);
     }
 }
 
@@ -52,11 +60,16 @@ function first_run_prepare_dir(string $dir): bool
     if (is_link($dir)) return false;
     if (!is_dir($dir) && !@mkdir($dir, 0700, true)) return false;
     @chmod($dir, 0700);
+    clearstatcache(true, $dir);
     $perms = @fileperms($dir);
     if (!is_dir($dir) || $perms === false || (($perms & 0x01ff) !== 0700)) return false;
     $probe = $dir . '/.sentryiq_probe_' . bin2hex(random_bytes(8));
-    if (@file_put_contents($probe, 'ok', LOCK_EX) !== 2) return false;
+    if (@file_put_contents($probe, 'ok', LOCK_EX) !== 2) {
+        @unlink($probe);
+        return false;
+    }
     @unlink($probe);
+    clearstatcache(true, $dir);
     return true;
 }
 
@@ -73,137 +86,67 @@ function first_run_write_secure_config(string $path, string $username, string $e
     return @file_put_contents($path, $config, LOCK_EX) !== false && @chmod($path, 0600);
 }
 
-function first_run_initialize_vault(string $password, string $dataFile): bool
+function first_run_initialize_vault(string $password, string $dataFile): void
 {
     first_run_diag('VAULT_INITIALIZATION_STARTED', ['data_file' => $dataFile]);
-
-    if (!function_exists('sodium_crypto_pwhash') || !defined('SODIUM_CRYPTO_PWHASH_SALTBYTES')) {
-        first_run_diag('KDF_DEPENDENCY_FAILED', ['reason' => 'sodium_missing']);
-        throw new RuntimeException('sodium_missing');
-    }
-    if (!function_exists('openssl_encrypt') || !in_array('aes-256-gcm', openssl_get_cipher_methods(), true)) {
-        first_run_diag('GCM_DEPENDENCY_FAILED', ['reason' => 'aes_256_gcm_unavailable']);
-        throw new RuntimeException('aes_256_gcm_unavailable');
-    }
+    if (!function_exists('sodium_crypto_pwhash') || !defined('SODIUM_CRYPTO_PWHASH_SALTBYTES')) throw new RuntimeException('sodium_missing');
+    if (!function_exists('openssl_encrypt') || !in_array('aes-256-gcm', openssl_get_cipher_methods(), true)) throw new RuntimeException('aes_256_gcm_unavailable');
 
     $salt = random_bytes(SODIUM_CRYPTO_PWHASH_SALTBYTES);
     $opslimit = 3;
     $memlimit = 32 * 1024 * 1024;
     first_run_diag('KDF_STARTED', ['opslimit' => $opslimit, 'memlimit' => $memlimit]);
     $key = sodium_crypto_pwhash(32, $password, $salt, $opslimit, $memlimit, SODIUM_CRYPTO_PWHASH_ALG_ARGON2ID13);
-    if (!is_string($key) || strlen($key) !== 32) {
-        first_run_diag('KDF_FAILED', ['result_length' => is_string($key) ? strlen($key) : -1]);
-        throw new RuntimeException('kdf_failed');
-    }
+    if (!is_string($key) || strlen($key) !== 32) throw new RuntimeException('kdf_failed');
     first_run_diag('KDF_COMPLETED');
 
-    $kdf = [
-        'name' => 'argon2id13',
-        'opslimit' => $opslimit,
-        'memlimit' => $memlimit,
-        'salt' => base64_encode($salt),
-    ];
-
-    $aad = (string)json_encode([
-        'version' => 2,
-        'kdf' => $kdf,
-        'cipher' => [
-            'name' => 'aes-256-gcm',
-            'nonce_bytes' => 12,
-            'tag_bytes' => 16,
-        ],
-    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
-
-    $records = [[
-        'id' => 'sys_config_node',
-        'type' => 'system_config',
-        'app_username' => $_POST['setup_username'] ?? '',
-        '2fa_email' => $_POST['setup_email'] ?? '',
-        'imap_password' => '',
-    ]];
+    $kdf = ['name' => 'argon2id13', 'opslimit' => $opslimit, 'memlimit' => $memlimit, 'salt' => base64_encode($salt)];
+    $aad = (string)json_encode(['version' => 2, 'kdf' => $kdf, 'cipher' => ['name' => 'aes-256-gcm', 'nonce_bytes' => 12, 'tag_bytes' => 16]], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+    $records = [['id' => 'sys_config_node', 'type' => 'system_config', 'app_username' => $_POST['setup_username'] ?? '', '2fa_email' => $_POST['setup_email'] ?? '', 'imap_password' => '']];
     $plaintext = json_encode($records, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
     $nonce = random_bytes(12);
     $tag = '';
     first_run_diag('GCM_ENCRYPT_STARTED');
     $ciphertext = openssl_encrypt($plaintext, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $nonce, $tag, $aad, 16);
-    if ($ciphertext === false || strlen($tag) !== 16) {
-        $lastError = error_get_last();
-        first_run_diag('GCM_ENCRYPT_FAILED', ['php_error' => is_array($lastError) ? (string)($lastError['message'] ?? '') : '']);
-        throw new RuntimeException('gcm_encrypt_failed');
-    }
+    if ($ciphertext === false || strlen($tag) !== 16) throw new RuntimeException('gcm_encrypt_failed');
     first_run_diag('GCM_ENCRYPT_COMPLETED', ['ciphertext_length' => strlen($ciphertext), 'tag_length' => strlen($tag)]);
 
-    $envelope = [
-        'version' => 2,
-        'kdf' => $kdf,
-        'cipher' => [
-            'name' => 'aes-256-gcm',
-            'nonce_bytes' => 12,
-            'tag_bytes' => 16,
-        ],
-        'aad' => base64_encode($aad),
-        'nonce' => base64_encode($nonce),
-        'tag' => base64_encode($tag),
-        'ciphertext' => base64_encode($ciphertext),
-    ];
-
+    $envelope = ['version' => 2, 'kdf' => $kdf, 'cipher' => ['name' => 'aes-256-gcm', 'nonce_bytes' => 12, 'tag_bytes' => 16], 'aad' => base64_encode($aad), 'nonce' => base64_encode($nonce), 'tag' => base64_encode($tag), 'ciphertext' => base64_encode($ciphertext)];
     $encoded = json_encode($envelope, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
     $tmp = $dataFile . '.tmp-' . bin2hex(random_bytes(12));
-    first_run_diag('VAULT_FILE_WRITE_STARTED');
     $handle = @fopen($tmp, 'xb');
-    if ($handle === false) {
-        $lastError = error_get_last();
-        first_run_diag('VAULT_FILE_WRITE_FAILED', ['reason' => 'temp_create_failed', 'php_error' => is_array($lastError) ? (string)($lastError['message'] ?? '') : '']);
-        throw new RuntimeException('vault_temp_create_failed');
-    }
+    if ($handle === false) throw new RuntimeException('vault_temp_create_failed');
     try {
         @chmod($tmp, 0600);
         if (fwrite($handle, $encoded) !== strlen($encoded)) throw new RuntimeException('vault_write_failed');
         if (function_exists('fflush')) fflush($handle);
         if (function_exists('fsync')) @fsync($handle);
-    } finally {
-        fclose($handle);
-    }
+    } finally { fclose($handle); }
     @chmod($tmp, 0600);
-    if (!@rename($tmp, $dataFile)) {
-        @unlink($tmp);
-        first_run_diag('VAULT_FILE_WRITE_FAILED', ['reason' => 'rename_failed']);
-        throw new RuntimeException('vault_rename_failed');
-    }
+    if (!@rename($tmp, $dataFile)) { @unlink($tmp); throw new RuntimeException('vault_rename_failed'); }
     @chmod($dataFile, 0600);
-    first_run_diag('VAULT_FILE_WRITE_COMPLETED', [
-        'file_exists' => is_file($dataFile),
-        'file_size' => is_file($dataFile) ? filesize($dataFile) : -1,
-        'file_permissions' => is_file($dataFile) ? decoct((int)(fileperms($dataFile) & 0x01ff)) : 'unknown',
-    ]);
-    return true;
+    clearstatcache(true, $dataFile);
+    first_run_diag('VAULT_FILE_WRITE_COMPLETED', ['file_exists' => is_file($dataFile), 'file_size' => is_file($dataFile) ? filesize($dataFile) : -1, 'file_permissions' => is_file($dataFile) ? decoct((int)(fileperms($dataFile) & 0x01ff)) : 'unknown']);
 }
 
-function first_run_verify_written_envelope(string $dataFile): void
+function first_run_runtime_diagnostic(string $password): void
 {
-    first_run_diag('VAULT_ENVELOPE_VERIFY_STARTED');
-    $raw = @file_get_contents($dataFile);
-    if (!is_string($raw) || $raw === '') throw new RuntimeException('vault_file_read_failed');
-    try {
-        $envelope = json_decode($raw, true, 16, JSON_THROW_ON_ERROR);
-    } catch (Throwable $exception) {
-        first_run_diag('VAULT_ENVELOPE_VERIFY_FAILED', ['reason' => 'json_decode_failed', 'exception' => $exception::class]);
-        throw new RuntimeException('vault_envelope_json_failed');
-    }
-    if (!is_array($envelope)) throw new RuntimeException('vault_envelope_invalid');
-    foreach (['version', 'kdf', 'cipher', 'aad', 'nonce', 'tag', 'ciphertext'] as $field) {
-        if (!array_key_exists($field, $envelope)) throw new RuntimeException('vault_envelope_missing_' . $field);
-    }
-    first_run_diag('VAULT_ENVELOPE_VERIFY_COMPLETED', [
-        'version' => $envelope['version'],
-        'kdf_name' => (string)($envelope['kdf']['name'] ?? ''),
-        'kdf_opslimit' => (int)($envelope['kdf']['opslimit'] ?? 0),
-        'kdf_memlimit' => (int)($envelope['kdf']['memlimit'] ?? 0),
-        'cipher_name' => (string)($envelope['cipher']['name'] ?? ''),
-        'ciphertext_b64_length' => strlen((string)$envelope['ciphertext']),
-        'tag_b64_length' => strlen((string)$envelope['tag']),
-        'nonce_b64_length' => strlen((string)$envelope['nonce']),
-    ]);
+    $dir = first_run_data_dir();
+    clearstatcache(true, $dir);
+    clearstatcache(true, $dir . '/passwords.enc');
+    first_run_diag('RUNTIME_DIRECTORY_CHECK', ['exists' => is_dir($dir), 'is_link' => is_link($dir), 'realpath' => realpath($dir) ?: 'false', 'configured_path' => $dir, 'permissions' => is_dir($dir) ? decoct((int)(fileperms($dir) & 0x01ff)) : 'unknown', 'writable' => is_dir($dir) ? is_writable($dir) : false]);
+
+    $parts = vault_read_envelope();
+    if ($parts === false) { first_run_diag('RUNTIME_ENVELOPE_READ_FAILED'); throw new RuntimeException('runtime_envelope_validation_failed'); }
+    first_run_diag('RUNTIME_ENVELOPE_READ_COMPLETED', ['opslimit' => (int)$parts['kdf']['opslimit'], 'memlimit' => (int)$parts['kdf']['memlimit'], 'aad_length' => strlen($parts['aad']), 'ciphertext_length' => strlen($parts['ciphertext']), 'tag_length' => strlen($parts['tag']), 'nonce_length' => strlen($parts['nonce'])]);
+
+    try { $key = vault_derive_key($password, $parts['salt'], (int)$parts['kdf']['opslimit'], (int)$parts['kdf']['memlimit']); }
+    catch (Throwable $exception) { first_run_diag('RUNTIME_KDF_FAILED', ['exception_class' => $exception::class, 'failure' => $exception->getMessage()]); throw new RuntimeException('runtime_kdf_failed'); }
+    first_run_diag('RUNTIME_KDF_COMPLETED');
+
+    $plaintext = openssl_decrypt($parts['ciphertext'], 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $parts['nonce'], $parts['tag'], $parts['aad']);
+    if ($plaintext === false) { first_run_diag('RUNTIME_GCM_DECRYPT_FAILED'); throw new RuntimeException('runtime_gcm_decrypt_failed'); }
+    first_run_diag('RUNTIME_GCM_DECRYPT_COMPLETED', ['plaintext_length' => strlen($plaintext)]);
 }
 
 function first_run_remove_sources(): bool
@@ -246,29 +189,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_first_run'])
         try {
             if (!is_file($engineTarget) && !@copy(__DIR__ . '/private_data/vault_engine.php', $engineTarget)) throw new RuntimeException('runtime_copy_failed');
             if (!is_file($templateTarget) && !@copy(__DIR__ . '/private_data/email_template.php', $templateTarget)) throw new RuntimeException('template_copy_failed');
-            @chmod($engineTarget, 0600);
-            @chmod($templateTarget, 0600);
+            @chmod($engineTarget, 0600); @chmod($templateTarget, 0600);
             first_run_diag('RUNTIME_FILES_READY', ['engine_exists' => is_file($engineTarget), 'template_exists' => is_file($templateTarget)]);
             if (!first_run_write_secure_config($secureConfig, $username, $email, $baseUrl, $directory)) throw new RuntimeException('secure_config_failed');
             first_run_diag('SECURE_CONFIG_WRITTEN', ['config_exists' => is_file($secureConfig)]);
-            first_run_initialize_vault($password, $directory . '/passwords.enc');
-            first_run_verify_written_envelope($directory . '/passwords.enc');
             require_once $engineTarget;
-            first_run_diag('VAULT_RUNTIME_VERIFY_STARTED');
-            if (vault_unlock($password) === false) {
-                first_run_diag('VAULT_RUNTIME_VERIFY_FAILED', ['reason' => 'vault_unlock_returned_false']);
-                throw new RuntimeException('vault_verification_failed');
-            }
+            first_run_initialize_vault($password, $directory . '/passwords.enc');
+            clearstatcache(true, $directory);
+            first_run_runtime_diagnostic($password);
+            if (vault_unlock($password) === false) throw new RuntimeException('vault_verification_failed');
             first_run_diag('VAULT_RUNTIME_VERIFY_COMPLETED');
             if (@file_put_contents($configFile, $pointerConfig, LOCK_EX) === false || !@chmod($configFile, 0600)) throw new RuntimeException('pointer_config_failed');
-            first_run_diag('INSTALL_POINTER_WRITTEN');
             if (!first_run_remove_sources()) throw new RuntimeException('first_run_cleanup_failed');
             first_run_diag('INSTALL_SUCCESS');
-            @unlink(first_run_data_dir() . '/install_debug.log');
-            unset($_SESSION['csrf_token']);
-            @unlink(__FILE__);
-            header('Location: index.php?setup=complete');
-            exit;
+            @unlink(first_run_log_path($directory));
+            unset($_SESSION['csrf_token']); @unlink(__FILE__);
+            header('Location: index.php?setup=complete'); exit;
         } catch (Throwable $exception) {
             first_run_diag('INSTALL_FAILED', ['exception_class' => $exception::class, 'failure' => $exception->getMessage(), 'line' => $exception->getLine()]);
             @unlink($secureConfig);
@@ -279,29 +215,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_first_run'])
 
 $csrf = sentryiq_csrf_token();
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SentryIQ — First Run</title>
-    <link rel="stylesheet" href="pm_style.css">
-</head>
-<body>
-<div class="box">
-    <h2>🛡️ Create Your SentryIQ Vault</h2>
-    <p>Configure the administrator account before using SentryIQ.</p>
-    <?php if ($error !== ''): ?><p class="error"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></p><?php endif; ?>
-    <form method="POST" autocomplete="off">
-        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
-        <div class="form-group"><label>Administrator Username:</label><input type="text" name="setup_username" class="input-field" maxlength="64" required></div>
-        <div class="form-group"><label>2FA Email Address:</label><input type="email" name="setup_email" class="input-field" required></div>
-        <div class="form-group"><label>Secure Storage:</label><input type="text" class="input-field" value="<?php echo htmlspecialchars($directory, ENT_QUOTES, 'UTF-8'); ?>" readonly></div>
-        <div class="form-group"><label>Application HTTPS URL:</label><input type="text" class="input-field" value="<?php echo htmlspecialchars($baseUrl, ENT_QUOTES, 'UTF-8'); ?>" readonly></div>
-        <div class="form-group"><label>Master Vault Password:</label><input type="password" name="setup_password" class="input-field" minlength="12" required></div>
-        <div class="form-group"><label>Confirm Master Vault Password:</label><input type="password" name="setup_password_confirm" class="input-field" minlength="12" required></div>
-        <button type="submit" name="complete_first_run" class="btn btn-primary">Create Secure Vault</button>
-    </form>
-</div>
-</body>
-</html>
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>SentryIQ — First Run</title><link rel="stylesheet" href="pm_style.css"></head>
+<body><div class="box"><h2>🛡️ Create Your SentryIQ Vault</h2><p>Configure the administrator account before using SentryIQ.</p><?php if ($error !== ''): ?><p class="error"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></p><?php endif; ?><form method="POST" autocomplete="off"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>"><div class="form-group"><label>Administrator Username:</label><input type="text" name="setup_username" class="input-field" maxlength="64" required></div><div class="form-group"><label>2FA Email Address:</label><input type="email" name="setup_email" class="input-field" required></div><div class="form-group"><label>Secure Storage:</label><input type="text" class="input-field" value="<?php echo htmlspecialchars($directory, ENT_QUOTES, 'UTF-8'); ?>" readonly></div><div class="form-group"><label>Application HTTPS URL:</label><input type="text" class="input-field" value="<?php echo htmlspecialchars($baseUrl, ENT_QUOTES, 'UTF-8'); ?>" readonly></div><div class="form-group"><label>Master Vault Password:</label><input type="password" name="setup_password" class="input-field" minlength="12" required></div><div class="form-group"><label>Confirm Master Vault Password:</label><input type="password" name="setup_password_confirm" class="input-field" minlength="12" required></div><button type="submit" name="complete_first_run" class="btn btn-primary">Create Secure Vault</button></form></div></body></html>
