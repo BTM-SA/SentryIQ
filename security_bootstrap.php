@@ -12,14 +12,17 @@ function sentryiq_security_bootstrap(): void
         exit('SentryIQ requires HTTPS.');
     }
 
-    ini_set('session.use_strict_mode', '1');
-    ini_set('session.use_only_cookies', '1');
-    ini_set('session.cookie_secure', '1');
-    ini_set('session.cookie_httponly', '1');
-    ini_set('session.cookie_samesite', 'Strict');
-    ini_set('session.cookie_path', '/');
-
+    // Session INI directives and cookie parameters must be configured before
+    // session_start(). Some hosting environments or prepend files may already
+    // have started the session, in which case changing them would emit warnings.
     if (session_status() !== PHP_SESSION_ACTIVE) {
+        ini_set('session.use_strict_mode', '1');
+        ini_set('session.use_only_cookies', '1');
+        ini_set('session.cookie_secure', '1');
+        ini_set('session.cookie_httponly', '1');
+        ini_set('session.cookie_samesite', 'Strict');
+        ini_set('session.cookie_path', '/');
+
         session_set_cookie_params([
             'lifetime' => 0,
             'path' => '/',
