@@ -12,9 +12,6 @@ function sentryiq_security_bootstrap(): void
         exit('SentryIQ requires HTTPS.');
     }
 
-    // Session INI directives and cookie parameters must be configured before
-    // session_start(). Some hosting environments or prepend files may already
-    // have started the session, in which case changing them would emit warnings.
     if (session_status() !== PHP_SESSION_ACTIVE) {
         ini_set('session.use_strict_mode', '1');
         ini_set('session.use_only_cookies', '1');
@@ -130,4 +127,17 @@ function sentryiq_pending_auth_expired(): bool
 {
     $started = (int)($_SESSION['pending_started_at'] ?? 0);
     return $started <= 0 || (time() - $started) > 300;
+}
+
+function cleanup_expired_tokens(): void
+{
+    if (!isset($_SESSION) || !defined('SENTRYIQ_DATA_DIR') || !is_dir(SENTRYIQ_DATA_DIR)) return;
+    foreach (glob(SENTRYIQ_DATA_DIR . '/token_*.json') ?: [] as $file) {
+        if (is_link($file)) continue;
+        $raw = @file_get_contents($file);
+        $token = is_string($raw) ? json_decode($raw, true) : null;
+        if (!is_array($token) || (int)($token['expires'] ?? 0) <= time()) {
+            @unlink($file);
+        }
+    }
 }
