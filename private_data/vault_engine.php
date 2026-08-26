@@ -111,6 +111,25 @@ function normalize_vault_records(array $records): array
         }
 
         if (array_key_exists('label', $record)) {
+            if (is_array($record['label']) && count($record['label']) >= 5) {
+                $parts = array_values($record['label']);
+                $normalized[] = [
+                    'id'=>trim((string)($parts[5] ?? $record['id'] ?? bin2hex(random_bytes(8)))),
+                    'label'=>trim((string)($parts[0] ?? '')),
+                    'username'=>trim((string)($parts[1] ?? $record['username'] ?? '')),
+                    'password'=>trim((string)($parts[2] ?? $record['password'] ?? '')),
+                    'url'=>trim((string)($parts[3] ?? $record['url'] ?? '')),
+                    'notes'=>trim((string)($parts[4] ?? $record['notes'] ?? '')),
+                    'created_at'=>$record['created_at'] ?? null,
+                    'updated_at'=>$record['updated_at'] ?? null,
+                    'icon_type'=>$record['icon_type'] ?? null,
+                    'icon_path'=>$record['icon_path'] ?? null,
+                    'icon_source'=>$record['icon_source'] ?? null,
+                    'icon_fetched_at'=>$record['icon_fetched_at'] ?? null,
+                ];
+                continue;
+            }
+
             $parts = str_getcsv((string)($record['label'] ?? ''));
             $looksLikePackedRecord = count($parts) >= 6 && trim((string)($parts[5] ?? '')) !== '';
 
