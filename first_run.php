@@ -21,14 +21,22 @@ function first_run_validate_directory(string $directory): bool
         if (!@mkdir($directory, 0700, true) || !is_dir($directory)) return false;
     }
 
-    if (is_link($directory) || !is_dir($directory) || !is_writable($directory)) return false;
+    if (is_link($directory) || !is_dir($directory)) return false;
 
-    // Explicitly enforce the required mode after creation because the server umask
-    // may otherwise change the mode requested by mkdir().
-    if (!@chmod($directory, 0700)) return false;
+    // Enforce the final mode explicitly; mkdir() is affected by the process umask.
+    @chmod($directory, 0700);
 
     $perms = @fileperms($directory);
-    if ($perms === false || (($perms & 0x0077) !== 0)) return false;
+    if ($perms === false || (($perms & 0x01ff) !== 0700)) return false;
+
+    // Verify actual write access by creating and removing a temporary file.
+    $probe = $directory . '/.sentryiq_write_test_' . bin2hex(random_bytes(8));
+    $written = @file_put_contents($probe, 'ok', LOCK_EX);
+    if ($written !== 2) {
+        @unlink($probe);
+        return false;
+    }
+    @unlink($probe);
 
     return true;
 }
