@@ -6,8 +6,6 @@ ini_set('session.cookie_samesite', 'Lax');
 session_start();
 date_default_timezone_set('Africa/Johannesburg');
 
-// Always resolve the configured secure storage location. Never hard-code a
-// production user's private_data path here.
 $pointerConfigFile = __DIR__ . '/sentryiq_config.php';
 if (!is_file($pointerConfigFile)) {
     header('Location: index.php?status=error&pane=view');
@@ -26,16 +24,11 @@ if (!isset($_SESSION['master_key'])) {
     exit;
 }
 
-/** Convert every historical record shape into the canonical associative form. */
+/** Convert every historical/intermediate record shape into canonical associative form. */
 function sentryiq_normalize_action_records($records): array {
     if (!is_array($records)) return [];
-
-    // A single legacy record may itself be the top-level numeric array.
     $isList = array_keys($records) === range(0, count($records) - 1);
-    if ($isList && count($records) >= 5 && count($records) <= 6 && !is_array($records[0])) {
-        $records = [$records];
-    }
-
+    if ($isList && count($records) >= 5 && count($records) <= 6 && !is_array($records[0])) $records = [$records];
     $out = [];
     foreach ($records as $item) {
         if (is_string($item)) {
@@ -43,13 +36,11 @@ function sentryiq_normalize_action_records($records): array {
             if (count($parts) >= 5) $item = $parts;
         }
         if (!is_array($item)) continue;
-
         $assoc = array_keys($item) !== range(0, count($item) - 1);
-        if ($assoc && isset($item['type']) && $item['type'] === 'system_config') {
+        if ($assoc && (($item['type'] ?? '') === 'system_config')) {
             $out[] = $item;
             continue;
         }
-
         if (!$assoc && count($item) >= 5) {
             $out[] = [
                 'label' => (string)($item[0] ?? ''),
@@ -61,8 +52,29 @@ function sentryiq_normalize_action_records($records): array {
             ];
             continue;
         }
-
         if ($assoc && isset($item['label'])) {
+            $label = (string)$item['label'];
+            $parts = str_getcsv($label);
+            if (count($parts) >= 5) {
+                $hasSeparateFields = false;
+                foreach (['username','password','url','notes'] as $field) {
+                    if (isset($item[$field]) && (string)$item[$field] !== '') {
+                        $hasSeparateFields = true;
+                        break;
+                    }
+                }
+                if (!$hasSeparateFields) {
+                    $out[] = [
+                        'label' => (string)($parts[0] ?? ''),
+                        'username' => (string)($parts[1] ?? ''),
+                        'password' => (string)($parts[2] ?? ''),
+                        'url' => (string)($parts[3] ?? ''),
+                        'notes' => (string)($parts[4] ?? ''),
+                        'id' => (string)($parts[5] ?? ($item['id'] ?? bin2hex(random_bytes(8)))),
+                    ];
+                    continue;
+                }
+            }
             if (empty($item['id'])) $item['id'] = bin2hex(random_bytes(8));
             $out[] = $item;
         }
@@ -97,7 +109,6 @@ if ($action === 'edit') {
             $passwords[$index]['password'] = $password;
             $passwords[$index]['url'] = $url;
             $passwords[$index]['notes'] = $notes;
-
             if ($url !== $oldUrl) {
                 if (!empty($item['icon_path']) && is_file($item['icon_path'])) @unlink($item['icon_path']);
                 $icon = cache_vault_icon($url, $entryId);
@@ -110,7 +121,6 @@ if ($action === 'edit') {
             break;
         }
     }
-
     if ($found && save_passwords($passwords)) {
         log_security_event('VAULT_RECORD_UPDATED', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown', ['entry_id' => $entryId]);
         header('Location: index.php?status=updated&pane=view');
@@ -129,7 +139,6 @@ if ($action === 'delete') {
         unset($passwords[$index]);
         break;
     }
-
     if ($found && save_passwords(array_values($passwords))) {
         log_security_event('VAULT_RECORD_DELETED', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown', ['entry_id' => $entryId]);
         header('Location: index.php?status=deleted&pane=view');
@@ -138,6 +147,5 @@ if ($action === 'delete') {
     header('Location: index.php?status=error&pane=view');
     exit;
 }
-
 header('Location: index.php?status=error&pane=view');
 exit;
