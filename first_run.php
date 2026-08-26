@@ -11,6 +11,15 @@ if (is_file($configFile)) {
     exit('Not found.');
 }
 
+function first_run_detect_data_directory(): string
+{
+    // SentryIQ is normally installed below the public web root, for example:
+    // /home/account/public_html/pass
+    // Store secure runtime data beside the web root:
+    // /home/account/private_data
+    return rtrim(dirname(dirname(__DIR__)), '/') . '/private_data';
+}
+
 function first_run_validate_directory(string $directory): bool
 {
     if ($directory === '' || !str_starts_with($directory, '/')) return false;
@@ -64,6 +73,7 @@ function first_run_remove_reference_files(): bool
 }
 
 $error = '';
+$directory = first_run_detect_data_directory();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_first_run'])) {
     sentryiq_require_csrf();
@@ -71,7 +81,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_first_run'])
     $username = trim((string)($_POST['setup_username'] ?? ''));
     $email = trim((string)($_POST['setup_email'] ?? ''));
     $baseUrl = rtrim(trim((string)($_POST['setup_base_url'] ?? '')), '/');
-    $directory = rtrim(trim((string)($_POST['setup_directory'] ?? '')), '/');
     $password = (string)($_POST['setup_password'] ?? '');
     $confirm = (string)($_POST['setup_password_confirm'] ?? '');
     $parts = parse_url($baseUrl);
@@ -79,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_first_run'])
     if (!preg_match('/^[A-Za-z0-9._-]{2,64}$/', $username)) $error = 'Please enter a valid administrator username.';
     elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) $error = 'Please enter a valid 2FA email address.';
     elseif (!filter_var($baseUrl, FILTER_VALIDATE_URL) || !is_array($parts) || strtolower((string)($parts['scheme'] ?? '')) !== 'https' || empty($parts['host']) || isset($parts['user']) || isset($parts['pass'])) $error = 'The application URL must be a valid HTTPS URL.';
-    elseif (!first_run_validate_directory($directory)) $error = 'Secure storage must be an application-owned 0700 directory outside the web root.';
+    elseif (!first_run_validate_directory($directory)) $error = 'SentryIQ could not create its secure storage directory.';
     elseif (strlen($password) < 12) $error = 'The master vault password must be at least 12 characters long.';
     elseif ($password !== $confirm) $error = 'The master vault passwords do not match.';
     elseif (!function_exists('sodium_crypto_pwhash') || !defined('SODIUM_CRYPTO_PWHASH_SALTBYTES')) $error = 'SentryIQ requires the PHP Sodium extension for encrypted vault initialization.';
@@ -106,7 +115,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_first_run'])
                 'type' => 'system_config',
                 'app_username' => $username,
                 '2fa_email' => $email,
-                'base_url' => $baseUrl,
                 'imap_password' => '',
             ]];
 
@@ -157,7 +165,7 @@ $csrf = sentryiq_csrf_token();
         <div class="form-group"><label>Administrator Username:</label><input type="text" name="setup_username" class="input-field" maxlength="64" required></div>
         <div class="form-group"><label>2FA Email Address:</label><input type="email" name="setup_email" class="input-field" required></div>
         <div class="form-group"><label>Application HTTPS URL:</label><input type="url" name="setup_base_url" class="input-field" placeholder="https://vault.example.com" required><small style="display:block;margin-top:6px;color:#777;">This trusted URL is used for security-sensitive email links.</small></div>
-        <div class="form-group"><label>Secure Storage Directory:</label><input type="text" name="setup_directory" class="input-field" placeholder="/home/username/private_data" required><small style="display:block;margin-top:6px;color:#777;">Must be outside the public web root.</small></div>
+        <div class="form-group"><label>Secure Storage Directory:</label><input type="text" class="input-field" value="<?php echo htmlspecialchars($directory, ENT_QUOTES, 'UTF-8'); ?>" readonly><small style="display:block;margin-top:6px;color:#777;">Detected automatically outside the public web root. You can change it later in System Configuration.</small></div>
         <div class="form-group"><label>Master Vault Password:</label><input type="password" name="setup_password" class="input-field" minlength="12" required></div>
         <div class="form-group"><label>Confirm Master Vault Password:</label><input type="password" name="setup_password_confirm" class="input-field" minlength="12" required></div>
         <button type="submit" name="complete_first_run" class="btn btn-primary">Create Secure Vault</button>
