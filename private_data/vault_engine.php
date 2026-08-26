@@ -92,7 +92,7 @@ function normalize_vault_records(array $records): array
         $recordKeys = array_keys($record);
         $isSequentialRecord = ($recordKeys === range(0, count($record) - 1));
 
-        if (array_key_exists('type', $record)) {
+        if (($record['type'] ?? '') === 'system_config') {
             $normalized[] = $record;
             continue;
         }
@@ -112,15 +112,11 @@ function normalize_vault_records(array $records): array
 
         if (array_key_exists('label', $record)) {
             $parts = str_getcsv((string)($record['label'] ?? ''));
-            $hasWrappedFields = count($parts) >= 5
-                && (string)($record['username'] ?? '') === ''
-                && (string)($record['password'] ?? '') === ''
-                && (string)($record['url'] ?? '') === ''
-                && (string)($record['notes'] ?? '') === '';
+            $looksLikePackedRecord = count($parts) >= 6 && trim((string)($parts[5] ?? '')) !== '';
 
-            if ($hasWrappedFields) {
+            if ($looksLikePackedRecord) {
                 $normalized[] = [
-                    'id'=>trim((string)($parts[5] ?? ($record['id'] ?? bin2hex(random_bytes(8))))),
+                    'id'=>trim((string)$parts[5]),
                     'label'=>trim((string)($parts[0] ?? '')),
                     'username'=>trim((string)($parts[1] ?? '')),
                     'password'=>trim((string)($parts[2] ?? '')),
@@ -141,7 +137,7 @@ function normalize_vault_records(array $records): array
         }
     }
 
-    return $normalized;
+    return array_values($normalized);
 }
 
 function load_passwords(?string $explicitKey = null): array|bool
