@@ -19,15 +19,13 @@ function first_run_validate_directory(string $directory): bool
 
     if (!is_dir($directory)) {
         if (!@mkdir($directory, 0700, true)) return false;
-        if (!@chmod($directory, 0700)) return false;
+        @chmod($directory, 0700);
     } else {
-        if (!@chmod($directory, 0700)) return false;
+        if (!is_writable($directory)) return false;
+        @chmod($directory, 0700);
     }
 
-    if (!is_dir($directory) || !is_writable($directory) || is_link($directory)) return false;
-
-    $real = realpath($directory);
-    if ($real === false || rtrim($real, '/') !== rtrim($directory, '/')) return false;
+    if (!is_dir($directory) || is_link($directory) || !is_writable($directory)) return false;
 
     $perms = @fileperms($directory);
     if ($perms === false || (($perms & 0x0077) !== 0)) return false;
