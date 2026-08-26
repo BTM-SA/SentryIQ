@@ -62,11 +62,7 @@ function read_security_log(): array
     return $events;
 }
 
-/**
- * Convert every historical/intermediate vault record into one canonical associative shape.
- * Supported forms: CSV strings, numeric arrays, canonical associative records, and the
- * malformed intermediate form where the complete CSV row was stored inside label.
- */
+/** Convert every historical/intermediate vault record into one canonical associative shape. */
 function normalize_vault_records(array $records): array
 {
     $normalized = [];
@@ -156,7 +152,7 @@ function load_passwords(?string $explicitKey = null): array|bool
     if (empty($raw)) return [];
     $payload = json_decode($raw, true);
     if (!is_array($payload) || !isset($payload['ciphertext'],$payload['iv'],$payload['tag'])) return false;
-    $decrypted = openssl_decrypt('aes-256-gcm' ? base64_decode($payload['ciphertext']) : '', 'aes-256-gcm', $masterKey, OPENSSL_RAW_DATA, base64_decode($payload['iv']), base64_decode($payload['tag']));
+    $decrypted = openssl_decrypt(base64_decode($payload['ciphertext']), 'aes-256-gcm', $masterKey, OPENSSL_RAW_DATA, base64_decode($payload['iv']), base64_decode($payload['tag']));
     if ($decrypted === false) return false;
     $records = json_decode($decrypted, true);
     if (!is_array($records)) return [];
