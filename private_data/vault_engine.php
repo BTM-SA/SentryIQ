@@ -26,7 +26,7 @@ define('TWO_FA_EMAIL', trim((string)($config['two_fa_email'] ?? '')));
 define('TWO_FA_TOKEN_LIFETIME', 300);
 define('SENTRYIQ_VAULT_VERSION', 2);
 define('SENTRYIQ_KDF_OPSLIMIT', 3);
-define('SENTRYIQ_KDF_MEMLIMIT', 64 * 1024 * 1024);
+define('SENTRYIQ_KDF_MEMLIMIT', 32 * 1024 * 1024);
 define('SENTRYIQ_GCM_NONCE_BYTES', 12);
 define('SENTRYIQ_GCM_TAG_BYTES', 16);
 
@@ -220,7 +220,11 @@ function vault_read_envelope(): array|false
     $raw = @file_get_contents(DATA_FILE);
     if (!is_string($raw) || $raw === '' || strlen($raw) > 32 * 1024 * 1024) return false;
 
-    $envelope = json_decode($raw, true, 16, JSON_THROW_ON_ERROR);
+    try {
+        $envelope = json_decode($raw, true, 16, JSON_THROW_ON_ERROR);
+    } catch (Throwable) {
+        return false;
+    }
     if (!is_array($envelope)) return false;
     if (($envelope['version'] ?? null) !== SENTRYIQ_VAULT_VERSION) return false;
     if (($envelope['kdf']['name'] ?? '') !== 'argon2id13') return false;
@@ -268,7 +272,8 @@ function vault_unlock(string $password): array|false
             (int)$parts['kdf']['opslimit'],
             (int)$parts['kdf']['memlimit']
         );
-    } catch (Throwable) {
+    } catch (Throwable $exception) {
+        error_log('SentryIQ vault unlock KDF failure: ' . $exception->getMessage());
         return false;
     }
 
@@ -303,7 +308,8 @@ function vault_initialize(string $password, array $records = []): bool
         $key = vault_derive_key($password, $salt, SENTRYIQ_KDF_OPSLIMIT, SENTRYIQ_KDF_MEMLIMIT);
         $kdf = vault_kdf_metadata($salt, SENTRYIQ_KDF_OPSLIMIT, SENTRYIQ_KDF_MEMLIMIT);
         return vault_write_encrypted_records(normalize_vault_records($records), $key, $kdf);
-    } catch (Throwable) {
+    } catch (Throwable $exception) {
+        error_log('SentryIQ vault initialization failure: ' . $exception::class . ': ' . $exception->getMessage());
         return false;
     }
 }
@@ -361,7 +367,7 @@ function vault_write_encrypted_records(array $dataMatrix, string $masterKey, arr
         fclose($handle);
     }
 
-    if (!@chmod($tmp, 0600)) return false;
+    @chmod($tmp, 0600);
     if (!@rename($tmp, DATA_FILE)) {
         @unlink($tmp);
         return false;
@@ -394,16 +400,3 @@ function load_passwords(?string $explicitKey = null): array|bool
 
     return normalize_vault_records($records);
 }
-
-function save_passwords(array $dataMatrix): bool
-{
-    $masterKey = $_SESSION['master_key'] ?? null;
-    if (!is_string($masterKey) || strlen($masterKey) !== 32) return false;
-
-    $parts = vault_read_envelope();
-    if ($parts === false) return false;
-
-    return vault_write_encrypted_records($dataMatrix, $masterKey, $parts['kdf']);
-}
-
-cleanup_expired_tokens();
