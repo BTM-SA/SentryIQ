@@ -30,6 +30,12 @@ function sentryiq_security_bootstrap(): void
         session_start();
     }
 
+    set_exception_handler(static function (Throwable $exception): void {
+        error_log('SentryIQ runtime failure: ' . $exception::class . ': ' . $exception->getMessage());
+        http_response_code(500);
+        exit('SentryIQ encountered a security failure.');
+    });
+
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
     header('Pragma: no-cache');
     header('Expires: 0');
