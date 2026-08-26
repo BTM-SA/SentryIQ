@@ -13,11 +13,21 @@ if (is_file($configFile)) {
 
 function first_run_detect_data_directory(): string
 {
-    // SentryIQ is normally installed below the public web root, for example:
-    // /home/account/public_html/pass
-    // Store secure runtime data beside the web root:
-    // /home/account/private_data
     return rtrim(dirname(dirname(__DIR__)), '/') . '/private_data';
+}
+
+function first_run_detect_base_url(): string
+{
+    $serverName = trim((string)($_SERVER['SERVER_NAME'] ?? ''));
+    if ($serverName === '' || !preg_match('/^[A-Za-z0-9.-]+$/', $serverName)) return '';
+
+    if (PHP_SAPI !== 'cli' && (($_SERVER['HTTPS'] ?? '') !== 'on' && (string)($_SERVER['SERVER_PORT'] ?? '') !== '443')) {
+        return '';
+    }
+
+    $scriptPath = str_replace('\\', '/', (string)($_SERVER['SCRIPT_NAME'] ?? ''));
+    $applicationPath = rtrim(str_replace('\\', '/', dirname($scriptPath)), '/');
+    return 'https://' . $serverName . ($applicationPath === '/' ? '' : $applicationPath);
 }
 
 function first_run_validate_directory(string $directory): bool
@@ -64,30 +74,31 @@ function first_run_remove_reference_files(): bool
 {
     $directory = __DIR__ . '/private_data';
     if (!is_dir($directory)) return true;
+
     foreach (['vault_engine.php', 'email_template.php'] as $name) {
         $path = $directory . '/' . $name;
         if (is_file($path) && !@unlink($path)) return false;
     }
+
     $remaining = array_values(array_diff(@scandir($directory) ?: [], ['.', '..']));
     return count($remaining) === 0 ? @rmdir($directory) : false;
 }
 
 $error = '';
 $directory = first_run_detect_data_directory();
+$baseUrl = first_run_detect_base_url();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_first_run'])) {
     sentryiq_require_csrf();
 
     $username = trim((string)($_POST['setup_username'] ?? ''));
     $email = trim((string)($_POST['setup_email'] ?? ''));
-    $baseUrl = rtrim(trim((string)($_POST['setup_base_url'] ?? '')), '/');
     $password = (string)($_POST['setup_password'] ?? '');
     $confirm = (string)($_POST['setup_password_confirm'] ?? '');
-    $parts = parse_url($baseUrl);
 
     if (!preg_match('/^[A-Za-z0-9._-]{2,64}$/', $username)) $error = 'Please enter a valid administrator username.';
     elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) $error = 'Please enter a valid 2FA email address.';
-    elseif (!filter_var($baseUrl, FILTER_VALIDATE_URL) || !is_array($parts) || strtolower((string)($parts['scheme'] ?? '')) !== 'https' || empty($parts['host']) || isset($parts['user']) || isset($parts['pass'])) $error = 'The application URL must be a valid HTTPS URL.';
+    elseif ($baseUrl === '') $error = 'SentryIQ could not determine its HTTPS application URL.';
     elseif (!first_run_validate_directory($directory)) $error = 'SentryIQ could not create its secure storage directory.';
     elseif (strlen($password) < 12) $error = 'The master vault password must be at least 12 characters long.';
     elseif ($password !== $confirm) $error = 'The master vault passwords do not match.';
@@ -115,6 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_first_run'])
                 'type' => 'system_config',
                 'app_username' => $username,
                 '2fa_email' => $email,
+                'base_url' => $baseUrl,
                 'imap_password' => '',
             ]];
 
@@ -158,14 +170,14 @@ $csrf = sentryiq_csrf_token();
 <body>
 <div class="box">
     <h2>🛡️ Create Your SentryIQ Vault</h2>
-    <p>Configure the administrator account and secure storage location before using SentryIQ.</p>
+    <p>Configure the administrator account before using SentryIQ.</p>
     <?php if ($error !== ''): ?><p class="error"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></p><?php endif; ?>
     <form method="POST" autocomplete="off">
         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
         <div class="form-group"><label>Administrator Username:</label><input type="text" name="setup_username" class="input-field" maxlength="64" required></div>
         <div class="form-group"><label>2FA Email Address:</label><input type="email" name="setup_email" class="input-field" required></div>
-        <div class="form-group"><label>Application HTTPS URL:</label><input type="url" name="setup_base_url" class="input-field" placeholder="https://vault.example.com" required><small style="display:block;margin-top:6px;color:#777;">This trusted URL is used for security-sensitive email links.</small></div>
-        <div class="form-group"><label>Secure Storage Directory:</label><input type="text" class="input-field" value="<?php echo htmlspecialchars($directory, ENT_QUOTES, 'UTF-8'); ?>" readonly><small style="display:block;margin-top:6px;color:#777;">Detected automatically outside the public web root. You can change it later in System Configuration.</small></div>
+        <div class="form-group"><label>Secure Storage:</label><input type="text" class="input-field" value="<?php echo htmlspecialchars($directory, ENT_QUOTES, 'UTF-8'); ?>" readonly><small style="display:block;margin-top:6px;color:#777;">Detected automatically outside the public web root.</small></div>
+        <div class="form-group"><label>Application HTTPS URL:</label><input type="text" class="input-field" value="<?php echo htmlspecialchars($baseUrl, ENT_QUOTES, 'UTF-8'); ?>" readonly><small style="display:block;margin-top:6px;color:#777;">Detected automatically from the current HTTPS application. You can change it later in System Configuration.</small></div>
         <div class="form-group"><label>Master Vault Password:</label><input type="password" name="setup_password" class="input-field" minlength="12" required></div>
         <div class="form-group"><label>Confirm Master Vault Password:</label><input type="password" name="setup_password_confirm" class="input-field" minlength="12" required></div>
         <button type="submit" name="complete_first_run" class="btn btn-primary">Create Secure Vault</button>
