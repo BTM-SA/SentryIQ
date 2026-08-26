@@ -23,13 +23,11 @@ function first_run_validate_directory(string $directory): bool
 
     if (is_link($directory) || !is_dir($directory)) return false;
 
-    // Enforce the final mode explicitly; mkdir() is affected by the process umask.
     @chmod($directory, 0700);
 
     $perms = @fileperms($directory);
     if ($perms === false || (($perms & 0x01ff) !== 0700)) return false;
 
-    // Verify actual write access by creating and removing a temporary file.
     $probe = $directory . '/.sentryiq_write_test_' . bin2hex(random_bytes(8));
     $written = @file_put_contents($probe, 'ok', LOCK_EX);
     if ($written !== 2) {
@@ -85,6 +83,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_first_run'])
     elseif (!first_run_validate_directory($directory)) $error = 'Secure storage must be an application-owned 0700 directory outside the web root.';
     elseif (strlen($password) < 12) $error = 'The master vault password must be at least 12 characters long.';
     elseif ($password !== $confirm) $error = 'The master vault passwords do not match.';
+    elseif (!function_exists('sodium_crypto_pwhash') || !defined('SODIUM_CRYPTO_PWHASH_SALTBYTES')) $error = 'SentryIQ requires the PHP Sodium extension for encrypted vault initialization.';
+    elseif (!function_exists('openssl_encrypt')) $error = 'SentryIQ requires OpenSSL for AES-256-GCM vault encryption.';
     elseif (!is_file(__DIR__ . '/private_data/vault_engine.php') || !is_file(__DIR__ . '/private_data/email_template.php')) $error = 'SentryIQ installation files are incomplete.';
     else {
         $engineSource = __DIR__ . '/private_data/vault_engine.php';
