@@ -24,67 +24,9 @@ if (!isset($_SESSION['master_key'])) {
     exit;
 }
 
-/** Convert every historical/intermediate record shape into canonical associative form. */
-function sentryiq_normalize_action_records($records): array {
-    if (!is_array($records)) return [];
-    $isList = array_keys($records) === range(0, count($records) - 1);
-    if ($isList && count($records) >= 5 && count($records) <= 6 && !is_array($records[0])) $records = [$records];
-    $out = [];
-    foreach ($records as $item) {
-        if (is_string($item)) {
-            $parts = str_getcsv($item);
-            if (count($parts) >= 5) $item = $parts;
-        }
-        if (!is_array($item)) continue;
-        $assoc = array_keys($item) !== range(0, count($item) - 1);
-        if ($assoc && (($item['type'] ?? '') === 'system_config')) {
-            $out[] = $item;
-            continue;
-        }
-        if (!$assoc && count($item) >= 5) {
-            $out[] = [
-                'label' => (string)($item[0] ?? ''),
-                'username' => (string)($item[1] ?? ''),
-                'password' => (string)($item[2] ?? ''),
-                'url' => (string)($item[3] ?? ''),
-                'notes' => (string)($item[4] ?? ''),
-                'id' => (string)($item[5] ?? bin2hex(random_bytes(8))),
-            ];
-            continue;
-        }
-        if ($assoc && isset($item['label'])) {
-            $label = (string)$item['label'];
-            $parts = str_getcsv($label);
-            if (count($parts) >= 5) {
-                $hasSeparateFields = false;
-                foreach (['username','password','url','notes'] as $field) {
-                    if (isset($item[$field]) && (string)$item[$field] !== '') {
-                        $hasSeparateFields = true;
-                        break;
-                    }
-                }
-                if (!$hasSeparateFields) {
-                    $out[] = [
-                        'label' => (string)($parts[0] ?? ''),
-                        'username' => (string)($parts[1] ?? ''),
-                        'password' => (string)($parts[2] ?? ''),
-                        'url' => (string)($parts[3] ?? ''),
-                        'notes' => (string)($parts[4] ?? ''),
-                        'id' => (string)($parts[5] ?? ($item['id'] ?? bin2hex(random_bytes(8)))),
-                    ];
-                    continue;
-                }
-            }
-            if (empty($item['id'])) $item['id'] = bin2hex(random_bytes(8));
-            $out[] = $item;
-        }
-    }
-    return $out;
-}
-
 $action = $_POST['action'] ?? '';
 $entryId = trim((string)($_POST['entry_id'] ?? ''));
-$passwords = sentryiq_normalize_action_records(load_passwords());
+$passwords = normalize_vault_records(load_passwords());
 
 if (!is_array($passwords) || $entryId === '') {
     header('Location: index.php?status=error&pane=view');
