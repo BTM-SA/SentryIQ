@@ -22,7 +22,6 @@ function first_run_validate_directory(string $directory): bool
     }
 
     if (is_link($directory) || !is_dir($directory)) return false;
-
     @chmod($directory, 0700);
 
     $perms = @fileperms($directory);
@@ -112,8 +111,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_first_run'])
             ]];
 
             if (!vault_initialize($password, $systemRecord)) {
+                $failureCode = function_exists('sentryiq_vault_last_error') ? sentryiq_vault_last_error() : 'unknown_failure';
                 @unlink($secureConfig);
-                $error = 'SentryIQ could not initialize the encrypted vault.';
+                $error = 'SentryIQ could not initialize the encrypted vault. [' . htmlspecialchars($failureCode, ENT_QUOTES, 'UTF-8') . ']';
             } else {
                 $verified = vault_unlock($password);
                 if ($verified === false) {
