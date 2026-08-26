@@ -2,46 +2,54 @@
 
 declare(strict_types=1);
 
-ini_set('session.cookie_httponly', '1');
-ini_set('session.cookie_samesite', 'Strict');
-session_start();
+require_once __DIR__ . '/security_bootstrap.php';
+sentryiq_security_bootstrap();
+sentryiq_require_auth();
 
-if (!isset($_SESSION['master_key'])) {
-    http_response_code(403);
+$configFile = __DIR__ . '/sentryiq_config.php';
+$config = is_file($configFile) ? require $configFile : [];
+$dataDir = is_array($config) ? rtrim((string)($config['data_dir'] ?? ''), '/') : '';
+if ($dataDir === '' || !is_file($dataDir . '/vault_engine.php')) {
+    http_response_code(503);
     exit;
 }
-
-require_once '/home/bicheveb/private_data/vault_engine.php';
+require_once $dataDir . '/vault_engine.php';
 
 $id = trim((string)($_GET['id'] ?? ''));
-if ($id === '') {
+if ($id === '' || !preg_match('/^[a-f0-9]{32}$/i', $id)) {
     http_response_code(404);
     exit;
 }
 
 $passwords = load_passwords();
-foreach ($passwords as $entry) {
-    if (($entry['id'] ?? '') !== $id) {
-        continue;
-    }
+if (!is_array($passwords)) {
+    http_response_code(404);
+    exit;
+}
 
-    $path = $entry['icon_path'] ?? '';
-    if ($path === '' || !is_file($path) || !is_readable($path)) {
+foreach ($passwords as $entry) {
+    if (($entry['id'] ?? '') !== $id) continue;
+
+    $path = (string)($entry['icon_path'] ?? '');
+    $iconRoot = realpath(SENTRYIQ_DATA_DIR . '/vault_icons');
+    $realPath = is_file($path) ? realpath($path) : false;
+    if ($iconRoot === false || $realPath === false || !str_starts_with($realPath, rtrim($iconRoot, '/') . '/') || !is_readable($realPath)) {
         http_response_code(404);
         exit;
     }
 
-    $mime = mime_content_type($path) ?: 'application/octet-stream';
-    if (!str_starts_with(strtolower($mime), 'image/')) {
+    $mime = mime_content_type($realPath) ?: 'application/octet-stream';
+    $allowed = ['image/png','image/jpeg','image/gif','image/webp','image/avif','image/x-icon','image/vnd.microsoft.icon'];
+    if (!in_array(strtolower($mime), $allowed, true)) {
         http_response_code(404);
         exit;
     }
 
     header('Content-Type: ' . $mime);
-    header('Content-Length: ' . (string)filesize($path));
+    header('Content-Length: ' . (string)filesize($realPath));
     header('Cache-Control: private, max-age=86400');
     header('X-Content-Type-Options: nosniff');
-    readfile($path);
+    readfile($realPath);
     exit;
 }
 
