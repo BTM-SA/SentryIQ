@@ -92,6 +92,33 @@ function normalize_vault_records(array $records): array
         $recordKeys = array_keys($record);
         $isSequentialRecord = ($recordKeys === range(0, count($record) - 1));
 
+        /*
+         * A legacy record can arrive as an associative wrapper whose label
+         * contains the complete six-field CSV payload. Normalize that form
+         * before any other record handling so the packed payload can never
+         * reach the UI as the resource label.
+         */
+        if (isset($record['label']) && is_string($record['label'])) {
+            $packed = str_getcsv($record['label']);
+            if (count($packed) >= 6 && trim((string)($packed[5] ?? '')) !== '') {
+                $normalized[] = [
+                    'id'=>trim((string)$packed[5]),
+                    'label'=>trim((string)($packed[0] ?? '')),
+                    'username'=>trim((string)($packed[1] ?? '')),
+                    'password'=>trim((string)($packed[2] ?? '')),
+                    'url'=>trim((string)($packed[3] ?? '')),
+                    'notes'=>trim((string)($packed[4] ?? '')),
+                    'created_at'=>$record['created_at'] ?? null,
+                    'updated_at'=>$record['updated_at'] ?? null,
+                    'icon_type'=>$record['icon_type'] ?? null,
+                    'icon_path'=>$record['icon_path'] ?? null,
+                    'icon_source'=>$record['icon_source'] ?? null,
+                    'icon_fetched_at'=>$record['icon_fetched_at'] ?? null,
+                ];
+                continue;
+            }
+        }
+
         if (($record['type'] ?? '') === 'system_config') {
             $normalized[] = $record;
             continue;
