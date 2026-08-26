@@ -18,14 +18,14 @@ function first_run_validate_directory(string $directory): bool
     if (is_link($directory)) return false;
 
     if (!is_dir($directory)) {
-        if (!@mkdir($directory, 0700, true)) return false;
-        @chmod($directory, 0700);
-    } else {
-        if (!is_writable($directory)) return false;
-        @chmod($directory, 0700);
+        if (!@mkdir($directory, 0700, true) || !is_dir($directory)) return false;
     }
 
-    if (!is_dir($directory) || is_link($directory) || !is_writable($directory)) return false;
+    if (is_link($directory) || !is_dir($directory) || !is_writable($directory)) return false;
+
+    // Explicitly enforce the required mode after creation because the server umask
+    // may otherwise change the mode requested by mkdir().
+    if (!@chmod($directory, 0700)) return false;
 
     $perms = @fileperms($directory);
     if ($perms === false || (($perms & 0x0077) !== 0)) return false;
