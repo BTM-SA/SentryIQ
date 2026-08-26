@@ -51,13 +51,13 @@ if ($action === 'edit') {
             $passwords[$index]['password'] = $password;
             $passwords[$index]['url'] = $url;
             $passwords[$index]['notes'] = $notes;
-            if ($url !== $oldUrl) {
+            if ($url !== $oldUrl && function_exists('cache_vault_icon')) {
                 if (!empty($item['icon_path']) && is_file($item['icon_path'])) @unlink($item['icon_path']);
                 $icon = cache_vault_icon($url, $entryId);
-                $passwords[$index]['icon_type'] = $icon['icon_type'];
-                $passwords[$index]['icon_path'] = $icon['icon_path'];
-                $passwords[$index]['icon_source'] = $icon['icon_source'];
-                $passwords[$index]['icon_fetched_at'] = $icon['icon_fetched_at'];
+                $passwords[$index]['icon_type'] = $icon['icon_type'] ?? null;
+                $passwords[$index]['icon_path'] = $icon['icon_path'] ?? null;
+                $passwords[$index]['icon_source'] = $icon['icon_source'] ?? null;
+                $passwords[$index]['icon_fetched_at'] = $icon['icon_fetched_at'] ?? null;
             }
             $passwords[$index]['updated_at'] = date('Y-m-d H:i:s');
             break;
