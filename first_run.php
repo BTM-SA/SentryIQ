@@ -20,11 +20,14 @@ function first_run_validate_directory(string $directory): bool
     if (!is_dir($directory) || !is_writable($directory) || is_link($directory)) return false;
     $real = realpath($directory);
     if ($real === false || rtrim($real, '/') !== rtrim($directory, '/')) return false;
+
+    // The installer creates the final storage directory itself. Verify the
+    // resulting permissions, but do not require PHP's effective UID to match
+    // the parent account UID; shared-hosting PHP workers commonly run under
+    // an account-specific execution context with different reporting semantics.
     $perms = @fileperms($directory);
     if ($perms === false || (($perms & 0x0077) !== 0)) return false;
-    if (function_exists('posix_geteuid')) {
-        if (@fileowner($directory) !== @posix_geteuid()) return false;
-    }
+
     return true;
 }
 
@@ -81,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_first_run'])
         $secureConfig = $directory . '/sentryiq_config.php';
         $pointerConfig = "<?php\nreturn [\n    'data_dir' => " . var_export($directory, true) . ",\n    'base_url' => " . var_export($baseUrl, true) . ",\n];\n";
 
-        if (!@copy($engineSource, $engineTarget) || !@copy($templateSource, $templateTarget)) {
+        if ((!is_file($engineTarget) && !@copy($engineSource, $engineTarget)) || (!is_file($templateTarget) && !@copy($templateSource, $templateTarget))) {
             $error = 'SentryIQ could not create its secure runtime files.';
         } elseif (!@chmod($engineTarget, 0600) || !@chmod($templateTarget, 0600)) {
             $error = 'SentryIQ could not secure its runtime files.';
