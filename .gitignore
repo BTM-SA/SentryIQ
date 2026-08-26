@@ -1,0 +1,14 @@
+.DS_Store
+*.log
+*.tmp
+*.bak
+*.swp
+.env
+sentryiq_config.php
+private_data/sentryiq_config.php
+private_data/passwords.enc
+private_data/security_audit.log
+private_data/token_*.json
+private_data/consumed_*.token
+private_data/auth_throttle.json
+private_data/vault_icons/
