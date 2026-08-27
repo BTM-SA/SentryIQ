@@ -57,7 +57,7 @@ function sentryiq_is_trusted_data_directory(?string $directory = null): bool
     if ($perms === false) {
         throw new RuntimeException('trusted_directory:fileperms_failed');
     }
-    if (($perms & 0x0077) !== 0) {
+    if (($perms & 0077) !== 0) {
         throw new RuntimeException('trusted_directory:permissions_not_private');
     }
 
