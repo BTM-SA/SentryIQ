@@ -1,5 +1,7 @@
 /* SentryIQ Branding */
 .sentryiq-brand-logo { display:block; width:160px; height:160px; max-width:100%; object-fit:contain; margin:0 auto 18px; }
+.sentryiq-vault-brand { display:flex; align-items:center; gap:10px; margin:0; }
+.sentryiq-vault-logo { width:48px; height:48px; object-fit:contain; display:block; }
 
 /* Base Core Typography */
 * { box-sizing: border-box; }
@@ -58,6 +60,9 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
     body { margin: 0; padding: 10px; }
     .box { width: 100%; max-width: none; padding: 16px; border-radius: 6px; }
     .sentryiq-brand-logo { width:104px; height:104px; margin-bottom:12px; }
+    .sentryiq-vault-brand { gap:8px; }
+    .sentryiq-vault-logo { width:42px; height:42px; }
+    .sentryiq-vault-brand span { display:none; }
     h2 { font-size: 20px; }
     h3 { font-size: 18px; }
     .vault-mobile-menu-bar { display: block; position: relative; margin: 18px 0 10px; }
@@ -72,7 +77,11 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
     .entry-card { width: 100%; cursor: pointer; }
     .entry-card:focus-visible { outline: 2px solid #0066cc; outline-offset: 2px; }
     .entry-card .inspect-button { display: none !important; }
-    .og-preview-holder { height: 84px !important; }
+    .entry-card { display: grid !important; grid-template-columns: 84px minmax(0, 1fr); align-items: stretch; }
+    .entry-card .og-preview-holder { grid-column: 1; grid-row: 1; width: 84px; height: 84px !important; border-radius: 12px 0 0 12px; }
+    .entry-card .entry-card-identity { grid-column: 2; grid-row: 1; align-self: center; min-width: 0; padding: 10px 14px !important; }
+    .entry-card .entry-card-identity .entry-label { max-width: 100%; }
+    .entry-card .entry-card-identity small { max-width: 100%; }
     .form-box, .detail-card { padding: 14px; }
     .detail-card > div[style*="display:flex"] { flex-direction: column; }
     .detail-card > div[style*="display:flex"] .btn { width: 100%; }
@@ -95,6 +104,7 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
     body { padding: 6px; }
     .box { padding: 12px; }
     .sentryiq-brand-logo { width:92px; height:92px; }
+    .sentryiq-vault-logo { width:38px; height:38px; }
     .tab-btn { font-size: 14px; }
     .btn { width: 100%; }
 }
