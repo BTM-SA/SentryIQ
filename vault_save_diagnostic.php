@@ -5,7 +5,6 @@ declare(strict_types=1);
 require_once __DIR__ . '/security_bootstrap.php';
 sentryiq_security_bootstrap();
 sentryiq_require_auth();
-sentryiq_require_csrf();
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -34,6 +33,8 @@ try {
     $result['master_key_valid'] = is_string($masterKey) && strlen($masterKey) === 32;
 
     if (!$result['master_key_valid']) throw new RuntimeException('master_key_unavailable');
+
+    require_once $dataDir . '/vault_engine.php';
 
     $parts = vault_read_envelope();
     $result['envelope_read_ok'] = true;
