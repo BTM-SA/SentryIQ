@@ -48,10 +48,18 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
     .box { width: 100%; max-width: none; padding: 16px; border-radius: 6px; }
     h2 { font-size: 20px; }
     h3 { font-size: 18px; }
-    .vault-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; gap: 6px; border-bottom: 0; }
-    .tab-btn { width: 100%; min-height: 44px; padding: 10px 8px; border-radius: 6px; font-size: 13px; }
+    .vault-mobile-menu-bar { display: block; position: relative; margin: 18px 0 10px; }
+    .vault-mobile-menu-toggle { width: 100%; min-height: 46px; padding: 10px 14px; border: 1px solid #dee2e6; border-radius: 7px; background: #fff; color: #212529; font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 10px; justify-content: flex-start; cursor: pointer; }
+    .vault-mobile-menu-icon { font-size: 20px; line-height: 1; }
+    .vault-tabs { display: none; flex-direction: column; gap: 0; overflow: visible; border: 1px solid #dee2e6; border-radius: 7px; margin: 0 0 14px; background: #fff; }
+    .vault-tabs.mobile-open { display: flex; }
+    .tab-btn { width: 100%; min-height: 44px; padding: 10px 12px; border: 0; border-bottom: 1px solid #eef0f2; border-radius: 0; text-align: left; background: #fff; }
+    .tab-btn:last-child { border-bottom: 0; }
+    .tab-btn.active { background: #e9f2ff; color: #0066cc; }
     .vault-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
-    .entry-card { width: 100%; }
+    .entry-card { width: 100%; cursor: pointer; }
+    .entry-card > div:last-child { position: absolute !important; inset: 0 !important; padding: 0 !important; z-index: 5; }
+    .entry-card > div:last-child .btn { width: 100% !important; height: 100% !important; padding: 0 !important; margin: 0 !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; color: transparent !important; font-size: 0 !important; box-shadow: none !important; opacity: 0 !important; }
     .og-preview-holder { height: 84px !important; }
     .form-box, .detail-card { padding: 14px; }
     .detail-card > div[style*="display:flex"] { flex-direction: column; }
@@ -62,10 +70,13 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
     .entry-row { flex-direction: column; align-items: stretch; gap: 10px; }
 }
 
+@media (min-width: 701px) {
+    .vault-mobile-menu-bar { display: none; }
+}
+
 @media (max-width: 420px) {
     body { padding: 6px; }
     .box { padding: 12px; }
-    .vault-tabs { grid-template-columns: 1fr; }
     .tab-btn { font-size: 14px; }
     .btn { width: 100%; }
 }
