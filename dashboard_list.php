@@ -12,8 +12,17 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
 <?php if (isset($_GET['status']) && $_GET['status'] == 'updated') echo "<p class='success'>Entry updated successfully!</p>"; ?>
 <?php if (isset($_GET['status']) && $_GET['status'] == 'deleted') echo "<p class='success'>Entry deleted safely from disk.</p>"; ?>
 <?php if (isset($_GET['status']) && $_GET['status'] == 'error') echo "<p class='error'>The requested vault record operation could not be completed.</p>"; ?>
+<?php if (isset($_GET['status']) && $_GET['status'] === 'validation' && ($_GET['field'] ?? '') === 'url') echo "<p class='error'>Please enter a valid HTTPS URL, or leave the URL field blank.</p>"; ?>
+<?php if (isset($_GET['status']) && $_GET['status'] === 'validation' && ($_GET['field'] ?? '') === 'required') echo "<p class='error'>Please complete the required fields before saving.</p>"; ?>
 
-<div class="vault-tabs">
+<div class="vault-mobile-menu-bar">
+    <button type="button" class="vault-mobile-menu-toggle" onclick="toggleVaultMobileMenu()" aria-expanded="false" aria-controls="vault-mobile-menu">
+        <span class="vault-mobile-menu-icon" aria-hidden="true">☰</span>
+        <span id="vault-mobile-menu-label">SentryIQ Menu</span>
+    </button>
+</div>
+
+<div id="vault-mobile-menu" class="vault-tabs">
     <button id="view-btn" class="tab-btn <?php echo ($active_pane === 'view') ? 'active' : ''; ?>" onclick="switchVaultTab('view')">📋 View Stored Entries</button>
     <button id="add-btn" class="tab-btn <?php echo ($active_pane === 'add') ? 'active' : ''; ?>" onclick="switchVaultTab('add')">➕ Add New Entry</button>
     <button id="settings-btn" class="tab-btn <?php echo ($active_pane === 'settings') ? 'active' : ''; ?>" onclick="switchVaultTab('settings')">⚙️ System</button>
