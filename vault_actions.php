@@ -16,6 +16,30 @@ if ($dataDir === '' || !is_file($dataDir . '/vault_engine.php')) {
 }
 require_once $dataDir . '/vault_engine.php';
 
+/**
+ * Persist normalized vault records using the currently authenticated master key
+ * and the existing vault KDF parameters stored in the envelope.
+ */
+function save_passwords(array $records): bool
+{
+    $masterKey = $_SESSION['master_key'] ?? null;
+    if (!is_string($masterKey) || strlen($masterKey) !== 32) {
+        return false;
+    }
+
+    try {
+        $parts = vault_read_envelope();
+        return vault_write_encrypted_records(
+            $records,
+            $masterKey,
+            $parts['kdf']
+        );
+    } catch (Throwable $exception) {
+        error_log('SentryIQ vault save failure: ' . $exception::class . ': ' . $exception->getMessage());
+        return false;
+    }
+}
+
 $action = (string)($_POST['action'] ?? '');
 $passwords = load_passwords();
 if ($passwords === false) {
