@@ -53,7 +53,7 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
                         <span style="position:absolute;color:#fff;font-size:28px;font-weight:700;font-family:monospace;opacity:.3;z-index:1;"><?php echo htmlspecialchars($initials); ?></span>
                     </div>
                     <div class="entry-card-identity" style="padding:12px 15px 4px;"><span class="entry-label" style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;color:#212529;"><?php echo htmlspecialchars($label); ?></span><small style="color:#868e96;font-size:11px;display:block;overflow:hidden;text-overflow:ellipsis;"><?php echo htmlspecialchars($row['username'] ?? '[No Username]'); ?></small></div>
-                    <div style="padding:12px;"><button type="button" class="btn btn-primary inspect-button" style="width:100%;padding:8px 0;font-size:12px;border-radius:6px;background:#0066cc;">👁️ Inspect</button></div>
+                    <div class="entry-card-actions" style="padding:12px;"><button type="button" class="btn btn-primary inspect-button" style="width:100%;padding:8px 0;font-size:12px;border-radius:6px;background:#0066cc;">👁️ Inspect</button></div>
                 </div>
             <?php endforeach; ?>
         </div>
