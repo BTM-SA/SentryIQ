@@ -151,6 +151,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_first_run'])
             if (!@copy(__DIR__ . '/private_data/email_template.php', $templateTarget)) throw new RuntimeException('template_copy_failed');
             @chmod($engineTarget, 0600); @chmod($templateTarget, 0600);
             if (!first_run_write_config($secureConfig, $username, $email, $baseUrl, $directory)) throw new RuntimeException('secure_config_failed');
+
+            clearstatcache(true, $engineTarget);
+            if (function_exists('opcache_invalidate')) {
+                @opcache_invalidate($engineTarget, true);
+                first_run_log('RUNTIME_OPCACHE_INVALIDATED', ['available' => true]);
+            } else {
+                first_run_log('RUNTIME_OPCACHE_INVALIDATE_UNAVAILABLE', ['available' => false]);
+            }
+
             require_once $engineTarget;
             first_run_initialize($password, $directory . '/passwords.enc');
             $verified = vault_unlock($password);
