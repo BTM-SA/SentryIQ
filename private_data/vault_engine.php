@@ -35,17 +35,37 @@ function sentryiq_is_trusted_data_directory(?string $directory = null): bool
     $directory ??= SENTRYIQ_DATA_DIR;
     $directory = rtrim($directory, '/');
 
-    if ($directory === '' || !str_starts_with($directory, '/')) return false;
-    if (!is_dir($directory)) return false;
-    if (is_link($directory)) return false;
+    if ($directory === '' || !str_starts_with($directory, '/')) {
+        throw new RuntimeException('trusted_directory:invalid_path');
+    }
+    if (!is_dir($directory)) {
+        throw new RuntimeException('trusted_directory:not_directory');
+    }
+    if (is_link($directory)) {
+        throw new RuntimeException('trusted_directory:is_symlink');
+    }
 
     $real = realpath($directory);
-    if ($real === false || rtrim($real, '/') !== $directory) return false;
+    if ($real === false) {
+        throw new RuntimeException('trusted_directory:realpath_failed');
+    }
+    if (rtrim($real, '/') !== $directory) {
+        throw new RuntimeException('trusted_directory:realpath_mismatch');
+    }
 
     $perms = @fileperms($directory);
-    if ($perms === false || (($perms & 0x0077) !== 0)) return false;
+    if ($perms === false) {
+        throw new RuntimeException('trusted_directory:fileperms_failed');
+    }
+    if (($perms & 0x0077) !== 0) {
+        throw new RuntimeException('trusted_directory:permissions_not_private');
+    }
 
-    return is_writable($directory);
+    if (!is_writable($directory)) {
+        throw new RuntimeException('trusted_directory:not_writable');
+    }
+
+    return true;
 }
 
 function ensure_sentryiq_data_directory(): bool
@@ -217,9 +237,13 @@ function vault_read_envelope(): array|false
 {
     clearstatcache(true, DATA_FILE);
 
-    if (!ensure_sentryiq_data_directory() || !is_file(DATA_FILE) || is_link(DATA_FILE)) {
-        throw new RuntimeException('vault_read_envelope:data_file_unavailable');
+    try {
+        ensure_sentryiq_data_directory();
+    } catch (Throwable $exception) {
+        throw new RuntimeException('vault_read_envelope:' . $exception->getMessage());
     }
+    if (!is_file(DATA_FILE)) throw new RuntimeException('vault_read_envelope:data_file_missing');
+    if (is_link(DATA_FILE)) throw new RuntimeException('vault_read_envelope:data_file_symlink');
 
     $raw = @file_get_contents(DATA_FILE);
     if (!is_string($raw) || $raw === '' || strlen($raw) > 32 * 1024 * 1024) {
