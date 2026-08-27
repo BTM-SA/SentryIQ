@@ -5,8 +5,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/security_bootstrap.php';
 sentryiq_security_bootstrap();
 
-$configFile = __DIR__ . '/sentryiq_config.php';
-if (is_file($configFile)) {
+$pointerConfigFile = __DIR__ . '/sentryiq_config.php';
+if (is_file($pointerConfigFile)) {
     http_response_code(404);
     exit('Not found.');
 }
@@ -224,7 +224,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_first_run'])
             $verified = vault_unlock($password);
             if ($verified === false) throw new RuntimeException('vault_verification_failed');
             first_run_log('VAULT_RUNTIME_VERIFY_COMPLETED');
-            if (@file_put_contents($configFile, $pointerConfig, LOCK_EX) === false || !@chmod($configFile, 0600)) throw new RuntimeException('pointer_config_failed');
+            if (@file_put_contents($pointerConfigFile, $pointerConfig, LOCK_EX) === false || !@chmod($pointerConfigFile, 0600)) throw new RuntimeException('pointer_config_failed');
+            first_run_log('POINTER_CONFIG_WRITTEN', [
+                'exists' => is_file($pointerConfigFile),
+                'permissions' => is_file($pointerConfigFile) ? decoct((int)(fileperms($pointerConfigFile) & 0x01ff)) : null,
+            ]);
+            $pointerConfigLoaded = false;
+            if (is_file($pointerConfigFile) && !is_link($pointerConfigFile) && is_readable($pointerConfigFile)) {
+                try {
+                    $pointerLoaded = require $pointerConfigFile;
+                    $pointerConfigLoaded = is_array($pointerLoaded)
+                        && rtrim((string)($pointerLoaded['data_dir'] ?? ''), '/') === rtrim($directory, '/')
+                        && trim((string)($pointerLoaded['base_url'] ?? '')) === trim($baseUrl);
+                } catch (Throwable) {
+                    $pointerConfigLoaded = false;
+                }
+            }
+            first_run_log('POINTER_CONFIG_VERIFIED', ['verified' => $pointerConfigLoaded]);
+            if (!$pointerConfigLoaded) throw new RuntimeException('pointer_config_verification_failed');
             if (!first_run_cleanup()) throw new RuntimeException('first_run_cleanup_failed');
             first_run_log('INSTALL_SUCCESS');
             @unlink($directory . '/install_debug.log');
