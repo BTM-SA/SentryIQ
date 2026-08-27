@@ -85,7 +85,7 @@ if ($action === 'edit') {
     $label = trim((string)($_POST['label'] ?? ''));
     $username = trim((string)($_POST['username'] ?? ''));
     $password = (string)($_POST['password'] ?? '');
-    $url = vault_validate_url((string)($_POST['url'] ?? ''));
+    $rawUrl = trim((string)($_POST['url'] ?? ''));
     $notes = trim((string)($_POST['notes'] ?? ''));
     $found = false;
 
@@ -94,30 +94,37 @@ if ($action === 'edit') {
         'label_present' => $label !== '',
         'username_present' => $username !== '',
         'password_present' => $password !== '',
-        'url_valid' => $url !== false,
-        'url_present' => is_string($url) && $url !== '',
+        'url_present' => $rawUrl !== '',
         'notes_present' => $notes !== '',
         'record_count_before' => count($passwords),
     ]);
 
-    if ($entryId !== '' && $label !== '' && $password !== '' && $url !== false) {
+    if ($entryId !== '' && $label !== '' && $password !== '') {
         foreach ($passwords as $index => $item) {
             if (($item['id'] ?? '') !== $entryId) continue;
             $found = true;
             $oldUrl = (string)($item['url'] ?? '');
+            $newUrl = $rawUrl === '' ? $oldUrl : vault_validate_url($rawUrl);
+            if ($newUrl === false) {
+                record_action_diagnostic('RECORD_EDIT_FAILURE', ['reason' => 'invalid_url', 'index' => $index]);
+                header('Location: index.php?status=error&pane=view');
+                exit;
+            }
+
             $passwords[$index]['label'] = $label;
             $passwords[$index]['username'] = $username;
             $passwords[$index]['password'] = $password;
-            $passwords[$index]['url'] = $url;
+            $passwords[$index]['url'] = $newUrl;
             $passwords[$index]['notes'] = $notes;
             record_action_diagnostic('RECORD_EDIT_MATCHED', [
                 'index' => $index,
-                'url_changed' => $url !== $oldUrl,
+                'url_changed' => $newUrl !== $oldUrl,
             ]);
-            if ($url !== $oldUrl) {
+
+            if ($newUrl !== $oldUrl) {
                 $oldIcon = (string)($item['icon_path'] ?? '');
                 if ($oldIcon !== '' && is_file($oldIcon) && str_starts_with($oldIcon, SENTRYIQ_DATA_DIR . '/vault_icons/')) @unlink($oldIcon);
-                $icon = cache_vault_icon($url, $entryId);
+                $icon = cache_vault_icon($newUrl, $entryId);
                 $passwords[$index]['icon_type'] = $icon['icon_type'];
                 $passwords[$index]['icon_path'] = $icon['icon_path'];
                 $passwords[$index]['icon_source'] = $icon['icon_source'];
