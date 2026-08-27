@@ -16,18 +16,18 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
 <?php if (isset($_GET['status']) && $_GET['status'] === 'validation' && ($_GET['field'] ?? '') === 'required') echo "<p class='error'>Please complete the required fields before saving.</p>"; ?>
 
 <div class="vault-mobile-menu-bar">
-    <button type="button" class="vault-mobile-menu-toggle" onclick="toggleVaultMobileMenu()" aria-expanded="false" aria-controls="vault-mobile-menu">
+    <button type="button" class="vault-mobile-menu-toggle" aria-expanded="false" aria-controls="vault-mobile-menu">
         <span class="vault-mobile-menu-icon" aria-hidden="true">☰</span>
         <span id="vault-mobile-menu-label">SentryIQ Menu</span>
     </button>
 </div>
 
 <div id="vault-mobile-menu" class="vault-tabs">
-    <button id="view-btn" class="tab-btn <?php echo ($active_pane === 'view') ? 'active' : ''; ?>" onclick="switchVaultTab('view')">📋 View Stored Entries</button>
-    <button id="add-btn" class="tab-btn <?php echo ($active_pane === 'add') ? 'active' : ''; ?>" onclick="switchVaultTab('add')">➕ Add New Entry</button>
-    <button id="settings-btn" class="tab-btn <?php echo ($active_pane === 'settings') ? 'active' : ''; ?>" onclick="switchVaultTab('settings')">⚙️ System</button>
-    <button id="log-btn" class="tab-btn <?php echo ($active_pane === 'log') ? 'active' : ''; ?>" onclick="switchVaultTab('log')">🔐 Log</button>
-    <button id="details-btn" class="tab-btn" style="display:none;" onclick="switchVaultTab('details')">👁️ Entry Inspection</button>
+    <button id="view-btn" class="tab-btn <?php echo ($active_pane === 'view') ? 'active' : ''; ?>" data-vault-tab="view">📋 View Stored Entries</button>
+    <button id="add-btn" class="tab-btn <?php echo ($active_pane === 'add') ? 'active' : ''; ?>" data-vault-tab="add">➕ Add New Entry</button>
+    <button id="settings-btn" class="tab-btn <?php echo ($active_pane === 'settings') ? 'active' : ''; ?>" data-vault-tab="settings">⚙️ System</button>
+    <button id="log-btn" class="tab-btn <?php echo ($active_pane === 'log') ? 'active' : ''; ?>" data-vault-tab="log">🔐 Log</button>
+    <button id="details-btn" class="tab-btn" style="display:none;" data-vault-tab="details">👁️ Entry Inspection</button>
 </div>
 
 <div id="view-panel" class="vault-panel <?php echo ($active_pane === 'view') ? 'active' : ''; ?>">
@@ -53,9 +53,48 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
                         <span style="position:absolute;color:#fff;font-size:28px;font-weight:700;font-family:monospace;opacity:.3;z-index:1;"><?php echo htmlspecialchars($initials); ?></span>
                     </div>
                     <div style="padding:12px 15px 4px;"><span class="entry-label" style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;color:#212529;"><?php echo htmlspecialchars($label); ?></span><small style="color:#868e96;font-size:11px;display:block;overflow:hidden;text-overflow:ellipsis;"><?php echo htmlspecialchars($row['username'] ?? '[No Username]'); ?></small></div>
-                    <div style="padding:12px;"><button type="button" class="btn btn-primary inspect-button" style="width:100%;padding:8px 0;font-size:12px;border-radius:6px;background:#0066cc;" onclick='event.stopPropagation();viewRecordDetails(<?php echo $inspectJson; ?>)'>👁️ Inspect</button></div>
+                    <div style="padding:12px;"><button type="button" class="btn btn-primary inspect-button" style="width:100%;padding:8px 0;font-size:12px;border-radius:6px;background:#0066cc;">👁️ Inspect</button></div>
                 </div>
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
 </div>
+
+<script>
+(function () {
+    function getMenu() { return document.getElementById('vault-mobile-menu'); }
+    function getToggle() { return document.querySelector('.vault-mobile-menu-toggle'); }
+
+    window.toggleVaultMobileMenu = function () {
+        var menu = getMenu();
+        var toggle = getToggle();
+        if (!menu || !toggle) return;
+        var open = menu.classList.toggle('mobile-open');
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var toggle = getToggle();
+        var menu = getMenu();
+        if (!toggle || !menu) return;
+
+        toggle.addEventListener('click', window.toggleVaultMobileMenu);
+
+        menu.querySelectorAll('[data-vault-tab]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var tab = button.getAttribute('data-vault-tab');
+                if (typeof switchVaultTab === 'function') switchVaultTab(tab);
+                menu.classList.remove('mobile-open');
+                toggle.setAttribute('aria-expanded', 'false');
+            });
+        });
+
+        var inspectButtons = menu.querySelectorAll('.inspect-button');
+        inspectButtons.forEach(function (button) {
+            button.addEventListener('click', function (event) {
+                event.stopPropagation();
+            });
+        });
+    });
+}());
+</script>
