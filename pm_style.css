@@ -1,5 +1,5 @@
 /* SentryIQ Branding */
-.box::before { content: ""; display: block; width: 128px; height: 128px; margin: 0 auto 18px; background: url('sentryiq-logo-512.png') center / contain no-repeat; }
+.sentryiq-brand-logo { display:block; width:160px; height:160px; max-width:100%; object-fit:contain; margin:0 auto 18px; }
 
 /* Base Core Typography */
 * { box-sizing: border-box; }
@@ -57,7 +57,7 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
 @media (max-width: 700px) {
     body { margin: 0; padding: 10px; }
     .box { width: 100%; max-width: none; padding: 16px; border-radius: 6px; }
-    .box::before { width: 104px; height: 104px; margin-bottom: 12px; }
+    .sentryiq-brand-logo { width:104px; height:104px; margin-bottom:12px; }
     h2 { font-size: 20px; }
     h3 { font-size: 18px; }
     .vault-mobile-menu-bar { display: block; position: relative; margin: 18px 0 10px; }
@@ -94,7 +94,7 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
 @media (max-width: 420px) {
     body { padding: 6px; }
     .box { padding: 12px; }
-    .box::before { width: 92px; height: 92px; }
+    .sentryiq-brand-logo { width:92px; height:92px; }
     .tab-btn { font-size: 14px; }
     .btn { width: 100%; }
 }
