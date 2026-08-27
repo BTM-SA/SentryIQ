@@ -171,10 +171,12 @@ function first_run_cleanup(): bool
 {
     $dir = __DIR__ . '/private_data';
     if (!is_dir($dir)) return true;
-    foreach (['vault_engine.php', 'email_template.php'] as $name) {
+
+    foreach (['vault_engine.php', 'email_template.php', 'vault_icon_cache.php'] as $name) {
         $path = $dir . '/' . $name;
         if (is_file($path) && !@unlink($path)) return false;
     }
+
     $remaining = array_values(array_diff(@scandir($dir) ?: [], ['.', '..']));
     return $remaining === [] ? @rmdir($dir) : false;
 }
@@ -197,17 +199,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_first_run'])
     elseif (!first_run_prepare_dir($directory)) $error = 'SentryIQ could not prepare secure storage.';
     elseif (strlen($password) < 12) $error = 'The master vault password must be at least 12 characters long.';
     elseif ($password !== $confirm) $error = 'The master vault passwords do not match.';
-    elseif (!is_file(__DIR__ . '/private_data/vault_engine.php') || !is_file(__DIR__ . '/private_data/email_template.php')) $error = 'SentryIQ installation files are incomplete.';
+    elseif (!is_file(__DIR__ . '/private_data/vault_engine.php') || !is_file(__DIR__ . '/private_data/email_template.php') || !is_file(__DIR__ . '/private_data/vault_icon_cache.php')) $error = 'SentryIQ installation files are incomplete.';
     else {
         $engineTarget = $directory . '/vault_engine.php';
         $templateTarget = $directory . '/email_template.php';
+        $iconCacheTarget = $directory . '/vault_icon_cache.php';
         $secureConfig = $directory . '/sentryiq_config.php';
         $pointerConfig = "<?php\nreturn [\n    'data_dir' => " . var_export($directory, true) . ",\n    'base_url' => " . var_export($baseUrl, true) . ",\n];\n";
         try {
-            @unlink($engineTarget); @unlink($templateTarget);
+            @unlink($engineTarget); @unlink($templateTarget); @unlink($iconCacheTarget);
             if (!@copy(__DIR__ . '/private_data/vault_engine.php', $engineTarget)) throw new RuntimeException('runtime_copy_failed');
             if (!@copy(__DIR__ . '/private_data/email_template.php', $templateTarget)) throw new RuntimeException('template_copy_failed');
-            @chmod($engineTarget, 0600); @chmod($templateTarget, 0600);
+            if (!@copy(__DIR__ . '/private_data/vault_icon_cache.php', $iconCacheTarget)) throw new RuntimeException('icon_cache_copy_failed');
+            @chmod($engineTarget, 0600); @chmod($templateTarget, 0600); @chmod($iconCacheTarget, 0600);
             if (!first_run_write_config($secureConfig, $username, $email, $baseUrl, $directory)) throw new RuntimeException('secure_config_failed');
 
             clearstatcache(true, $engineTarget);
@@ -219,6 +223,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_first_run'])
             }
 
             require_once $engineTarget;
+            require_once $iconCacheTarget;
             first_run_initialize($password, $directory . '/passwords.enc');
             first_run_direct_crypto_verify($password, $directory . '/passwords.enc');
             $verified = vault_unlock($password);
@@ -261,14 +266,25 @@ $csrf = sentryiq_csrf_token();
 ?>
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>SentryIQ — First Run</title><link rel="stylesheet" href="pm_style.css"></head>
-<body><div class="box"><h2>🛡️ Create Your SentryIQ Vault</h2><p>Configure the administrator account before using SentryIQ.</p>
-<?php if ($error !== ''): ?><p class="error"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></p><?php endif; ?>
-<form method="POST" autocomplete="off"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
-<div class="form-group"><label>Administrator Username:</label><input type="text" name="setup_username" class="input-field" maxlength="64" required></div>
-<div class="form-group"><label>2FA Email Address:</label><input type="email" name="setup_email" class="input-field" required></div>
-<div class="form-group"><label>Secure Storage:</label><input type="text" class="input-field" value="<?php echo htmlspecialchars($directory, ENT_QUOTES, 'UTF-8'); ?>" readonly></div>
-<div class="form-group"><label>Application HTTPS URL:</label><input type="text" class="input-field" value="<?php echo htmlspecialchars($baseUrl, ENT_QUOTES, 'UTF-8'); ?>" readonly></div>
-<div class="form-group"><label>Master Vault Password:</label><input type="password" name="setup_password" class="input-field" minlength="12" required></div>
-<div class="form-group"><label>Confirm Master Vault Password:</label><input type="password" name="setup_password_confirm" class="input-field" minlength="12" required></div>
-<button type="submit" name="complete_first_run" class="btn btn-primary">Create Secure Vault</button></form></div></body></html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SentryIQ First-Run Setup</title>
+<link rel="stylesheet" href="pm_style.css">
+</head>
+<body>
+<div class="box">
+    <h2>🛡️ SentryIQ Secure Setup</h2>
+    <?php if ($error !== ''): ?><p class="error"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></p><?php endif; ?>
+    <form method="POST" autocomplete="off">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
+        <div class="form-group"><label>Administrator Username:</label><input type="text" name="setup_username" class="input-field" required></div>
+        <div class="form-group"><label>2FA Email Address:</label><input type="email" name="setup_email" class="input-field" required></div>
+        <div class="form-group"><label>Master Vault Password:</label><input type="password" name="setup_password" class="input-field" autocomplete="new-password" minlength="12" required></div>
+        <div class="form-group"><label>Confirm Master Vault Password:</label><input type="password" name="setup_password_confirm" class="input-field" autocomplete="new-password" minlength="12" required></div>
+        <p style="font-size:12px;color:#777;">SentryIQ securely stores its encrypted vault outside the public web root.</p>
+        <button type="submit" name="complete_first_run" class="btn btn-primary">Complete Secure Installation</button>
+    </form>
+</div>
+</body>
+</html>
