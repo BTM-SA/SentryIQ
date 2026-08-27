@@ -1,0 +1,2 @@
+<?php
+// Temporary verification placeholder
