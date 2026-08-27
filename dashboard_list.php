@@ -45,14 +45,15 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
                 $initials = strtoupper(substr($words[0] ?? 'V', 0, 1) . (isset($words[1]) ? substr($words[1], 0, 1) : ''));
                 $hasStoredIcon = !empty($row['icon_path']) && !empty($row['id']);
                 $inspectArgs = [$label,$row['username'] ?? '',$row['password'] ?? '',$row['url'] ?? '',$row['notes'] ?? '',(string)($row['id'] ?? '')];
+                $inspectJson = htmlspecialchars(json_encode($inspectArgs, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8');
             ?>
-                <div class="entry-card" style="background:#fff; border:1px solid #e9ecef; border-radius:12px; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 6px rgba(0,0,0,.02); position:relative;">
+                <div class="entry-card" tabindex="0" role="button" aria-label="Inspect <?php echo htmlspecialchars($label); ?>" onclick='viewRecordDetails(<?php echo $inspectJson; ?>)' onkeydown='if(event.key === "Enter" || event.key === " "){event.preventDefault();viewRecordDetails(<?php echo $inspectJson; ?>)}' style="background:#fff; border:1px solid #e9ecef; border-radius:12px; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 6px rgba(0,0,0,.02); position:relative;">
                     <div class="og-preview-holder" style="height:100px; background:<?php echo $cardGradient; ?>; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative;">
                         <?php if ($hasStoredIcon): ?><img src="vault-icon.php?id=<?php echo rawurlencode((string)$row['id']); ?>" style="width:36px;height:36px;object-fit:contain;position:relative;z-index:2;filter:drop-shadow(0 4px 6px rgba(0,0,0,.15));" alt="Stored website icon" onerror="this.style.display='none';"><?php endif; ?>
                         <span style="position:absolute;color:#fff;font-size:28px;font-weight:700;font-family:monospace;opacity:.3;z-index:1;"><?php echo htmlspecialchars($initials); ?></span>
                     </div>
                     <div style="padding:12px 15px 4px;"><span class="entry-label" style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;color:#212529;"><?php echo htmlspecialchars($label); ?></span><small style="color:#868e96;font-size:11px;display:block;overflow:hidden;text-overflow:ellipsis;"><?php echo htmlspecialchars($row['username'] ?? '[No Username]'); ?></small></div>
-                    <div style="padding:12px;"><button type="button" class="btn btn-primary" style="width:100%;padding:8px 0;font-size:12px;border-radius:6px;background:#0066cc;" onclick='viewRecordDetails(<?php echo htmlspecialchars(json_encode($inspectArgs, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, "UTF-8"); ?>)'>👁️ Inspect</button></div>
+                    <div style="padding:12px;"><button type="button" class="btn btn-primary inspect-button" style="width:100%;padding:8px 0;font-size:12px;border-radius:6px;background:#0066cc;" onclick='event.stopPropagation();viewRecordDetails(<?php echo $inspectJson; ?>)'>👁️ Inspect</button></div>
                 </div>
             <?php endforeach; ?>
         </div>
