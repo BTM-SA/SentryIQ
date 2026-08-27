@@ -75,7 +75,7 @@ $csrf = sentryiq_csrf_token();
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="csrf-token" content="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
-<title>Vault Studio Manager</title>
+<title>SentryIQ</title>
 <link rel="stylesheet" href="pm_style.css">
 <script>
 function switchVaultTab(tabName){document.querySelectorAll('.vault-panel').forEach(panel=>panel.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(btn=>btn.classList.remove('active'));var targetPanel=document.getElementById(tabName+'-panel');if(targetPanel)targetPanel.classList.add('active');var btnElement=document.getElementById(tabName+'-btn');if(btnElement)btnElement.classList.add('active');}
@@ -87,23 +87,23 @@ function viewRecordDetails(label,username,password,url,notes,id){if(Array.isArra
 <div class="box">
 <?php if (!$vault_authenticated): ?>
     <?php if ($vault_error): ?>
-        <h2>🔒 Vault Unavailable</h2><p class="error">The secure vault could not be opened. No changes have been made.</p>
+        <h2>🔒 SentryIQ</h2><p class="error">The secure vault could not be opened. No changes have been made.</p>
     <?php elseif (!isset($_SESSION['pending_key'])): ?>
-        <h2>🔒 Open Secure Vault</h2>
+        <h2>🔒 SentryIQ</h2>
         <?php if ($decryption_failed): ?><p class="error">Unable to verify the master vault password.</p><?php endif; ?>
         <form method="POST" autocomplete="off">
             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
             <div class="form-group"><label>Master Vault Password:</label><input type="password" name="master_password" class="input-field" autocomplete="current-password" required autofocus></div>
-            <button type="submit" name="login_step_1" class="btn btn-primary">Unlock Vault</button>
+            <button type="submit" name="login_step_1" class="btn btn-primary">Unlock SentryIQ</button>
         </form>
     <?php else: ?>
-        <h2>Verification Checkpoint</h2>
+        <h2>🔐 SentryIQ Verification</h2>
         <p>A temporary verification code has been sent to the configured 2FA email address.</p>
         <?php if ($error_step_2 !== ''): ?><p class="error"><?php echo htmlspecialchars($error_step_2, ENT_QUOTES, 'UTF-8'); ?></p><?php endif; ?>
         <form method="POST" autocomplete="off">
             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
             <div class="form-group"><label>Enter 6-Digit Code:</label><input type="text" name="verification_code" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" autocomplete="one-time-code" class="input-field" required autofocus></div>
-            <button type="submit" name="login_step_2" class="btn btn-primary">Verify &amp; Unlock</button>
+            <button type="submit" name="login_step_2" class="btn btn-primary">Verify &amp; Unlock SentryIQ</button>
         </form>
     <?php endif; ?>
 <?php else: ?>
