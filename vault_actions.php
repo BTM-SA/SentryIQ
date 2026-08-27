@@ -66,19 +66,38 @@ if ($action === 'add') {
     $label = trim((string)($_POST['label'] ?? ''));
     $username = trim((string)($_POST['username'] ?? ''));
     $password = (string)($_POST['password'] ?? '');
-    $url = vault_validate_url((string)($_POST['url'] ?? ''));
+    $rawUrl = trim((string)($_POST['url'] ?? ''));
     $notes = trim((string)($_POST['notes'] ?? ''));
 
+    vault_action_diagnostic('VAULT_RECORD_ADD_STARTED', [
+        'label_present' => $label !== '',
+        'username_present' => $username !== '',
+        'password_present' => $password !== '',
+        'url_present' => $rawUrl !== '',
+        'notes_present' => $notes !== '',
+        'record_count_before' => count($passwords),
+    ]);
+
+    $url = $rawUrl === '' ? '' : vault_validate_url($rawUrl);
     if ($label === '' || $password === '' || $url === false) {
+        vault_action_diagnostic('VAULT_RECORD_ADD_FAILURE', [
+            'reason' => 'validation_failed',
+            'label_present' => $label !== '',
+            'password_present' => $password !== '',
+            'url_present' => $rawUrl !== '',
+            'url_valid' => $url !== false,
+        ]);
         header('Location: index.php?status=error&pane=add');
         exit;
     }
 
     $entryId = bin2hex(random_bytes(16));
-    $icon = cache_vault_icon($url, $entryId);
+    $icon = ['icon_type'=>null,'icon_path'=>null,'icon_source'=>null,'icon_fetched_at'=>null];
+    if ($url !== '') $icon = cache_vault_icon($url, $entryId);
     $passwords[] = ['id'=>$entryId,'label'=>$label,'username'=>$username,'password'=>$password,'url'=>$url,'notes'=>$notes,'icon_type'=>$icon['icon_type'],'icon_path'=>$icon['icon_path'],'icon_source'=>$icon['icon_source'],'icon_fetched_at'=>$icon['icon_fetched_at'],'created_at'=>date('c'),'updated_at'=>null];
 
     if (!save_passwords($passwords)) {
+        vault_action_diagnostic('VAULT_RECORD_ADD_FAILURE', ['reason'=>'save_failed','record_count_after'=>count($passwords)]);
         header('Location: index.php?status=error&pane=add');
         exit;
     }
@@ -93,26 +112,66 @@ if ($action === 'edit') {
     $label = trim((string)($_POST['label'] ?? ''));
     $username = trim((string)($_POST['username'] ?? ''));
     $password = (string)($_POST['password'] ?? '');
-    $url = vault_validate_url((string)($_POST['url'] ?? ''));
+    $rawUrl = trim((string)($_POST['url'] ?? ''));
     $notes = trim((string)($_POST['notes'] ?? ''));
-    if ($entryId === '' || $label === '' || $password === '' || $url === false) { header('Location: index.php?status=error&pane=view'); exit; }
-
     $found = false;
-    foreach ($passwords as $index => $item) {
-        if (($item['id'] ?? '') !== $entryId) continue;
-        $found = true;
-        $oldUrl = (string)($item['url'] ?? '');
-        $passwords[$index]['label']=$label; $passwords[$index]['username']=$username; $passwords[$index]['password']=$password; $passwords[$index]['url']=$url; $passwords[$index]['notes']=$notes;
-        if ($oldUrl !== $url) {
-            $oldIcon = (string)($item['icon_path'] ?? '');
-            if ($oldIcon !== '' && is_file($oldIcon) && str_starts_with($oldIcon, SENTRYIQ_DATA_DIR . '/vault_icons/')) @unlink($oldIcon);
-            $icon = cache_vault_icon($url, $entryId);
-            $passwords[$index]['icon_type']=$icon['icon_type']; $passwords[$index]['icon_path']=$icon['icon_path']; $passwords[$index]['icon_source']=$icon['icon_source']; $passwords[$index]['icon_fetched_at']=$icon['icon_fetched_at'];
+
+    vault_action_diagnostic('VAULT_RECORD_EDIT_STARTED', [
+        'entry_id_present' => $entryId !== '',
+        'label_present' => $label !== '',
+        'username_present' => $username !== '',
+        'password_present' => $password !== '',
+        'url_present' => $rawUrl !== '',
+        'notes_present' => $notes !== '',
+        'record_count_before' => count($passwords),
+    ]);
+
+    if ($entryId !== '' && $label !== '' && $password !== '') {
+        foreach ($passwords as $index => $item) {
+            if (($item['id'] ?? '') !== $entryId) continue;
+            $found = true;
+            $oldUrl = (string)($item['url'] ?? '');
+            $newUrl = $rawUrl === '' ? $oldUrl : vault_validate_url($rawUrl);
+            if ($newUrl === false) {
+                vault_action_diagnostic('VAULT_RECORD_EDIT_FAILURE', ['reason'=>'invalid_url','index'=>$index]);
+                header('Location: index.php?status=error&pane=view');
+                exit;
+            }
+
+            $passwords[$index]['label'] = $label;
+            $passwords[$index]['username'] = $username;
+            $passwords[$index]['password'] = $password;
+            $passwords[$index]['url'] = $newUrl;
+            $passwords[$index]['notes'] = $notes;
+            vault_action_diagnostic('VAULT_RECORD_EDIT_MATCHED', ['index'=>$index,'url_changed'=>$newUrl !== $oldUrl]);
+
+            if ($newUrl !== $oldUrl) {
+                $oldIcon = (string)($item['icon_path'] ?? '');
+                if ($oldIcon !== '' && is_file($oldIcon) && str_starts_with($oldIcon, SENTRYIQ_DATA_DIR . '/vault_icons/')) @unlink($oldIcon);
+                $icon = ['icon_type'=>null,'icon_path'=>null,'icon_source'=>null,'icon_fetched_at'=>null];
+                if ($newUrl !== '') $icon = cache_vault_icon($newUrl, $entryId);
+                $passwords[$index]['icon_type'] = $icon['icon_type'];
+                $passwords[$index]['icon_path'] = $icon['icon_path'];
+                $passwords[$index]['icon_source'] = $icon['icon_source'];
+                $passwords[$index]['icon_fetched_at'] = $icon['icon_fetched_at'];
+            }
+            $passwords[$index]['updated_at'] = date('c');
+            break;
         }
-        $passwords[$index]['updated_at']=date('c');
-        break;
     }
-    if (!$found || !save_passwords($passwords)) { header('Location: index.php?status=error&pane=view'); exit; }
+
+    if (!$found) {
+        vault_action_diagnostic('VAULT_RECORD_EDIT_FAILURE', ['reason'=>'record_not_found']);
+        header('Location: index.php?status=error&pane=view');
+        exit;
+    }
+
+    if (!save_passwords($passwords)) {
+        vault_action_diagnostic('VAULT_RECORD_EDIT_FAILURE', ['reason'=>'save_failed']);
+        header('Location: index.php?status=error&pane=view');
+        exit;
+    }
+
     log_security_event('VAULT_RECORD_UPDATED', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown', ['entry_id'=>$entryId]);
     header('Location: index.php?status=updated&pane=view');
     exit;
@@ -120,7 +179,12 @@ if ($action === 'edit') {
 
 if ($action === 'delete') {
     $entryId = trim((string)($_POST['entry_id'] ?? ''));
-    if ($entryId === '') { header('Location: index.php?status=error&pane=view'); exit; }
+    if ($entryId === '') {
+        vault_action_diagnostic('VAULT_RECORD_DELETE_FAILURE', ['reason'=>'entry_id_missing']);
+        header('Location: index.php?status=error&pane=view');
+        exit;
+    }
+
     $found = false;
     foreach ($passwords as $index => $item) {
         if (($item['id'] ?? '') !== $entryId) continue;
@@ -130,7 +194,12 @@ if ($action === 'delete') {
         unset($passwords[$index]);
         break;
     }
-    if (!$found || !save_passwords(array_values($passwords))) { header('Location: index.php?status=error&pane=view'); exit; }
+    if (!$found || !save_passwords(array_values($passwords))) {
+        if (!$found) vault_action_diagnostic('VAULT_RECORD_DELETE_FAILURE', ['reason'=>'record_not_found']);
+        header('Location: index.php?status=error&pane=view');
+        exit;
+    }
+
     log_security_event('VAULT_RECORD_DELETED', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown', ['entry_id'=>$entryId]);
     header('Location: index.php?status=deleted&pane=view');
     exit;
