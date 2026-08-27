@@ -217,23 +217,28 @@ function vault_read_envelope(): array|false
 {
     clearstatcache(true, DATA_FILE);
 
-    if (!ensure_sentryiq_data_directory() || !is_file(DATA_FILE) || is_link(DATA_FILE)) return false;
+    if (!ensure_sentryiq_data_directory() || !is_file(DATA_FILE) || is_link(DATA_FILE)) {
+        throw new RuntimeException('vault_read_envelope:data_file_unavailable');
+    }
 
     $raw = @file_get_contents(DATA_FILE);
-    if (!is_string($raw) || $raw === '' || strlen($raw) > 32 * 1024 * 1024) return false;
+    if (!is_string($raw) || $raw === '' || strlen($raw) > 32 * 1024 * 1024) {
+        throw new RuntimeException('vault_read_envelope:raw_file_invalid');
+    }
 
     try {
         $envelope = json_decode($raw, true, 16, JSON_THROW_ON_ERROR);
-    } catch (Throwable) {
-        return false;
+    } catch (Throwable $exception) {
+        throw new RuntimeException('vault_read_envelope:json_decode_failed');
     }
-    if (!is_array($envelope)) return false;
-    if (($envelope['version'] ?? null) !== SENTRYIQ_VAULT_VERSION) return false;
-    if (!isset($envelope['kdf']) || !is_array($envelope['kdf'])) return false;
-    if (($envelope['kdf']['name'] ?? '') !== 'argon2id13') return false;
-    if (($envelope['cipher']['name'] ?? '') !== 'aes-256-gcm') return false;
-    if (($envelope['cipher']['nonce_bytes'] ?? null) !== SENTRYIQ_GCM_NONCE_BYTES) return false;
-    if (($envelope['cipher']['tag_bytes'] ?? null) !== SENTRYIQ_GCM_TAG_BYTES) return false;
+    if (!is_array($envelope)) throw new RuntimeException('vault_read_envelope:envelope_not_array');
+    if (($envelope['version'] ?? null) !== SENTRYIQ_VAULT_VERSION) throw new RuntimeException('vault_read_envelope:version_invalid');
+    if (!isset($envelope['kdf']) || !is_array($envelope['kdf'])) throw new RuntimeException('vault_read_envelope:kdf_invalid');
+    if (($envelope['kdf']['name'] ?? '') !== 'argon2id13') throw new RuntimeException('vault_read_envelope:kdf_name_invalid');
+    if (!isset($envelope['cipher']) || !is_array($envelope['cipher'])) throw new RuntimeException('vault_read_envelope:cipher_invalid');
+    if (($envelope['cipher']['name'] ?? '') !== 'aes-256-gcm') throw new RuntimeException('vault_read_envelope:cipher_name_invalid');
+    if (($envelope['cipher']['nonce_bytes'] ?? null) !== SENTRYIQ_GCM_NONCE_BYTES) throw new RuntimeException('vault_read_envelope:nonce_bytes_invalid');
+    if (($envelope['cipher']['tag_bytes'] ?? null) !== SENTRYIQ_GCM_TAG_BYTES) throw new RuntimeException('vault_read_envelope:tag_bytes_invalid');
 
     $salt = vault_decode_base64((string)($envelope['kdf']['salt'] ?? ''), SODIUM_CRYPTO_PWHASH_SALTBYTES);
     $nonce = vault_decode_base64((string)($envelope['nonce'] ?? ''), SENTRYIQ_GCM_NONCE_BYTES);
@@ -241,12 +246,18 @@ function vault_read_envelope(): array|false
     $ciphertext = vault_decode_base64((string)($envelope['ciphertext'] ?? ''));
     $aadStored = vault_decode_base64((string)($envelope['aad'] ?? ''));
 
-    if ($salt === false || $nonce === false || $tag === false || $ciphertext === false || $aadStored === false) return false;
+    if ($salt === false) throw new RuntimeException('vault_read_envelope:salt_invalid');
+    if ($nonce === false) throw new RuntimeException('vault_read_envelope:nonce_invalid');
+    if ($tag === false) throw new RuntimeException('vault_read_envelope:tag_invalid');
+    if ($ciphertext === false) throw new RuntimeException('vault_read_envelope:ciphertext_invalid');
+    if ($aadStored === false) throw new RuntimeException('vault_read_envelope:aad_invalid');
 
     $kdfName = (string)($envelope['kdf']['name'] ?? '');
     $opslimit = (int)($envelope['kdf']['opslimit'] ?? 0);
     $memlimit = (int)($envelope['kdf']['memlimit'] ?? 0);
-    if ($kdfName !== 'argon2id13' || $opslimit < SODIUM_CRYPTO_PWHASH_OPSLIMIT_INTERACTIVE || $memlimit < 19 * 1024 * 1024) return false;
+    if ($kdfName !== 'argon2id13') throw new RuntimeException('vault_read_envelope:kdf_name_invalid_after_decode');
+    if ($opslimit < SODIUM_CRYPTO_PWHASH_OPSLIMIT_INTERACTIVE) throw new RuntimeException('vault_read_envelope:opslimit_invalid');
+    if ($memlimit < 19 * 1024 * 1024) throw new RuntimeException('vault_read_envelope:memlimit_invalid');
 
     $kdf = [
         'name' => $kdfName,
@@ -268,8 +279,11 @@ function vault_read_envelope(): array|false
 
 function vault_unlock(string $password): array|false
 {
-    $parts = vault_read_envelope();
-    if ($parts === false) return false;
+    try {
+        $parts = vault_read_envelope();
+    } catch (Throwable $exception) {
+        throw new RuntimeException('vault_unlock:envelope:' . $exception->getMessage());
+    }
 
     try {
         $key = vault_derive_key(
@@ -279,8 +293,7 @@ function vault_unlock(string $password): array|false
             (int)$parts['kdf']['memlimit']
         );
     } catch (Throwable $exception) {
-        error_log('SentryIQ vault unlock KDF failure: ' . $exception->getMessage());
-        return false;
+        throw new RuntimeException('vault_unlock:kdf:' . $exception->getMessage());
     }
 
     $plaintext = openssl_decrypt(
@@ -292,10 +305,19 @@ function vault_unlock(string $password): array|false
         $parts['tag'],
         $parts['aad']
     );
-    if ($plaintext === false) return false;
+    if ($plaintext === false) {
+        $errors = [];
+        while (($opensslError = openssl_error_string()) !== false) $errors[] = $opensslError;
+        $suffix = $errors === [] ? '' : ':' . implode('|', $errors);
+        throw new RuntimeException('vault_unlock:gcm_decrypt_failed' . $suffix);
+    }
 
-    $records = json_decode($plaintext, true);
-    if (!is_array($records)) return false;
+    try {
+        $records = json_decode($plaintext, true, 16, JSON_THROW_ON_ERROR);
+    } catch (Throwable $exception) {
+        throw new RuntimeException('vault_unlock:plaintext_json_failed');
+    }
+    if (!is_array($records)) throw new RuntimeException('vault_unlock:plaintext_not_array');
 
     return [
         'key' => $key,
@@ -388,7 +410,6 @@ function load_passwords(?string $explicitKey = null): array|bool
     if (!is_string($key) || strlen($key) !== 32) return false;
 
     $parts = vault_read_envelope();
-    if ($parts === false) return false;
 
     $plaintext = openssl_decrypt(
         $parts['ciphertext'],
