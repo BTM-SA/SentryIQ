@@ -15,6 +15,20 @@ if ($dataDir === '' || !is_file($dataDir . '/vault_engine.php')) {
     exit('SentryIQ secure runtime is unavailable.');
 }
 require_once $dataDir . '/vault_engine.php';
+require_once $dataDir . '/vault_icon_cache.php';
+
+function record_action_save_passwords(array $records): bool
+{
+    $masterKey = $_SESSION['master_key'] ?? null;
+    if (!is_string($masterKey) || strlen($masterKey) !== 32) return false;
+    try {
+        $parts = vault_read_envelope();
+        return vault_write_encrypted_records($records, $masterKey, $parts['kdf']);
+    } catch (Throwable $exception) {
+        error_log('SentryIQ record save failure: ' . $exception::class . ': ' . $exception->getMessage());
+        return false;
+    }
+}
 
 $action = (string)($_POST['action'] ?? '');
 $passwords = load_passwords();
@@ -58,7 +72,7 @@ if ($action === 'edit') {
         }
     }
 
-    if (!$found || !save_passwords($passwords)) {
+    if (!$found || !record_action_save_passwords($passwords)) {
         header('Location: index.php?status=error&pane=view');
         exit;
     }
@@ -84,7 +98,7 @@ if ($action === 'delete') {
         break;
     }
 
-    if (!$found || !save_passwords(array_values($passwords))) {
+    if (!$found || !record_action_save_passwords(array_values($passwords))) {
         header('Location: index.php?status=error&pane=view');
         exit;
     }
