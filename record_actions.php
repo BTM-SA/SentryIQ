@@ -130,11 +130,13 @@ if ($action === 'edit') {
 
     if (!$found) {
         record_action_diagnostic('RECORD_EDIT_FAILURE', ['reason' => 'record_not_found']);
-    } elseif (!record_action_save_passwords($passwords)) {
-        record_action_diagnostic('RECORD_EDIT_FAILURE', ['reason' => 'save_failed']);
+        header('Location: index.php?status=error&pane=view');
+        exit;
     }
 
-    if (!$found || !record_action_save_passwords($passwords)) {
+    $saveOk = record_action_save_passwords($passwords);
+    if (!$saveOk) {
+        record_action_diagnostic('RECORD_EDIT_FAILURE', ['reason' => 'save_failed']);
         header('Location: index.php?status=error&pane=view');
         exit;
     }
