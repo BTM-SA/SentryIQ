@@ -16,6 +16,27 @@ if ($dataDir === '' || !is_file($dataDir . '/vault_engine.php')) {
 }
 require_once $dataDir . '/vault_engine.php';
 
+function vault_action_diagnostic(string $stage, array $details = []): void
+{
+    $dataFile = defined('LOG_FILE') ? LOG_FILE : '';
+    $directory = defined('SENTRYIQ_DATA_DIR') ? SENTRYIQ_DATA_DIR : '';
+    if ($directory === '' || $dataFile === '' || !is_dir($directory)) return;
+    $record = [
+        'timestamp' => date('c'),
+        'stage' => $stage,
+        'php_version' => PHP_VERSION,
+        'sapi' => PHP_SAPI,
+    ];
+    foreach ($details as $key => $value) {
+        if (is_scalar($value) || $value === null) $record[$key] = $value;
+    }
+    $line = json_encode($record, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    if (is_string($line)) {
+        @file_put_contents($dataFile, $line . PHP_EOL, FILE_APPEND | LOCK_EX);
+        @chmod($dataFile, 0600);
+    }
+}
+
 /**
  * Persist normalized vault records using the currently authenticated master key
  * and the existing vault KDF parameters stored in the envelope.
@@ -24,17 +45,33 @@ function save_passwords(array $records): bool
 {
     $masterKey = $_SESSION['master_key'] ?? null;
     if (!is_string($masterKey) || strlen($masterKey) !== 32) {
+        vault_action_diagnostic('VAULT_SAVE_FAILURE', ['reason' => 'master_key_unavailable', 'record_count' => count($records)]);
         return false;
     }
 
     try {
+        vault_action_diagnostic('VAULT_SAVE_STARTED', ['record_count' => count($records), 'data_file' => DATA_FILE]);
         $parts = vault_read_envelope();
-        return vault_write_encrypted_records(
+        vault_action_diagnostic('VAULT_SAVE_ENVELOPE_READ_OK', ['record_count' => count($records)]);
+        $saved = vault_write_encrypted_records(
             $records,
             $masterKey,
             $parts['kdf']
         );
+        if (!$saved) {
+            vault_action_diagnostic('VAULT_SAVE_FAILURE', ['reason' => 'vault_write_encrypted_records_returned_false', 'record_count' => count($records)]);
+            return false;
+        }
+        vault_action_diagnostic('VAULT_SAVE_COMPLETED', ['record_count' => count($records)]);
+        return true;
     } catch (Throwable $exception) {
+        vault_action_diagnostic('VAULT_SAVE_FAILURE', [
+            'reason' => 'exception',
+            'exception_class' => $exception::class,
+            'exception_message' => $exception->getMessage(),
+            'line' => $exception->getLine(),
+            'record_count' => count($records),
+        ]);
         error_log('SentryIQ vault save failure: ' . $exception::class . ': ' . $exception->getMessage());
         return false;
     }
@@ -208,13 +245,24 @@ if ($action === 'save_settings') {
     $movedDirectory = false;
 
     if ($requestedDirectory !== '' && $requestedDirectory !== SENTRYIQ_DATA_DIR) {
-        if (!sentryiq_is_trusted_data_directory($requestedDirectory)) {
+        try {
+            $trustedRequestedDirectory = sentryiq_is_trusted_data_directory($requestedDirectory);
+        } catch (Throwable $exception) {
+            $trustedRequestedDirectory = false;
+        }
+        if (!$trustedRequestedDirectory) {
             if (!is_dir($requestedDirectory) && @mkdir($requestedDirectory, 0700, true)) {
                 @chmod($requestedDirectory, 0700);
             }
         }
 
-        if (sentryiq_is_trusted_data_directory($requestedDirectory)) {
+        try {
+            $trustedRequestedDirectory = sentryiq_is_trusted_data_directory($requestedDirectory);
+        } catch (Throwable $exception) {
+            $trustedRequestedDirectory = false;
+        }
+
+        if ($trustedRequestedDirectory) {
             $newDir = rtrim($requestedDirectory, '/');
             $ok = true;
             if (!@copy(DATA_FILE, $newDir . '/passwords.enc')) $ok = false;
