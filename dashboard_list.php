@@ -1,5 +1,6 @@
 <?php
 $passwords = normalize_vault_records($passwords ?? []);
+$passwords = array_values(array_filter($passwords, static fn(array $row): bool => ($row['type'] ?? '') !== 'system_config'));
 ?>
 <!-- Location: /home/bicheveb/public_html/pm/dashboard_list.php -->
 <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
