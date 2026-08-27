@@ -86,6 +86,7 @@ function viewRecordDetails(label,username,password,url,notes,id){if(Array.isArra
 <body>
 <div class="box">
 <?php if (!$vault_authenticated): ?>
+    <img class="sentryiq-brand-logo" src="sentryiq-logo-512.png" width="160" height="160" alt="SentryIQ" fetchpriority="high">
     <?php if ($vault_error): ?>
         <h2>🔒 SentryIQ</h2><p class="error">The secure vault could not be opened. No changes have been made.</p>
     <?php elseif (!isset($_SESSION['pending_key'])): ?>
