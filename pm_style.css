@@ -1,5 +1,5 @@
 /* SentryIQ Branding */
-.box::before { content: ""; display: block; width: 96px; height: 96px; margin: 0 auto 18px; background: url('sentryiq-logo.png') center / contain no-repeat; }
+.box::before { content: ""; display: block; width: 128px; height: 128px; margin: 0 auto 18px; background: url('sentryiq-logo-512.png') center / contain no-repeat; }
 
 /* Base Core Typography */
 * { box-sizing: border-box; }
@@ -17,6 +17,7 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
 .btn-danger:hover { background: #bd2130; }
 .error { color: #dc3545; font-weight: bold; margin-bottom: 15px; }
 .success { color: #28a745; font-weight: bold; margin-bottom: 15px; }
+.validation-error { color: #dc3545; font-size: 13px; font-weight: 600; margin-top: 6px; }
 
 /* Interactive Vault Layout Tabs */
 .vault-tabs { display: flex; gap: 5px; border-bottom: 2px solid #dee2e6; margin-top: 20px; margin-bottom: 20px; overflow-x: auto; }
@@ -42,10 +43,21 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
 .secret-badge { background: #e9ecef; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 14px; overflow-wrap: anywhere; }
 .initial-badge { width: 28px; height: 24px; border-radius: 50%; color: #ffffff; font-weight: bold; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; text-shadow: 0 1px 2px rgba(0,0,0,0.1); box-shadow: 0 2px 4px rgba(0,0,0,0.05); padding-bottom: 4px; }
 
+/* Mobile security log */
+.security-log-list { display: flex; flex-direction: column; gap: 10px; }
+.security-log-card { background: #fff; border: 1px solid #e3e6f0; border-radius: 8px; padding: 12px; }
+.security-log-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+.security-log-event { font-weight: 700; overflow-wrap: anywhere; }
+.security-log-time { color: #777; font-size: 11px; white-space: nowrap; }
+.security-log-field { margin-top: 7px; overflow-wrap: anywhere; word-break: break-word; }
+.security-log-label { display: block; color: #777; font-size: 10px; font-weight: 700; text-transform: uppercase; margin-bottom: 2px; }
+.security-log-value { font-size: 12px; }
+
 /* Mobile layout */
 @media (max-width: 700px) {
     body { margin: 0; padding: 10px; }
     .box { width: 100%; max-width: none; padding: 16px; border-radius: 6px; }
+    .box::before { width: 104px; height: 104px; margin-bottom: 12px; }
     h2 { font-size: 20px; }
     h3 { font-size: 18px; }
     .vault-mobile-menu-bar { display: block; position: relative; margin: 18px 0 10px; }
@@ -58,8 +70,8 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
     .tab-btn.active { background: #e9f2ff; color: #0066cc; }
     .vault-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
     .entry-card { width: 100%; cursor: pointer; }
-    .entry-card > div:last-child { position: absolute !important; inset: 0 !important; padding: 0 !important; z-index: 5; }
-    .entry-card > div:last-child .btn { width: 100% !important; height: 100% !important; padding: 0 !important; margin: 0 !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; color: transparent !important; font-size: 0 !important; box-shadow: none !important; opacity: 0 !important; }
+    .entry-card:focus-visible { outline: 2px solid #0066cc; outline-offset: 2px; }
+    .entry-card .inspect-button { display: none !important; }
     .og-preview-holder { height: 84px !important; }
     .form-box, .detail-card { padding: 14px; }
     .detail-card > div[style*="display:flex"] { flex-direction: column; }
@@ -68,15 +80,21 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
     .detail-card > div[style*="display:flex"] form .btn { width: 100%; }
     .input-field { font-size: 16px; }
     .entry-row { flex-direction: column; align-items: stretch; gap: 10px; }
+    .security-log-table { display: none; }
+    .security-log-list { display: flex; }
+    .security-log-card-header { flex-direction: column; }
+    .security-log-time { white-space: normal; }
 }
 
 @media (min-width: 701px) {
     .vault-mobile-menu-bar { display: none; }
+    .security-log-list { display: none; }
 }
 
 @media (max-width: 420px) {
     body { padding: 6px; }
     .box { padding: 12px; }
+    .box::before { width: 92px; height: 92px; }
     .tab-btn { font-size: 14px; }
     .btn { width: 100%; }
 }
