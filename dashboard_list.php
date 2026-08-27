@@ -4,7 +4,7 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
 ?>
 <!-- Location: /home/bicheveb/public_html/pm/dashboard_list.php -->
 <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
-    <h2>📂 Decrypted Vault Store</h2>
+    <h2>🛡️ SentryIQ</h2>
     <a href="?action=logout" class="btn btn-danger" style="background:#6c757d; text-decoration:none;">Lock Vault</a>
 </div>
 
