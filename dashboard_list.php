@@ -4,8 +4,8 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
 ?>
 <!-- Location: /home/bicheveb/public_html/pm/dashboard_list.php -->
 <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
-    <h2>🛡️ SentryIQ</h2>
-    <a href="?action=logout" class="btn btn-danger" style="background:#6c757d; text-decoration:none;">Lock Vault</a>
+    <h2 class="sentryiq-vault-brand"><img class="sentryiq-vault-logo" src="sentryiq-logo-512.png" width="48" height="48" alt="SentryIQ"> <span>SentryIQ</span></h2>
+    <a href="?action=logout" class="btn btn-primary" style="text-decoration:none;">Lock Vault</a>
 </div>
 
 <?php if (isset($_GET['status']) && $_GET['status'] == 'saved') echo "<p class='success'>Entry stored successfully!</p>"; ?>
@@ -18,7 +18,7 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
 <div class="vault-mobile-menu-bar">
     <button type="button" class="vault-mobile-menu-toggle" aria-expanded="false" aria-controls="vault-mobile-menu">
         <span class="vault-mobile-menu-icon" aria-hidden="true">☰</span>
-        <span id="vault-mobile-menu-label">SentryIQ Menu</span>
+        <span id="vault-mobile-menu-label">Menu</span>
     </button>
 </div>
 
@@ -52,7 +52,7 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
                         <?php if ($hasStoredIcon): ?><img src="vault-icon.php?id=<?php echo rawurlencode((string)$row['id']); ?>" style="width:36px;height:36px;object-fit:contain;position:relative;z-index:2;filter:drop-shadow(0 4px 6px rgba(0,0,0,.15));" alt="Stored website icon" onerror="this.style.display='none';"><?php endif; ?>
                         <span style="position:absolute;color:#fff;font-size:28px;font-weight:700;font-family:monospace;opacity:.3;z-index:1;"><?php echo htmlspecialchars($initials); ?></span>
                     </div>
-                    <div style="padding:12px 15px 4px;"><span class="entry-label" style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;color:#212529;"><?php echo htmlspecialchars($label); ?></span><small style="color:#868e96;font-size:11px;display:block;overflow:hidden;text-overflow:ellipsis;"><?php echo htmlspecialchars($row['username'] ?? '[No Username]'); ?></small></div>
+                    <div class="entry-card-identity" style="padding:12px 15px 4px;"><span class="entry-label" style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;color:#212529;"><?php echo htmlspecialchars($label); ?></span><small style="color:#868e96;font-size:11px;display:block;overflow:hidden;text-overflow:ellipsis;"><?php echo htmlspecialchars($row['username'] ?? '[No Username]'); ?></small></div>
                     <div style="padding:12px;"><button type="button" class="btn btn-primary inspect-button" style="width:100%;padding:8px 0;font-size:12px;border-radius:6px;background:#0066cc;">👁️ Inspect</button></div>
                 </div>
             <?php endforeach; ?>
@@ -86,13 +86,6 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
                 if (typeof switchVaultTab === 'function') switchVaultTab(tab);
                 menu.classList.remove('mobile-open');
                 toggle.setAttribute('aria-expanded', 'false');
-            });
-        });
-
-        var inspectButtons = menu.querySelectorAll('.inspect-button');
-        inspectButtons.forEach(function (button) {
-            button.addEventListener('click', function (event) {
-                event.stopPropagation();
             });
         });
     });
