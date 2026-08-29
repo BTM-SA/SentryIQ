@@ -1,5 +1,6 @@
 /* SentryIQ Branding */
 .sentryiq-brand-logo { display:block; width:160px; height:160px; max-width:100%; object-fit:contain; margin:0 auto 18px; }
+.sentryiq-brand-banner { display:block; width:min(980px,100%); height:auto; max-height:none; object-fit:contain; margin:0 auto 18px; }
 .sentryiq-vault-brand { display:flex; align-items:center; gap:10px; margin:0; }
 .sentryiq-vault-logo { width:48px; height:48px; object-fit:contain; display:block; }
 
@@ -60,6 +61,7 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
     body { margin: 0; padding: 10px; }
     .box { width: 100%; max-width: none; padding: 16px; border-radius: 6px; }
     .sentryiq-brand-logo { width:104px; height:104px; margin-bottom:12px; }
+    .sentryiq-brand-banner { width:100%; max-width:700px; margin-bottom:14px; }
     .sentryiq-vault-brand { gap:8px; }
     .sentryiq-vault-logo { width:42px; height:42px; }
     .sentryiq-vault-brand span { display:none; }
@@ -105,6 +107,7 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
     body { padding: 6px; }
     .box { padding: 12px; }
     .sentryiq-brand-logo { width:92px; height:92px; }
+    .sentryiq-brand-banner { width:100%; }
     .sentryiq-vault-logo { width:38px; height:38px; }
     .tab-btn { font-size: 14px; }
     .btn { width: 100%; }
