@@ -4,7 +4,7 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
 ?>
 <!-- Location: /home/bicheveb/public_html/pm/dashboard_list.php -->
 <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
-    <h2 class="sentryiq-vault-brand"><img class="sentryiq-vault-logo" src="sentryiq-logo-512.png" width="48" height="48" alt="SentryIQ"> <span>SentryIQ</span></h2>
+    <div class="sentryiq-vault-brand-wrap"><img class="sentryiq-vault-banner" src="sentryiq-logo-wide.webp" width="700" height="234" alt="SentryIQ"><span class="sentryiq-vault-status">Secure Vault</span></div>
     <a href="?action=logout" class="btn btn-primary" style="text-decoration:none;">Lock Vault</a>
 </div>
 
