@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1952" height="588" viewBox="0 0 1952 588" role="img" aria-labelledby="title desc">
+<title id="title">SentryIQ</title>
+<desc id="desc">SentryIQ logo with a white key inside a blue rounded square and SentryIQ wordmark.</desc>
+<defs>
+  <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#185a78"/>
+    <stop offset="1" stop-color="#08a4eb"/>
+  </linearGradient>
+</defs>
+<rect width="1952" height="588" fill="#fff"/>
+<rect x="120" y="52" width="466" height="466" rx="110" fill="url(#blue)"/>
+<circle cx="392" cy="245" r="99" fill="#fff"/>
+<path d="M303 276 L225 354 L225 395 Q225 411 241 411 H278 Q294 411 294 395 V375 H313 Q329 375 329 359 V340 H350 Q366 340 366 324 V306 Z" fill="#fff"/>
+<circle cx="416" cy="220" r="20" fill="#1685ba"/>
+<text x="705" y="386" font-family="Arial, Helvetica, sans-serif" font-size="192" font-weight="700" letter-spacing="-7" fill="#056692">SentryIQ</text>
+</svg>
