@@ -89,23 +89,22 @@ function viewRecordDetails(label,username,password,url,notes,id){if(Array.isArra
 <?php if (!$vault_authenticated): ?>
     <img class="sentryiq-brand-banner" src="sentryiq-logo-wide.webp" width="1952" height="588" alt="SentryIQ" fetchpriority="high">
     <?php if ($vault_error): ?>
-        <h2>🔒 SentryIQ</h2><p class="error">The secure vault could not be opened. No changes have been made.</p>
+        <p class="error">The secure vault could not be opened. No changes have been made.</p>
     <?php elseif (!isset($_SESSION['pending_key'])): ?>
-        <h2>🔒 SentryIQ</h2>
         <?php if ($decryption_failed): ?><p class="error">Unable to verify the master vault password.</p><?php endif; ?>
         <form method="POST" autocomplete="off">
             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
             <div class="form-group"><label>Master Vault Password:</label><input type="password" name="master_password" class="input-field" autocomplete="current-password" required autofocus></div>
-            <button type="submit" name="login_step_1" class="btn btn-primary">Unlock SentryIQ</button>
+            <button type="submit" name="login_step_1" class="btn btn-primary">Unlock</button>
         </form>
     <?php else: ?>
-        <h2>🔐 SentryIQ Verification</h2>
+        <h2>🔐 Verification</h2>
         <p>A temporary verification code has been sent to the configured 2FA email address.</p>
         <?php if ($error_step_2 !== ''): ?><p class="error"><?php echo htmlspecialchars($error_step_2, ENT_QUOTES, 'UTF-8'); ?></p><?php endif; ?>
         <form method="POST" autocomplete="off">
             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
             <div class="form-group"><label>Enter 6-Digit Code:</label><input type="text" name="verification_code" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" autocomplete="one-time-code" class="input-field" required autofocus></div>
-            <button type="submit" name="login_step_2" class="btn btn-primary">Verify &amp; Unlock SentryIQ</button>
+            <button type="submit" name="login_step_2" class="btn btn-primary">Verify &amp; Unlock</button>
         </form>
     <?php endif; ?>
 <?php else: ?>
