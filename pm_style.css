@@ -9,7 +9,7 @@
 
 /* First-run branding */
 .box > h2:first-child { text-align:center; }
-.box > h2:first-child::before { content:""; display:block; width:min(700px,100%); aspect-ratio:1400 / 467; margin:0 auto 18px; background:url('sentryiq-logo-wide.svg') center / contain no-repeat; }
+.box > h2:first-child::before { content:""; display:block; width:min(700px,100%); aspect-ratio:1952 / 588; margin:0 auto 18px; background:url('sentryiq-logo-wide.webp') center / contain no-repeat; }
 
 /* Base Core Typography */
 * { box-sizing: border-box; }
