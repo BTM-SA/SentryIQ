@@ -20,7 +20,7 @@ require_once $dataDir . '/vault_icon_cache.php';
 function record_action_diagnostic(string $stage, array $details = []): void
 {
     $directory = defined('SENTRYIQ_DATA_DIR') ? SENTRYIQ_DATA_DIR : '';
-    $logFile = defined('LOG_FILE') ? LOG_FILE : '';
+    $logFile = defined('SENTRYIQ_DIAGNOSTIC_LOG') ? SENTRYIQ_DIAGNOSTIC_LOG : '';
     if ($directory === '' || $logFile === '' || !is_dir($directory)) return;
 
     $record = [

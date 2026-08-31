@@ -22,6 +22,7 @@ if ($configuredDataDir === '' || !str_starts_with($configuredDataDir, '/')) {
 define('SENTRYIQ_DATA_DIR', rtrim($configuredDataDir, '/'));
 define('DATA_FILE', SENTRYIQ_DATA_DIR . '/passwords.enc');
 define('LOG_FILE', SENTRYIQ_DATA_DIR . '/security_audit.log');
+define('DIAGNOSTIC_LOG_FILE', SENTRYIQ_DATA_DIR . '/diagnostic.log');
 define('TWO_FA_EMAIL', trim((string)($config['two_fa_email'] ?? '')));
 define('TWO_FA_TOKEN_LIFETIME', 300);
 define('SENTRYIQ_VAULT_VERSION', 2);
@@ -103,14 +104,43 @@ function log_security_event(string $eventType, string $ipAddress, ?string $usern
 function read_security_log(): array
 {
     if (!is_file(LOG_FILE) || is_link(LOG_FILE)) return [];
+
     $lines = @file(LOG_FILE, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     if (!$lines) return [];
 
     $events = [];
+
     foreach (array_reverse($lines) as $line) {
         $decoded = json_decode($line, true);
-        if (is_array($decoded)) $events[] = $decoded;
+
+        if (!is_array($decoded)) {
+            continue;
+        }
+
+        // Only genuine security audit records belong in the Security Log.
+        if (
+            !isset($decoded['timestamp']) ||
+            !is_string($decoded['timestamp']) ||
+            !isset($decoded['event']) ||
+            !is_string($decoded['event']) ||
+            trim($decoded['event']) === ''
+        ) {
+            continue;
+        }
+
+        // Require the core audit fields so diagnostic/malformed
+        // records cannot be displayed as security events.
+        if (
+            !array_key_exists('username', $decoded) ||
+            !array_key_exists('ip', $decoded) ||
+            !array_key_exists('user_agent', $decoded)
+        ) {
+            continue;
+        }
+
+        $events[] = $decoded;
     }
+
     return $events;
 }
 

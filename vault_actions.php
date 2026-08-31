@@ -19,7 +19,7 @@ require_once $dataDir . '/vault_icon_cache.php';
 
 function vault_action_diagnostic(string $stage, array $details = []): void
 {
-    $dataFile = defined('LOG_FILE') ? LOG_FILE : '';
+    $dataFile = defined('SENTRYIQ_DIAGNOSTIC_LOG') ? SENTRYIQ_DIAGNOSTIC_LOG : '';
     $directory = defined('SENTRYIQ_DATA_DIR') ? SENTRYIQ_DATA_DIR : '';
     if ($directory === '' || $dataFile === '' || !is_dir($directory)) return;
     $record = ['timestamp'=>date('c'),'stage'=>$stage,'php_version'=>PHP_VERSION,'sapi'=>PHP_SAPI];
@@ -232,7 +232,9 @@ if ($action === 'save_settings') {
             $newDir=rtrim($requestedDirectory,'/'); $ok=true;
             if (!@copy(DATA_FILE,$newDir.'/passwords.enc')) $ok=false;
             if (is_file(LOG_FILE) && !@copy(LOG_FILE,$newDir.'/security_audit.log')) $ok=false;
+            if (defined('DIAGNOSTIC_LOG_FILE') && is_file(DIAGNOSTIC_LOG_FILE) && !@copy(DIAGNOSTIC_LOG_FILE,$newDir.'/diagnostic.log')) $ok=false;
             @chmod($newDir.'/passwords.enc',0600); if (is_file($newDir.'/security_audit.log')) @chmod($newDir.'/security_audit.log',0600);
+            if (is_file($newDir.'/diagnostic.log')) @chmod($newDir.'/diagnostic.log',0600);
             foreach (['vault_engine.php','email_template.php','vault_icon_cache.php'] as $runtimeFile) { if (!@copy(SENTRYIQ_DATA_DIR.'/'.$runtimeFile,$newDir.'/'.$runtimeFile)) $ok=false; @chmod($newDir.'/'.$runtimeFile,0600); }
             $oldIconDir=SENTRYIQ_DATA_DIR.'/vault_icons'; $newIconDir=$newDir.'/vault_icons';
             if (is_dir($oldIconDir)) { if (!is_dir($newIconDir) && !@mkdir($newIconDir,0700,true)) $ok=false; foreach (@scandir($oldIconDir) ?: [] as $file) { if ($file==='.'||$file==='..') continue; $source=$oldIconDir.'/'.$file; $target=$newIconDir.'/'.$file; if (is_file($source)&&!@copy($source,$target)) $ok=false; if (is_file($target)) @chmod($target,0600); } } else { @mkdir($newIconDir,0700,true); }
