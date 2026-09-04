@@ -25,6 +25,7 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
 <div id="vault-mobile-menu" class="vault-tabs">
     <button id="view-btn" class="tab-btn <?php echo ($active_pane === 'view') ? 'active' : ''; ?>" data-vault-tab="view">📋 View Stored Entries</button>
     <button id="add-btn" class="tab-btn <?php echo ($active_pane === 'add') ? 'active' : ''; ?>" data-vault-tab="add">➕ Add New Entry</button>
+    <button id="gallery-btn" class="tab-btn" type="button" onclick="window.location.href='gallery.php'">🖼️ Gallery</button>
     <button id="settings-btn" class="tab-btn <?php echo ($active_pane === 'settings') ? 'active' : ''; ?>" data-vault-tab="settings">⚙️ System</button>
     <button id="log-btn" class="tab-btn <?php echo ($active_pane === 'log') ? 'active' : ''; ?>" data-vault-tab="log">🔐 Log</button>
     <button id="details-btn" class="tab-btn" style="display:none;" data-vault-tab="details">👁️ Entry Inspection</button>
