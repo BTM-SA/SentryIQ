@@ -58,6 +58,30 @@ if (!is_file($original)) {
     exit;
 }
 
+$albumsFile = $galleryRoot . '/albums.json';
+$albums = null;
+if (is_file($albumsFile)) {
+    $json = @file_get_contents($albumsFile);
+    $albums = is_string($json) ? json_decode($json, true) : null;
+    if (!is_array($albums)) {
+        http_response_code(500);
+        echo json_encode(['status' => 'error', 'message' => 'Gallery album index is invalid.']);
+        exit;
+    }
+}
+
+$duplicateFile = $galleryRoot . '/duplicate-index.json';
+$index = null;
+if (is_file($duplicateFile)) {
+    $json = @file_get_contents($duplicateFile);
+    $index = is_string($json) ? json_decode($json, true) : null;
+    if (!is_array($index)) {
+        http_response_code(500);
+        echo json_encode(['status' => 'error', 'message' => 'Duplicate index is invalid.']);
+        exit;
+    }
+}
+
 if (!@unlink($original)) {
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => 'Unable to delete gallery photo.']);
@@ -70,18 +94,9 @@ if (!@unlink($thumbnail)) {
     exit;
 }
 
-$albumsFile = $galleryRoot . '/albums.json';
-if (is_file($albumsFile)) {
-    $json = @file_get_contents($albumsFile);
-    $albums = is_string($json) ? json_decode($json, true) : null;
-    if (!is_array($albums)) {
-        http_response_code(500);
-        echo json_encode(['status' => 'error', 'message' => 'Gallery album index is invalid.']);
-        exit;
-    }
-
+if (is_array($albums)) {
     $changed = false;
-    foreach ($albums as $album => &$photos) {
+    foreach ($albums as &$photos) {
         if (!is_array($photos)) continue;
         $filtered = array_values(array_filter($photos, static fn(mixed $id): bool => $id !== $photoId));
         if ($filtered !== $photos) $changed = true;
@@ -102,16 +117,7 @@ if (is_file($albumsFile)) {
     }
 }
 
-$duplicateFile = $galleryRoot . '/duplicate-index.json';
-if (is_file($duplicateFile)) {
-    $json = @file_get_contents($duplicateFile);
-    $index = is_string($json) ? json_decode($json, true) : null;
-    if (!is_array($index)) {
-        http_response_code(500);
-        echo json_encode(['status' => 'error', 'message' => 'Duplicate index is invalid.']);
-        exit;
-    }
-
+if (is_array($index)) {
     $changed = false;
     foreach ($index as $hash => $indexedPhotoId) {
         if ($indexedPhotoId === $photoId) {
