@@ -15,6 +15,9 @@ if ($dataDir === '' || !str_starts_with($dataDir, '/') || !is_dir($dataDir) || i
     exit('SentryIQ secure runtime is unavailable.');
 }
 
+require_once __DIR__ . '/cloud/Gallery/Storage/PhotoMetadataStore.php';
+use SentryIQCloud\Gallery\Storage\PhotoMetadataStore;
+
 header('Content-Type: application/json; charset=utf-8');
 
 $photoId = (string)($_POST['photo_id'] ?? '');
@@ -46,13 +49,7 @@ if ($foundBucket === null) {
 
 $original = $photoRoot . '/' . $foundBucket . '/' . $photoId . '.webp';
 $thumbnail = $thumbnailRoot . '/' . $foundBucket . '/' . $photoId . '.webp';
-if (is_link($original) || is_link($thumbnail)) {
-    http_response_code(400);
-    echo json_encode(['status' => 'error', 'message' => 'Photo storage is invalid.']);
-    exit;
-}
-
-if (!is_file($original)) {
+if (is_link($original) || is_link($thumbnail) || !is_file($original)) {
     http_response_code(404);
     echo json_encode(['status' => 'error', 'message' => 'Photo does not exist.']);
     exit;
@@ -137,6 +134,14 @@ if (is_array($index)) {
         }
         @chmod($duplicateFile, 0600);
     }
+}
+
+try {
+    (new PhotoMetadataStore($galleryRoot . '/metadata.json'))->remove($photoId);
+} catch (RuntimeException $exception) {
+    http_response_code(500);
+    echo json_encode(['status' => 'error', 'message' => 'Photo deleted but metadata cleanup failed.']);
+    exit;
 }
 
 log_security_event('GALLERY_PHOTO_DELETED', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown', ['photo_id' => $photoId]);
