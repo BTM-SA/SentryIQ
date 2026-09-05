@@ -8,6 +8,7 @@ use RuntimeException;
 use SentryIQCloud\Gallery\Image\ImageProcessor;
 use SentryIQCloud\Gallery\Image\ThumbnailGenerator;
 use SentryIQCloud\Gallery\Storage\DuplicateIndex;
+use SentryIQCloud\Gallery\Storage\PhotoMetadataStore;
 use SentryIQCloud\Gallery\Storage\PhotoStorage;
 
 final class UploadService
@@ -17,6 +18,7 @@ final class UploadService
         private readonly ThumbnailGenerator $thumbnailGenerator,
         private readonly DuplicateIndex $duplicateIndex,
         private readonly PhotoStorage $storage,
+        private readonly PhotoMetadataStore $metadata,
     ) {}
 
     public function upload(array $upload): array
@@ -30,19 +32,22 @@ final class UploadService
             return ['status' => 'rejected', 'message' => 'Invalid upload source.'];
         }
         $input = file_get_contents($temporaryPath);
-        if ($input === false) {
-            return ['status' => 'rejected', 'message' => 'Unable to read uploaded image.'];
-        }
+        if ($input === false) return ['status' => 'rejected', 'message' => 'Unable to read uploaded image.'];
         try {
             $webp = $this->processor->toWebp($input);
             $hash = $this->processor->contentHash($webp);
             $existingPhotoId = $this->duplicateIndex->find($hash);
-            if ($existingPhotoId !== null) {
-                return ['status' => 'duplicate', 'photo_id' => $existingPhotoId, 'message' => 'This image already exists in the gallery.'];
-            }
+            if ($existingPhotoId !== null) return ['status' => 'duplicate', 'photo_id' => $existingPhotoId, 'message' => 'This image already exists in the gallery.'];
             $thumbnail = $this->thumbnailGenerator->fromWebp($webp);
             $stored = $this->storage->store($webp, $thumbnail, $hash);
-            $this->duplicateIndex->add($hash, $stored['photo_id']);
+            try {
+                $this->duplicateIndex->add($hash, $stored['photo_id']);
+                $this->metadata->add($stored['photo_id'], (string)($upload['name'] ?? ''), $hash, (int)$stored['created_at']);
+            } catch (RuntimeException $exception) {
+                @unlink($stored['path']);
+                @unlink($stored['thumbnail_path']);
+                throw $exception;
+            }
             return ['status' => 'stored', 'photo_id' => $stored['photo_id'], 'message' => 'Image uploaded successfully.'];
         } catch (RuntimeException $exception) {
             return ['status' => 'rejected', 'message' => $exception->getMessage()];
