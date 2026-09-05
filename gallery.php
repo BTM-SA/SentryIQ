@@ -49,7 +49,7 @@ foreach ($photos as $photo) $photoAlbums[$photo['id']] = $albumStore->albumFor($
 <title>SentryIQ Gallery</title>
 <link rel="stylesheet" href="pm_style.css">
 <style>
-.gallery-header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.gallery-tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.gallery-filter{border:1px solid #d9dee5;background:#fff;border-radius:8px;padding:8px 12px;cursor:pointer}.gallery-filter.active{background:#0066cc;color:#fff;border-color:#0066cc}.gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin-top:20px}.gallery-card{background:#fff;border:1px solid #e9ecef;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.04)}.gallery-card img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;background:#f4f5f7}.gallery-card p{margin:0;padding:10px 12px 4px;font-size:12px;color:#6c757d}.gallery-card select{width:calc(100% - 24px);margin:4px 12px 12px;padding:7px;border:1px solid #d9dee5;border-radius:6px;background:#fff}.gallery-upload{margin-top:18px;padding:18px;border:1px solid #e9ecef;border-radius:12px;background:#fafbfc}.gallery-upload input[type=file]{width:100%;margin:8px 0 12px}.gallery-message{margin-top:12px}.gallery-empty{text-align:center;padding:40px 20px;color:#777}.gallery-albums{margin-top:18px;padding:18px;border:1px solid #e9ecef;border-radius:12px;background:#fff}.gallery-album-form{display:flex;gap:8px;max-width:520px}.gallery-album-form input{flex:1;min-width:0}
+.gallery-header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.gallery-tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.gallery-filter{border:1px solid #d9dee5;background:#fff;border-radius:8px;padding:8px 12px;cursor:pointer}.gallery-filter.active{background:#0066cc;color:#fff;border-color:#0066cc}.gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin-top:20px}.gallery-card{background:#fff;border:1px solid #e9ecef;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.04)}.gallery-card img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;background:#f4f5f7}.gallery-card p{margin:0;padding:10px 12px 4px;font-size:12px;color:#6c757d}.gallery-card select{width:calc(100% - 24px);margin:4px 12px 8px;padding:7px;border:1px solid #d9dee5;border-radius:6px;background:#fff}.gallery-delete{width:calc(100% - 24px);margin:0 12px 12px;padding:7px;border:1px solid #dc3545;border-radius:6px;background:#fff;color:#dc3545;cursor:pointer}.gallery-delete:hover{background:#dc3545;color:#fff}.gallery-upload{margin-top:18px;padding:18px;border:1px solid #e9ecef;border-radius:12px;background:#fafbfc}.gallery-upload input[type=file]{width:100%;margin:8px 0 12px}.gallery-message{margin-top:12px}.gallery-empty{text-align:center;padding:40px 20px;color:#777}.gallery-albums{margin-top:18px;padding:18px;border:1px solid #e9ecef;border-radius:12px;background:#fff}.gallery-album-form{display:flex;gap:8px;max-width:520px}.gallery-album-form input{flex:1;min-width:0}
 </style>
 </head>
 <body>
@@ -102,6 +102,7 @@ foreach ($photos as $photo) $photoAlbums[$photo['id']] = $albumStore->albumFor($
                             <option value="<?php echo htmlspecialchars($album, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $album === $currentAlbum ? 'selected' : ''; ?>><?php echo htmlspecialchars($album); ?></option>
                         <?php endforeach; ?>
                     </select>
+                    <button type="button" class="gallery-delete" data-photo-id="<?php echo htmlspecialchars($photo['id'], ENT_QUOTES, 'UTF-8'); ?>">Delete Photo</button>
                 </div>
             <?php endforeach; ?>
         <?php endif; ?>
@@ -151,6 +152,22 @@ document.querySelectorAll('.gallery-move').forEach(function(select){
             applyFilter(document.querySelector('.gallery-filter.active')?.dataset.album || 'all');
         } catch (error) { this.value = previous; alert(error.message || 'Unable to move photo.'); }
         finally { this.disabled = false; }
+    });
+});
+document.querySelectorAll('.gallery-delete').forEach(function(button){
+    button.addEventListener('click', async function(){
+        if (!window.confirm('Delete this photo permanently?')) return;
+        const card = this.closest('[data-photo-card]');
+        this.disabled = true;
+        try {
+            const form = new FormData(); form.append('csrf_token', csrf); form.append('photo_id', this.dataset.photoId);
+            const response = await fetch('gallery_delete.php', {method:'POST', body:form, credentials:'same-origin', headers:{Accept:'application/json'}});
+            const data = await response.json();
+            if (!response.ok || data.status !== 'ok') throw new Error(data.message || 'Unable to delete photo.');
+            card.remove();
+            const active = document.querySelector('.gallery-filter.active')?.dataset.album || 'all';
+            applyFilter(active);
+        } catch (error) { alert(error.message || 'Unable to delete photo.'); this.disabled = false; }
     });
 });
 function applyFilter(album) {
