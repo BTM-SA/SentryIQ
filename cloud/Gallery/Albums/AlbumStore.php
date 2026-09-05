@@ -58,7 +58,7 @@ final class AlbumStore
             throw new RuntimeException('Album does not exist.');
         }
 
-        foreach ($albums as $name => &$photos) {
+        foreach ($albums as &$photos) {
             $photos = array_values(array_filter($photos, static fn(mixed $id): bool => $id !== $photoId));
         }
         unset($photos);
@@ -91,10 +91,11 @@ final class AlbumStore
 
         $albums = [];
         foreach ($decoded as $name => $photos) {
-            if (!is_string($name) || !is_array($photos)) {
-                continue;
-            }
-            $albums[$name] = array_values(array_filter($photos, static fn(mixed $id): bool => is_string($id) && preg_match('/^[a-f0-9]{32}$/', $id) === 1));
+            if (!is_string($name) || !is_array($photos)) continue;
+            $albums[$name] = array_values(array_unique(array_filter(
+                $photos,
+                static fn(mixed $id): bool => is_string($id) && preg_match('/^[a-f0-9]{32}$/', $id) === 1
+            )));
         }
         return $albums ?: ['Unassigned' => []];
     }
@@ -102,11 +103,9 @@ final class AlbumStore
     private function write(array $albums): void
     {
         $json = json_encode($albums, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-        if ($json === false) {
-            throw new RuntimeException('Unable to encode gallery albums.');
-        }
+        if ($json === false) throw new RuntimeException('Unable to encode gallery albums.');
 
-        $temporary = $this->file . '.tmp';
+        $temporary = $this->file . '.tmp-' . bin2hex(random_bytes(8));
         if (file_put_contents($temporary, $json . PHP_EOL, LOCK_EX) === false) {
             throw new RuntimeException('Unable to write gallery albums.');
         }
