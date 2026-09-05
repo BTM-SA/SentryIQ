@@ -7,27 +7,13 @@ sentryiq_security_bootstrap();
 sentryiq_require_auth();
 
 $configFile = __DIR__ . '/sentryiq_config.php';
-if (!is_file($configFile)) {
-    http_response_code(503);
-    exit('SentryIQ configuration is unavailable.');
-}
-
+if (!is_file($configFile)) { http_response_code(503); exit('SentryIQ configuration is unavailable.'); }
 $config = require $configFile;
-if (!is_array($config)) {
-    http_response_code(503);
-    exit('SentryIQ configuration is unavailable.');
-}
-
+if (!is_array($config)) { http_response_code(503); exit('SentryIQ configuration is unavailable.'); }
 $dataDir = rtrim((string)($config['data_dir'] ?? ''), '/');
-if ($dataDir === '' || !str_starts_with($dataDir, '/') || !is_dir($dataDir) || is_link($dataDir)) {
-    http_response_code(503);
-    exit('SentryIQ secure runtime is unavailable.');
-}
-
+if ($dataDir === '' || !str_starts_with($dataDir, '/') || !is_dir($dataDir) || is_link($dataDir)) { http_response_code(503); exit('SentryIQ secure runtime is unavailable.'); }
 require_once __DIR__ . '/cloud/Gallery/Albums/AlbumStore.php';
-
 use SentryIQCloud\Gallery\Albums\AlbumStore;
-
 $galleryRoot = $dataDir . '/gallery';
 $albumStore = new AlbumStore($galleryRoot . '/albums.json');
 $albums = $albumStore->albums();
@@ -37,29 +23,22 @@ function gallery_collect_thumbnails(string $root): array
 {
     $directory = $root . '/thumbnails';
     if (!is_dir($directory)) return [];
-
     $items = [];
     foreach (scandir($directory) ?: [] as $bucket) {
         if ($bucket === '.' || $bucket === '..' || !preg_match('/^[a-f0-9]{2}$/', $bucket)) continue;
         foreach (scandir($directory . '/' . $bucket) ?: [] as $file) {
             if (!preg_match('/^([a-f0-9]{32})\.webp$/', $file, $match)) continue;
             $id = $match[1];
-            $items[] = [
-                'id' => $id,
-                'modified' => (int) (@filemtime($directory . '/' . $bucket . '/' . $file) ?: 0),
-            ];
+            $items[] = ['id' => $id, 'modified' => (int) (@filemtime($directory . '/' . $bucket . '/' . $file) ?: 0)];
         }
     }
-
     usort($items, static fn(array $a, array $b): int => $b['modified'] <=> $a['modified']);
     return $items;
 }
 
 $photos = gallery_collect_thumbnails($galleryRoot);
 $photoAlbums = [];
-foreach ($photos as $photo) {
-    $photoAlbums[$photo['id']] = $albumStore->albumFor($photo['id']);
-}
+foreach ($photos as $photo) $photoAlbums[$photo['id']] = $albumStore->albumFor($photo['id']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -103,8 +82,8 @@ foreach ($photos as $photo) {
 
     <div class="gallery-tools" aria-label="Gallery album filter">
         <button type="button" class="gallery-filter active" data-album="all">All (<?php echo count($photos); ?>)</button>
-        <?php foreach ($albums as $album => $members): ?>
-            <?php $count = count(array_intersect(array_keys($photoAlbums), $members)); ?>
+        <?php foreach ($albums as $album => $_members): ?>
+            <?php $count = count(array_filter($photoAlbums, static fn(string $current): bool => $current === $album)); ?>
             <button type="button" class="gallery-filter" data-album="<?php echo htmlspecialchars($album, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($album); ?> (<?php echo $count; ?>)</button>
         <?php endforeach; ?>
     </div>
@@ -130,18 +109,15 @@ foreach ($photos as $photo) {
 </div>
 <script>
 const csrf = <?php echo json_encode($csrf, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
-
 async function postAlbumForm(form) {
     const response = await fetch(form.action, {method:'POST', body:new FormData(form), credentials:'same-origin', headers:{Accept:'application/json'}});
     const data = await response.json();
     if (!response.ok || data.status !== 'ok') throw new Error(data.message || 'Gallery operation failed.');
     return data;
 }
-
 document.getElementById('gallery-upload-form').addEventListener('submit', async function(event){
     event.preventDefault();
-    const message = document.getElementById('gallery-message');
-    message.textContent = 'Uploading…';
+    const message = document.getElementById('gallery-message'); message.textContent = 'Uploading…';
     try {
         const response = await fetch(this.action, {method:'POST', body:new FormData(this), credentials:'same-origin', headers:{Accept:'application/json'}});
         const data = await response.json();
@@ -154,55 +130,34 @@ document.getElementById('gallery-upload-form').addEventListener('submit', async 
         if (stored > 0) window.location.reload();
     } catch (error) { message.textContent = error.message || 'Upload failed.'; }
 });
-
 document.getElementById('album-form').addEventListener('submit', async function(event){
     event.preventDefault();
-    const message = document.getElementById('album-message');
-    message.textContent = 'Creating album…';
-    try {
-        await postAlbumForm(this);
-        message.textContent = 'Album created.';
-        window.location.reload();
-    } catch (error) { message.textContent = error.message || 'Unable to create album.'; }
+    const message = document.getElementById('album-message'); message.textContent = 'Creating album…';
+    try { await postAlbumForm(this); message.textContent = 'Album created.'; window.location.reload(); }
+    catch (error) { message.textContent = error.message || 'Unable to create album.'; }
 });
-
 document.querySelectorAll('.gallery-move').forEach(function(select){
+    select.dataset.previous = select.value;
     select.addEventListener('change', async function(){
         const previous = this.dataset.previous || this.value;
-        const form = new FormData();
-        form.append('csrf_token', csrf);
-        form.append('action', 'move');
-        form.append('photo_id', this.dataset.photoId);
-        form.append('album', this.value);
+        const form = new FormData(); form.append('csrf_token', csrf); form.append('action', 'move'); form.append('photo_id', this.dataset.photoId); form.append('album', this.value);
         this.disabled = true;
         try {
             const response = await fetch('gallery_album.php', {method:'POST', body:form, credentials:'same-origin', headers:{Accept:'application/json'}});
             const data = await response.json();
             if (!response.ok || data.status !== 'ok') throw new Error(data.message || 'Unable to move photo.');
             this.dataset.previous = data.album;
-            const card = this.closest('[data-photo-card]');
-            card.dataset.album = data.album;
-            card.querySelector('.gallery-album-label').textContent = data.album;
+            const card = this.closest('[data-photo-card]'); card.dataset.album = data.album; card.querySelector('.gallery-album-label').textContent = data.album;
             applyFilter(document.querySelector('.gallery-filter.active')?.dataset.album || 'all');
-        } catch (error) {
-            this.value = previous;
-            alert(error.message || 'Unable to move photo.');
-        } finally { this.disabled = false; }
+        } catch (error) { this.value = previous; alert(error.message || 'Unable to move photo.'); }
+        finally { this.disabled = false; }
     });
 });
-
 function applyFilter(album) {
-    document.querySelectorAll('[data-photo-card]').forEach(function(card){
-        card.style.display = album === 'all' || card.dataset.album === album ? '' : 'none';
-    });
-    document.querySelectorAll('.gallery-filter').forEach(function(button){
-        button.classList.toggle('active', button.dataset.album === album);
-    });
+    document.querySelectorAll('[data-photo-card]').forEach(function(card){ card.style.display = album === 'all' || card.dataset.album === album ? '' : 'none'; });
+    document.querySelectorAll('.gallery-filter').forEach(function(button){ button.classList.toggle('active', button.dataset.album === album); });
 }
-
-document.querySelectorAll('.gallery-filter').forEach(function(button){
-    button.addEventListener('click', function(){ applyFilter(this.dataset.album); });
-});
+document.querySelectorAll('.gallery-filter').forEach(function(button){ button.addEventListener('click', function(){ applyFilter(this.dataset.album); }); });
 </script>
 </body>
 </html>
