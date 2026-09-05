@@ -13,9 +13,12 @@ if (!is_array($config)) { http_response_code(503); exit('SentryIQ configuration 
 $dataDir = rtrim((string)($config['data_dir'] ?? ''), '/');
 if ($dataDir === '' || !str_starts_with($dataDir, '/') || !is_dir($dataDir) || is_link($dataDir)) { http_response_code(503); exit('SentryIQ secure runtime is unavailable.'); }
 require_once __DIR__ . '/cloud/Gallery/Albums/AlbumStore.php';
+require_once __DIR__ . '/cloud/Gallery/Storage/PhotoMetadataStore.php';
 use SentryIQCloud\Gallery\Albums\AlbumStore;
+use SentryIQCloud\Gallery\Storage\PhotoMetadataStore;
 $galleryRoot = $dataDir . '/gallery';
 $albumStore = new AlbumStore($galleryRoot . '/albums.json');
+$metadataStore = new PhotoMetadataStore($galleryRoot . '/metadata.json');
 $albums = $albumStore->albums();
 $csrf = sentryiq_csrf_token();
 
@@ -29,7 +32,7 @@ function gallery_collect_thumbnails(string $root): array
         foreach (scandir($directory . '/' . $bucket) ?: [] as $file) {
             if (!preg_match('/^([a-f0-9]{32})\.webp$/', $file, $match)) continue;
             $id = $match[1];
-            $items[] = ['id' => $id, 'modified' => (int) (@filemtime($directory . '/' . $bucket . '/' . $file) ?: 0)];
+            $items[] = ['id' => $id, 'modified' => (int)(@filemtime($directory . '/' . $bucket . '/' . $file) ?: 0)];
         }
     }
     usort($items, static fn(array $a, array $b): int => $b['modified'] <=> $a['modified']);
@@ -38,7 +41,11 @@ function gallery_collect_thumbnails(string $root): array
 
 $photos = gallery_collect_thumbnails($galleryRoot);
 $photoAlbums = [];
-foreach ($photos as $photo) $photoAlbums[$photo['id']] = $albumStore->albumFor($photo['id']);
+$photoMetadata = [];
+foreach ($photos as $photo) {
+    $photoAlbums[$photo['id']] = $albumStore->albumFor($photo['id']);
+    $photoMetadata[$photo['id']] = $metadataStore->find($photo['id']);
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -49,7 +56,7 @@ foreach ($photos as $photo) $photoAlbums[$photo['id']] = $albumStore->albumFor($
 <title>SentryIQ Gallery</title>
 <link rel="stylesheet" href="pm_style.css">
 <style>
-.gallery-header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.gallery-tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.gallery-filter{border:1px solid #d9dee5;background:#fff;border-radius:8px;padding:8px 12px;cursor:pointer}.gallery-filter.active{background:#0066cc;color:#fff;border-color:#0066cc}.gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin-top:20px}.gallery-card{background:#fff;border:1px solid #e9ecef;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.04)}.gallery-card img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;background:#f4f5f7}.gallery-card p{margin:0;padding:10px 12px 4px;font-size:12px;color:#6c757d}.gallery-card select{width:calc(100% - 24px);margin:4px 12px 8px;padding:7px;border:1px solid #d9dee5;border-radius:6px;background:#fff}.gallery-delete{width:calc(100% - 24px);margin:0 12px 12px;padding:7px;border:1px solid #dc3545;border-radius:6px;background:#fff;color:#dc3545;cursor:pointer}.gallery-delete:hover{background:#dc3545;color:#fff}.gallery-upload{margin-top:18px;padding:18px;border:1px solid #e9ecef;border-radius:12px;background:#fafbfc}.gallery-upload input[type=file]{width:100%;margin:8px 0 12px}.gallery-message{margin-top:12px}.gallery-empty{text-align:center;padding:40px 20px;color:#777}.gallery-albums{margin-top:18px;padding:18px;border:1px solid #e9ecef;border-radius:12px;background:#fff}.gallery-album-form{display:flex;gap:8px;max-width:520px}.gallery-album-form input{flex:1;min-width:0}
+.gallery-header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.gallery-tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.gallery-filter{border:1px solid #d9dee5;background:#fff;border-radius:8px;padding:8px 12px;cursor:pointer}.gallery-filter.active{background:#0066cc;color:#fff;border-color:#0066cc}.gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin-top:20px}.gallery-card{background:#fff;border:1px solid #e9ecef;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.04)}.gallery-card img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;background:#f4f5f7}.gallery-card p{margin:0;padding:8px 12px 2px;font-size:12px;color:#6c757d;word-break:break-word}.gallery-card .gallery-meta{padding-top:2px;font-size:11px}.gallery-card select{width:calc(100% - 24px);margin:6px 12px 8px;padding:7px;border:1px solid #d9dee5;border-radius:6px;background:#fff}.gallery-delete{width:calc(100% - 24px);margin:0 12px 12px;padding:7px;border:1px solid #dc3545;border-radius:6px;background:#fff;color:#dc3545;cursor:pointer}.gallery-delete:hover{background:#dc3545;color:#fff}.gallery-upload{margin-top:18px;padding:18px;border:1px solid #e9ecef;border-radius:12px;background:#fafbfc}.gallery-upload input[type=file]{width:100%;margin:8px 0 12px}.gallery-message{margin-top:12px}.gallery-empty{text-align:center;padding:40px 20px;color:#777}.gallery-albums{margin-top:18px;padding:18px;border:1px solid #e9ecef;border-radius:12px;background:#fff}.gallery-album-form{display:flex;gap:8px;max-width:520px}.gallery-album-form input{flex:1;min-width:0}
 </style>
 </head>
 <body>
@@ -93,10 +100,12 @@ foreach ($photos as $photo) $photoAlbums[$photo['id']] = $albumStore->albumFor($
             <div class="gallery-empty" style="grid-column:1/-1;">No photos in the gallery yet.</div>
         <?php else: ?>
             <?php foreach ($photos as $photo): ?>
-                <?php $currentAlbum = $photoAlbums[$photo['id']] ?? 'Unassigned'; ?>
+                <?php $currentAlbum = $photoAlbums[$photo['id']] ?? 'Unassigned'; $metadata = $photoMetadata[$photo['id']] ?? null; $name = is_array($metadata) ? (string)($metadata['original_name'] ?? '') : ''; $createdAt = is_array($metadata) ? (int)($metadata['created_at'] ?? 0) : 0; ?>
                 <div class="gallery-card" data-photo-card data-album="<?php echo htmlspecialchars($currentAlbum, ENT_QUOTES, 'UTF-8'); ?>">
-                    <img src="gallery_image.php?id=<?php echo rawurlencode($photo['id']); ?>" loading="lazy" alt="Gallery photo">
+                    <img src="gallery_image.php?id=<?php echo rawurlencode($photo['id']); ?>" loading="lazy" alt="<?php echo htmlspecialchars($name !== '' ? $name : 'Gallery photo', ENT_QUOTES, 'UTF-8'); ?>">
                     <p class="gallery-album-label"><?php echo htmlspecialchars($currentAlbum); ?></p>
+                    <?php if ($name !== ''): ?><p title="<?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($name); ?></p><?php endif; ?>
+                    <?php if ($createdAt > 0): ?><p class="gallery-meta"><?php echo htmlspecialchars(date('Y-m-d H:i', $createdAt)); ?></p><?php endif; ?>
                     <select class="gallery-move" data-photo-id="<?php echo htmlspecialchars($photo['id'], ENT_QUOTES, 'UTF-8'); ?>" aria-label="Move photo to album">
                         <?php foreach ($albums as $album => $_members): ?>
                             <option value="<?php echo htmlspecialchars($album, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $album === $currentAlbum ? 'selected' : ''; ?>><?php echo htmlspecialchars($album); ?></option>
@@ -110,71 +119,13 @@ foreach ($photos as $photo) $photoAlbums[$photo['id']] = $albumStore->albumFor($
 </div>
 <script>
 const csrf = <?php echo json_encode($csrf, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
-async function postAlbumForm(form) {
-    const response = await fetch(form.action, {method:'POST', body:new FormData(form), credentials:'same-origin', headers:{Accept:'application/json'}});
-    const data = await response.json();
-    if (!response.ok || data.status !== 'ok') throw new Error(data.message || 'Gallery operation failed.');
-    return data;
-}
-document.getElementById('gallery-upload-form').addEventListener('submit', async function(event){
-    event.preventDefault();
-    const message = document.getElementById('gallery-message'); message.textContent = 'Uploading…';
-    try {
-        const response = await fetch(this.action, {method:'POST', body:new FormData(this), credentials:'same-origin', headers:{Accept:'application/json'}});
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Upload failed.');
-        const results = data.results || [];
-        const stored = results.filter(item => item.status === 'stored').length;
-        const duplicates = results.filter(item => item.status === 'duplicate').length;
-        const rejected = results.filter(item => item.status === 'rejected').length;
-        message.textContent = `Upload complete: ${stored} stored, ${duplicates} duplicate, ${rejected} rejected.`;
-        if (stored > 0) window.location.reload();
-    } catch (error) { message.textContent = error.message || 'Upload failed.'; }
-});
-document.getElementById('album-form').addEventListener('submit', async function(event){
-    event.preventDefault();
-    const message = document.getElementById('album-message'); message.textContent = 'Creating album…';
-    try { await postAlbumForm(this); message.textContent = 'Album created.'; window.location.reload(); }
-    catch (error) { message.textContent = error.message || 'Unable to create album.'; }
-});
-document.querySelectorAll('.gallery-move').forEach(function(select){
-    select.dataset.previous = select.value;
-    select.addEventListener('change', async function(){
-        const previous = this.dataset.previous || this.value;
-        const form = new FormData(); form.append('csrf_token', csrf); form.append('action', 'move'); form.append('photo_id', this.dataset.photoId); form.append('album', this.value);
-        this.disabled = true;
-        try {
-            const response = await fetch('gallery_album.php', {method:'POST', body:form, credentials:'same-origin', headers:{Accept:'application/json'}});
-            const data = await response.json();
-            if (!response.ok || data.status !== 'ok') throw new Error(data.message || 'Unable to move photo.');
-            this.dataset.previous = data.album;
-            const card = this.closest('[data-photo-card]'); card.dataset.album = data.album; card.querySelector('.gallery-album-label').textContent = data.album;
-            applyFilter(document.querySelector('.gallery-filter.active')?.dataset.album || 'all');
-        } catch (error) { this.value = previous; alert(error.message || 'Unable to move photo.'); }
-        finally { this.disabled = false; }
-    });
-});
-document.querySelectorAll('.gallery-delete').forEach(function(button){
-    button.addEventListener('click', async function(){
-        if (!window.confirm('Delete this photo permanently?')) return;
-        const card = this.closest('[data-photo-card]');
-        this.disabled = true;
-        try {
-            const form = new FormData(); form.append('csrf_token', csrf); form.append('photo_id', this.dataset.photoId);
-            const response = await fetch('gallery_delete.php', {method:'POST', body:form, credentials:'same-origin', headers:{Accept:'application/json'}});
-            const data = await response.json();
-            if (!response.ok || data.status !== 'ok') throw new Error(data.message || 'Unable to delete photo.');
-            card.remove();
-            const active = document.querySelector('.gallery-filter.active')?.dataset.album || 'all';
-            applyFilter(active);
-        } catch (error) { alert(error.message || 'Unable to delete photo.'); this.disabled = false; }
-    });
-});
-function applyFilter(album) {
-    document.querySelectorAll('[data-photo-card]').forEach(function(card){ card.style.display = album === 'all' || card.dataset.album === album ? '' : 'none'; });
-    document.querySelectorAll('.gallery-filter').forEach(function(button){ button.classList.toggle('active', button.dataset.album === album); });
-}
-document.querySelectorAll('.gallery-filter').forEach(function(button){ button.addEventListener('click', function(){ applyFilter(this.dataset.album); }); });
+async function postAlbumForm(form) { const response = await fetch(form.action, {method:'POST', body:new FormData(form), credentials:'same-origin', headers:{Accept:'application/json'}}); const data = await response.json(); if (!response.ok || data.status !== 'ok') throw new Error(data.message || 'Gallery operation failed.'); return data; }
+document.getElementById('gallery-upload-form').addEventListener('submit', async function(event){ event.preventDefault(); const message=document.getElementById('gallery-message'); message.textContent='Uploading…'; try { const response=await fetch(this.action,{method:'POST',body:new FormData(this),credentials:'same-origin',headers:{Accept:'application/json'}}); const data=await response.json(); if(!response.ok) throw new Error(data.message||'Upload failed.'); const results=data.results||[]; const stored=results.filter(item=>item.status==='stored').length; const duplicates=results.filter(item=>item.status==='duplicate').length; const rejected=results.filter(item=>item.status==='rejected').length; message.textContent=`Upload complete: ${stored} stored, ${duplicates} duplicate, ${rejected} rejected.`; if(stored>0) window.location.reload(); } catch(error){ message.textContent=error.message||'Upload failed.'; } });
+document.getElementById('album-form').addEventListener('submit', async function(event){ event.preventDefault(); const message=document.getElementById('album-message'); message.textContent='Creating album…'; try { await postAlbumForm(this); message.textContent='Album created.'; window.location.reload(); } catch(error){ message.textContent=error.message||'Unable to create album.'; } });
+document.querySelectorAll('.gallery-move').forEach(function(select){ select.dataset.previous=select.value; select.addEventListener('change',async function(){ const previous=this.dataset.previous||this.value; const form=new FormData(); form.append('csrf_token',csrf); form.append('action','move'); form.append('photo_id',this.dataset.photoId); form.append('album',this.value); this.disabled=true; try { const response=await fetch('gallery_album.php',{method:'POST',body:form,credentials:'same-origin',headers:{Accept:'application/json'}}); const data=await response.json(); if(!response.ok||data.status!=='ok') throw new Error(data.message||'Unable to move photo.'); this.dataset.previous=data.album; const card=this.closest('[data-photo-card]'); card.dataset.album=data.album; card.querySelector('.gallery-album-label').textContent=data.album; applyFilter(document.querySelector('.gallery-filter.active')?.dataset.album||'all'); } catch(error){ this.value=previous; alert(error.message||'Unable to move photo.'); } finally{ this.disabled=false; } }); });
+document.querySelectorAll('.gallery-delete').forEach(function(button){ button.addEventListener('click',async function(){ if(!window.confirm('Delete this photo permanently?')) return; const card=this.closest('[data-photo-card]'); this.disabled=true; try { const form=new FormData(); form.append('csrf_token',csrf); form.append('photo_id',this.dataset.photoId); const response=await fetch('gallery_delete.php',{method:'POST',body:form,credentials:'same-origin',headers:{Accept:'application/json'}}); const data=await response.json(); if(!response.ok||data.status!=='ok') throw new Error(data.message||'Unable to delete photo.'); card.remove(); applyFilter(document.querySelector('.gallery-filter.active')?.dataset.album||'all'); } catch(error){ alert(error.message||'Unable to delete photo.'); this.disabled=false; } }); });
+function applyFilter(album){ document.querySelectorAll('[data-photo-card]').forEach(function(card){card.style.display=album==='all'||card.dataset.album===album?'':'none';}); document.querySelectorAll('.gallery-filter').forEach(function(button){button.classList.toggle('active',button.dataset.album===album);}); }
+document.querySelectorAll('.gallery-filter').forEach(function(button){button.addEventListener('click',function(){applyFilter(this.dataset.album);});});
 </script>
 </body>
 </html>
