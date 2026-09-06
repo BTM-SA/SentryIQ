@@ -119,7 +119,20 @@ foreach ($photos as $photo) {
 </div>
 <script>
 const csrf = <?php echo json_encode($csrf, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
-async function postAlbumForm(form) { const response = await fetch(form.action, {method:'POST', body:new FormData(form), credentials:'same-origin', headers:{Accept:'application/json'}}); const data = await response.json(); if (!response.ok || data.status !== 'ok') throw new Error(data.message || 'Gallery operation failed.'); return data; }
+async function postAlbumForm(form) {
+    const payload = new FormData(form);
+    const response = await fetch('gallery_album.php', {
+        method: 'POST',
+        body: payload,
+        credentials: 'same-origin',
+        headers: {Accept: 'application/json'}
+    });
+    const text = await response.text();
+    let data;
+    try { data = JSON.parse(text); } catch (_) { throw new Error('The album request returned an invalid response.'); }
+    if (!response.ok || data.status !== 'ok') throw new Error(data.message || 'Gallery operation failed.');
+    return data;
+}
 document.getElementById('gallery-upload-form').addEventListener('submit', async function(event){ event.preventDefault(); const message=document.getElementById('gallery-message'); message.textContent='Uploading…'; try { const response=await fetch(this.action,{method:'POST',body:new FormData(this),credentials:'same-origin',headers:{Accept:'application/json'}}); const data=await response.json(); if(!response.ok) throw new Error(data.message||'Upload failed.'); const results=data.results||[]; const stored=results.filter(item=>item.status==='stored').length; const duplicates=results.filter(item=>item.status==='duplicate').length; const rejected=results.filter(item=>item.status==='rejected').length; message.textContent=`Upload complete: ${stored} stored, ${duplicates} duplicate, ${rejected} rejected.`; if(stored>0) window.location.reload(); } catch(error){ message.textContent=error.message||'Upload failed.'; } });
 document.getElementById('album-form').addEventListener('submit', async function(event){ event.preventDefault(); const message=document.getElementById('album-message'); message.textContent='Creating album…'; try { await postAlbumForm(this); message.textContent='Album created.'; window.location.reload(); } catch(error){ message.textContent=error.message||'Unable to create album.'; } });
 document.querySelectorAll('.gallery-move').forEach(function(select){ select.dataset.previous=select.value; select.addEventListener('change',async function(){ const previous=this.dataset.previous||this.value; const form=new FormData(); form.append('csrf_token',csrf); form.append('action','move'); form.append('photo_id',this.dataset.photoId); form.append('album',this.value); this.disabled=true; try { const response=await fetch('gallery_album.php',{method:'POST',body:form,credentials:'same-origin',headers:{Accept:'application/json'}}); const data=await response.json(); if(!response.ok||data.status!=='ok') throw new Error(data.message||'Unable to move photo.'); this.dataset.previous=data.album; const card=this.closest('[data-photo-card]'); card.dataset.album=data.album; card.querySelector('.gallery-album-label').textContent=data.album; applyFilter(document.querySelector('.gallery-filter.active')?.dataset.album||'all'); } catch(error){ this.value=previous; alert(error.message||'Unable to move photo.'); } finally{ this.disabled=false; } }); });
