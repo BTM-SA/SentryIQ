@@ -15,10 +15,10 @@ final class PhotoStorage
         }
     }
 
-    public function store(string $webp, string $thumbnail, string $contentHash): array
+    public function store(string $webp, string $thumbnail, string $contentHash, string $filename): array
     {
-        if ($webp === '' || $thumbnail === '' || !preg_match('/^[a-f0-9]{64}$/', $contentHash)) {
-            throw new RuntimeException('Invalid image data or content hash.');
+        if ($webp === '' || $thumbnail === '' || !preg_match('/^[a-f0-9]{64}$/', $contentHash) || !preg_match('/^img\d+\.webp$/', $filename)) {
+            throw new RuntimeException('Invalid image data or filename.');
         }
         $photoId = bin2hex(random_bytes(16));
         $bucket = substr($contentHash, 0, 2);
@@ -26,8 +26,11 @@ final class PhotoStorage
         $thumbDirectory = rtrim($this->root, '/') . '/thumbnails/' . $bucket;
         $this->ensureDirectory($directory);
         $this->ensureDirectory($thumbDirectory);
-        $path = $directory . '/' . $photoId . '.webp';
-        $thumbnailPath = $thumbDirectory . '/' . $photoId . '.webp';
+        $path = $directory . '/' . $filename;
+        $thumbnailPath = $thumbDirectory . '/' . $filename;
+        if (file_exists($path) || file_exists($thumbnailPath)) {
+            throw new RuntimeException('Gallery filename already exists.');
+        }
         if (file_put_contents($path, $webp, LOCK_EX) === false) {
             throw new RuntimeException('Unable to store gallery image.');
         }
@@ -37,7 +40,7 @@ final class PhotoStorage
         }
         @chmod($path, 0640);
         @chmod($thumbnailPath, 0640);
-        return ['photo_id' => $photoId, 'path' => $path, 'thumbnail_path' => $thumbnailPath, 'created_at' => time()];
+        return ['photo_id' => $photoId, 'filename' => $filename, 'path' => $path, 'thumbnail_path' => $thumbnailPath, 'created_at' => time()];
     }
 
     private function ensureDirectory(string $directory): void
