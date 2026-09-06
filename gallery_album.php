@@ -15,6 +15,13 @@ if ($dataDir === '' || !str_starts_with($dataDir, '/') || !is_dir($dataDir) || i
     exit('SentryIQ secure runtime is unavailable.');
 }
 
+$vaultEngine = $dataDir . '/vault_engine.php';
+if (!is_file($vaultEngine) || is_link($vaultEngine)) {
+    http_response_code(503);
+    exit('SentryIQ secure logging runtime is unavailable.');
+}
+require_once $vaultEngine;
+
 require_once __DIR__ . '/cloud/Gallery/Albums/AlbumStore.php';
 
 use SentryIQCloud\Gallery\Albums\AlbumStore;
