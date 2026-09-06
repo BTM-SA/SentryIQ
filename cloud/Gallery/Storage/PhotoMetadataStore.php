@@ -16,14 +16,15 @@ final class PhotoMetadataStore
         }
     }
 
-    public function add(string $photoId, string $originalName, string $contentHash, int $createdAt): void
+    public function add(string $photoId, string $originalName, string $filename, string $contentHash, int $createdAt): void
     {
-        if (!preg_match('/^[a-f0-9]{32}$/', $photoId) || !preg_match('/^[a-f0-9]{64}$/', $contentHash)) {
+        if (!preg_match('/^[a-f0-9]{32}$/', $photoId) || !preg_match('/^img\d+\.webp$/', $filename) || !preg_match('/^[a-f0-9]{64}$/', $contentHash)) {
             throw new RuntimeException('Invalid gallery metadata.');
         }
 
         $metadata = $this->read();
         $metadata[$photoId] = [
+            'filename' => $filename,
             'original_name' => $this->sanitizeName($originalName),
             'content_hash' => $contentHash,
             'created_at' => $createdAt,
@@ -33,18 +34,19 @@ final class PhotoMetadataStore
 
     public function find(string $photoId): ?array
     {
-        if (!preg_match('/^[a-f0-9]{32}$/', $photoId)) {
-            return null;
-        }
+        if (!preg_match('/^[a-f0-9]{32}$/', $photoId)) return null;
         $metadata = $this->read();
         return isset($metadata[$photoId]) && is_array($metadata[$photoId]) ? $metadata[$photoId] : null;
     }
 
+    public function all(): array
+    {
+        return $this->read();
+    }
+
     public function remove(string $photoId): void
     {
-        if (!preg_match('/^[a-f0-9]{32}$/', $photoId)) {
-            throw new RuntimeException('Invalid gallery photo ID.');
-        }
+        if (!preg_match('/^[a-f0-9]{32}$/', $photoId)) throw new RuntimeException('Invalid gallery photo ID.');
         $metadata = $this->read();
         if (!array_key_exists($photoId, $metadata)) return;
         unset($metadata[$photoId]);
@@ -65,9 +67,7 @@ final class PhotoMetadataStore
         $json = json_encode($metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         if ($json === false) throw new RuntimeException('Unable to encode gallery metadata.');
         $temporary = $this->file . '.tmp-' . bin2hex(random_bytes(8));
-        if (file_put_contents($temporary, $json . PHP_EOL, LOCK_EX) === false) {
-            throw new RuntimeException('Unable to write gallery metadata.');
-        }
+        if (file_put_contents($temporary, $json . PHP_EOL, LOCK_EX) === false) throw new RuntimeException('Unable to write gallery metadata.');
         chmod($temporary, 0600);
         if (!rename($temporary, $this->file)) {
             @unlink($temporary);
