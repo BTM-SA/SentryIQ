@@ -29,7 +29,8 @@ use SentryIQCloud\Gallery\Albums\AlbumStore;
 header('Content-Type: application/json; charset=utf-8');
 
 try {
-    $store = new AlbumStore($dataDir . '/gallery/albums.json');
+    $galleryRoot = $dataDir . '/gallery';
+    $store = new AlbumStore($galleryRoot . '/albums.json');
     $action = (string)($_POST['action'] ?? '');
 
     if ($action === 'create') {
@@ -42,10 +43,29 @@ try {
     if ($action === 'move') {
         $photoId = (string)($_POST['photo_id'] ?? '');
         $album = (string)($_POST['album'] ?? '');
-        $thumbnail = $dataDir . '/gallery/thumbnails/' . substr($photoId, 0, 2) . '/' . $photoId . '.webp';
-        if (!preg_match('/^[a-f0-9]{32}$/', $photoId) || !is_file($thumbnail) || is_link($thumbnail)) {
+
+        if (!preg_match('/^[a-f0-9]{32}$/', $photoId)) {
+            throw new RuntimeException('Invalid photo ID.');
+        }
+
+        // Photo IDs are random and are NOT the storage bucket name. The bucket
+        // is derived from the image content hash, so locate the actual photo
+        // by scanning the thumbnail buckets just as the Gallery view does.
+        $thumbnailRoot = $galleryRoot . '/thumbnails';
+        $found = false;
+        for ($bucket = 0; $bucket < 256; $bucket++) {
+            $bucketName = str_pad(dechex($bucket), 2, '0', STR_PAD_LEFT);
+            $thumbnail = $thumbnailRoot . '/' . $bucketName . '/' . $photoId . '.webp';
+            if (is_file($thumbnail) && !is_link($thumbnail)) {
+                $found = true;
+                break;
+            }
+        }
+
+        if (!$found) {
             throw new RuntimeException('Photo does not exist.');
         }
+
         $store->move($photoId, $album);
         log_security_event('GALLERY_PHOTO_MOVED', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown', ['photo_id' => $photoId, 'album' => $album]);
         echo json_encode(['status' => 'ok', 'album' => $store->albumFor($photoId)], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
