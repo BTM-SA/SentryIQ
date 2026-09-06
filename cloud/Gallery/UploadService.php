@@ -9,6 +9,7 @@ use SentryIQCloud\Gallery\Image\ImageProcessor;
 use SentryIQCloud\Gallery\Image\ThumbnailGenerator;
 use SentryIQCloud\Gallery\Storage\DuplicateIndex;
 use SentryIQCloud\Gallery\Storage\PhotoMetadataStore;
+use SentryIQCloud\Gallery\Storage\PhotoNameAllocator;
 use SentryIQCloud\Gallery\Storage\PhotoStorage;
 
 final class UploadService
@@ -19,36 +20,37 @@ final class UploadService
         private readonly DuplicateIndex $duplicateIndex,
         private readonly PhotoStorage $storage,
         private readonly PhotoMetadataStore $metadata,
+        private readonly PhotoNameAllocator $nameAllocator,
     ) {}
 
     public function upload(array $upload): array
     {
         $error = $upload['error'] ?? UPLOAD_ERR_NO_FILE;
-        if (!is_int($error) || $error !== UPLOAD_ERR_OK) {
-            return ['status' => 'rejected', 'message' => $this->uploadErrorMessage($error)];
-        }
+        if (!is_int($error) || $error !== UPLOAD_ERR_OK) return ['status' => 'rejected', 'message' => $this->uploadErrorMessage($error)];
         $temporaryPath = $upload['tmp_name'] ?? '';
-        if (!is_string($temporaryPath) || $temporaryPath === '' || !is_uploaded_file($temporaryPath)) {
-            return ['status' => 'rejected', 'message' => 'Invalid upload source.'];
-        }
+        if (!is_string($temporaryPath) || $temporaryPath === '' || !is_uploaded_file($temporaryPath)) return ['status' => 'rejected', 'message' => 'Invalid upload source.'];
         $input = file_get_contents($temporaryPath);
         if ($input === false) return ['status' => 'rejected', 'message' => 'Unable to read uploaded image.'];
+
         try {
             $webp = $this->processor->toWebp($input);
             $hash = $this->processor->contentHash($webp);
             $existingPhotoId = $this->duplicateIndex->find($hash);
             if ($existingPhotoId !== null) return ['status' => 'duplicate', 'photo_id' => $existingPhotoId, 'message' => 'This image already exists in the gallery.'];
+
+            // Allocate only after duplicate detection. Deleted names become available again.
+            $filename = $this->nameAllocator->next();
             $thumbnail = $this->thumbnailGenerator->fromWebp($webp);
-            $stored = $this->storage->store($webp, $thumbnail, $hash);
+            $stored = $this->storage->store($webp, $thumbnail, $hash, $filename);
             try {
                 $this->duplicateIndex->add($hash, $stored['photo_id']);
-                $this->metadata->add($stored['photo_id'], (string)($upload['name'] ?? ''), $hash, (int)$stored['created_at']);
+                $this->metadata->add($stored['photo_id'], (string)($upload['name'] ?? ''), $filename, $hash, (int)$stored['created_at']);
             } catch (RuntimeException $exception) {
                 @unlink($stored['path']);
                 @unlink($stored['thumbnail_path']);
                 throw $exception;
             }
-            return ['status' => 'stored', 'photo_id' => $stored['photo_id'], 'message' => 'Image uploaded successfully.'];
+            return ['status' => 'stored', 'photo_id' => $stored['photo_id'], 'filename' => $filename, 'message' => 'Image uploaded successfully.'];
         } catch (RuntimeException $exception) {
             return ['status' => 'rejected', 'message' => $exception->getMessage()];
         }
