@@ -79,10 +79,19 @@ try {
         ]);
     }
 
-    log_security_event('GALLERY_UPLOAD', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown');
+    // Audit logging must never turn a successful upload into a failed request.
+    // The gallery endpoint may be deployed without the optional legacy logging helpers.
+    if (function_exists('log_security_event') && function_exists('get_visitor_ip')) {
+        try {
+            log_security_event('GALLERY_UPLOAD', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown');
+        } catch (Throwable $exception) {
+            error_log('SentryIQ Gallery audit logging failed: ' . $exception->getMessage());
+        }
+    }
+
     gallery_upload_json(['status' => 'complete', 'results' => $results]);
 } catch (Throwable $exception) {
-    error_log('SentryIQ Gallery upload failed: ' . $exception->getMessage());
+    error_log('SentryIQ Gallery upload failed: ' . $exception::class . ': ' . $exception->getMessage());
     gallery_upload_json([
         'status' => 'error',
         'message' => 'The photo could not be processed. Please try another image or a smaller file.',
