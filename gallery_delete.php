@@ -144,6 +144,13 @@ try {
     exit;
 }
 
-log_security_event('GALLERY_PHOTO_DELETED', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown', ['photo_id' => $photoId]);
+// Audit logging must never convert a successful deletion into a failed JSON response.
+try {
+    if (function_exists('log_security_event') && function_exists('get_visitor_ip')) {
+        log_security_event('GALLERY_PHOTO_DELETED', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown', ['photo_id' => $photoId]);
+    }
+} catch (Throwable $exception) {
+    error_log('SentryIQ Gallery delete audit logging failed: ' . $exception->getMessage());
+}
 
 echo json_encode(['status' => 'ok', 'photo_id' => $photoId], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
