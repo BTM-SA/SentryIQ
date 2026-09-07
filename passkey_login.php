@@ -50,42 +50,25 @@ if (isset($_SESSION['master_key']) && is_string($_SESSION['master_key']) && strl
         node.style.display = 'block';
     }
     async function login() {
-        if (!window.PublicKeyCredential || !navigator.credentials) {
-            showError('Passkeys are not available in this browser.');
-            return;
-        }
+        if (!window.PublicKeyCredential || !navigator.credentials) { showError('Passkeys are not available in this browser.'); return; }
         var button = document.getElementById('passkey-login');
         button.disabled = true;
         try {
-            var optionsResponse = await fetch('passkey.php?action=login-options', { credentials: 'same-origin', cache: 'no-store' });
+            var optionsResponse = await fetch('passkey_auth.php?action=login-options', { credentials: 'same-origin', cache: 'no-store' });
             var options = await optionsResponse.json();
             if (!optionsResponse.ok || options.status !== 'ok') throw new Error(options.message || 'Unable to start passkey authentication.');
             var publicKey = options.options;
             publicKey.challenge = b64urlToBytes(publicKey.challenge);
-            if (publicKey.extensions && publicKey.extensions.prf && publicKey.extensions.prf.eval) {
-                publicKey.extensions.prf.eval.first = b64urlToBytes(publicKey.extensions.prf.eval.first);
-            }
+            if (publicKey.extensions && publicKey.extensions.prf && publicKey.extensions.prf.eval) publicKey.extensions.prf.eval.first = b64urlToBytes(publicKey.extensions.prf.eval.first);
             var credential = await navigator.credentials.get({ publicKey: publicKey });
             if (!credential) throw new Error('No passkey was returned.');
             var response = credential.response;
             var extensions = credential.getClientExtensionResults ? credential.getClientExtensionResults() : {};
             var prf = extensions && extensions.prf && extensions.prf.results ? extensions.prf.results.first : null;
             if (!prf) throw new Error('This passkey does not provide the secure key needed to unlock this vault.');
-            var csrf = document.querySelector('meta[name="csrf-token"]').content;
-            var resultResponse = await fetch('passkey.php', {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'login',
-                    csrf_token: csrf,
-                    rawId: bytesToB64url(credential.rawId),
-                    clientDataJSON: bytesToB64url(response.clientDataJSON),
-                    authenticatorData: bytesToB64url(response.authenticatorData),
-                    signature: bytesToB64url(response.signature),
-                    prf: bytesToB64url(prf)
-                })
-            });
+            var resultResponse = await fetch('passkey_auth.php', { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
+                action:'login', rawId:bytesToB64url(credential.rawId), clientDataJSON:bytesToB64url(response.clientDataJSON), authenticatorData:bytesToB64url(response.authenticatorData), signature:bytesToB64url(response.signature), prf:bytesToB64url(prf)
+            }) });
             var result = await resultResponse.json();
             if (!resultResponse.ok || result.status !== 'ok') throw new Error(result.message || 'Passkey authentication failed.');
             window.location.href = 'index.php';
@@ -95,9 +78,6 @@ if (isset($_SESSION['master_key']) && is_string($_SESSION['master_key']) && strl
         }
     }
     document.getElementById('passkey-login').addEventListener('click', login);
-    document.addEventListener('DOMContentLoaded', function () {
-        document.getElementById('passkey-login').focus();
-    });
 }());
 </script>
 </body>
