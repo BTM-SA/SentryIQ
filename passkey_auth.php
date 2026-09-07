@@ -6,6 +6,9 @@ require_once __DIR__ . '/security_bootstrap.php';
 sentryiq_security_bootstrap();
 header('Content-Type: application/json; charset=utf-8');
 
+const SENTRYIQ_PASSKEY_GCM_NONCE_BYTES = 12;
+const SENTRYIQ_PASSKEY_GCM_TAG_BYTES = 16;
+
 function passkey_auth_json(array $payload, int $status = 200): never
 {
     http_response_code($status);
@@ -32,17 +35,24 @@ function pk_origin(): array
     $port = isset($parts['port']) ? ':' . (int)$parts['port'] : '';
     return ['origin' => 'https://' . $host . $port, 'rp_id' => $host];
 }
-function pk_path(): string { return SENTRYIQ_DATA_DIR . '/passkeys.json'; }
+function pk_path(): string
+{
+    $dataDir = sentryiq_data_dir();
+    if ($dataDir === '') throw new RuntimeException('SentryIQ secure data directory is unavailable.');
+    return $dataDir . '/passkeys.json';
+}
 function pk_store(): array
 {
-    if (!is_file(pk_path()) || is_link(pk_path())) return [];
-    $raw = @file_get_contents(pk_path());
+    $path = pk_path();
+    if (!is_file($path) || is_link($path)) return [];
+    $raw = @file_get_contents($path);
     $data = is_string($raw) ? json_decode($raw, true) : null;
     return is_array($data) ? $data : [];
 }
 function pk_save(array $data): void
 {
-    $tmp = pk_path() . '.tmp-' . bin2hex(random_bytes(12));
+    $path = pk_path();
+    $tmp = $path . '.tmp-' . bin2hex(random_bytes(12));
     $json = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
     $handle = @fopen($tmp, 'xb');
     if ($handle === false) throw new RuntimeException('Unable to create secure passkey storage.');
@@ -52,8 +62,8 @@ function pk_save(array $data): void
         fflush($handle);
         if (function_exists('fsync')) @fsync($handle);
     } finally { fclose($handle); }
-    if (!@rename($tmp, pk_path())) { @unlink($tmp); throw new RuntimeException('Unable to activate secure passkey storage.'); }
-    @chmod(pk_path(), 0600);
+    if (!@rename($tmp, $path)) { @unlink($tmp); throw new RuntimeException('Unable to activate secure passkey storage.'); }
+    @chmod($path, 0600);
 }
 function pk_validate_client(string $json, string $type, string $challenge, string $origin): void
 {
@@ -81,15 +91,15 @@ function pk_wrap(string $masterKey, string $prf, string $salt, string $credentia
 {
     if (strlen($masterKey) !== 32 || strlen($prf) !== 32 || strlen($salt) !== 32) throw new RuntimeException('Invalid passkey key material.');
     $key = hash_hkdf('sha256', $prf, 32, 'SentryIQ passkey vault key', $salt);
-    $nonce = random_bytes(SENTRYIQ_GCM_NONCE_BYTES); $tag = '';
-    $cipher = openssl_encrypt($masterKey, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $nonce, $tag, $credentialId, SENTRYIQ_GCM_TAG_BYTES);
-    if ($cipher === false || strlen($tag) !== SENTRYIQ_GCM_TAG_BYTES) throw new RuntimeException('Unable to protect the vault key with the passkey.');
+    $nonce = random_bytes(SENTRYIQ_PASSKEY_GCM_NONCE_BYTES); $tag = '';
+    $cipher = openssl_encrypt($masterKey, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $nonce, $tag, $credentialId, SENTRYIQ_PASSKEY_GCM_TAG_BYTES);
+    if ($cipher === false || strlen($tag) !== SENTRYIQ_PASSKEY_GCM_TAG_BYTES) throw new RuntimeException('Unable to protect the vault key with the passkey.');
     return ['nonce'=>pk_b64($nonce), 'tag'=>pk_b64($tag), 'ciphertext'=>pk_b64($cipher)];
 }
 function pk_unwrap(array $wrap, string $prf, string $salt, string $credentialId): string|false
 {
     $nonce = pk_unb64((string)($wrap['nonce'] ?? '')); $tag = pk_unb64((string)($wrap['tag'] ?? '')); $cipher = pk_unb64((string)($wrap['ciphertext'] ?? ''));
-    if ($nonce === false || $tag === false || $cipher === false || strlen($nonce) !== SENTRYIQ_GCM_NONCE_BYTES || strlen($tag) !== SENTRYIQ_GCM_TAG_BYTES) return false;
+    if ($nonce === false || $tag === false || $cipher === false || strlen($nonce) !== SENTRYIQ_PASSKEY_GCM_NONCE_BYTES || strlen($tag) !== SENTRYIQ_PASSKEY_GCM_TAG_BYTES) return false;
     $key = hash_hkdf('sha256', $prf, 32, 'SentryIQ passkey vault key', $salt);
     $plain = openssl_decrypt($cipher, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $nonce, $tag, $credentialId);
     return is_string($plain) && strlen($plain) === 32 ? $plain : false;
@@ -98,8 +108,7 @@ function pk_request_salt(array $store): string
 {
     $salt = pk_unb64((string)($store['prf_salt'] ?? ''));
     if ($salt !== false && strlen($salt) === 32) return $salt;
-    $salt = random_bytes(32);
-    return $salt;
+    return random_bytes(32);
 }
 
 try {
