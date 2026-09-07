@@ -65,6 +65,35 @@ function pk_save(array $data): void
     if (!@rename($tmp, $path)) { @unlink($tmp); throw new RuntimeException('Unable to activate secure passkey storage.'); }
     @chmod($path, 0600);
 }
+function pk_visitor_ip(): string
+{
+    $ip = trim((string)($_SERVER['REMOTE_ADDR'] ?? ''));
+    return filter_var($ip, FILTER_VALIDATE_IP) ? $ip : '0.0.0.0';
+}
+function pk_log_security_event(string $eventType, string $ipAddress, ?string $username = null, array $context = []): void
+{
+    try {
+        $dataDir = sentryiq_data_dir();
+        if ($dataDir === '') {
+            error_log('SentryIQ security event: ' . $eventType);
+            return;
+        }
+        $path = $dataDir . '/security_audit.log';
+        $event = [
+            'timestamp' => date('c'),
+            'event' => $eventType,
+            'username' => $username ?? ($_SESSION['app_username'] ?? 'unknown'),
+            'ip' => $ipAddress,
+            'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown',
+            'context' => $context,
+        ];
+        $json = json_encode($event, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . PHP_EOL;
+        @file_put_contents($path, $json, FILE_APPEND | LOCK_EX);
+        @chmod($path, 0600);
+    } catch (Throwable $exception) {
+        error_log('SentryIQ security event logging failure: ' . $exception->getMessage());
+    }
+}
 function pk_validate_client(string $json, string $type, string $challenge, string $origin): void
 {
     try { $data = json_decode($json, true, 16, JSON_THROW_ON_ERROR); } catch (Throwable) { throw new RuntimeException('Invalid WebAuthn client data.'); }
@@ -175,7 +204,7 @@ try {
         $credentials[] = ['credential_id'=>$credentialId,'public_key'=>pk_b64($publicKey),'username'=>(string)$_SESSION['app_username'],'wrap'=>$wrapped,'sign_count'=>$auth['counter'],'created_at'=>time()];
         pk_save(['version'=>1,'prf_salt'=>pk_b64($salt),'credentials'=>$credentials]);
         unset($_SESSION['pk_register_challenge'], $_SESSION['pk_register_salt']);
-        log_security_event('PASSKEY_REGISTERED', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown');
+        pk_log_security_event('PASSKEY_REGISTERED', pk_visitor_ip(), (string)($_SESSION['app_username'] ?? 'unknown'));
         passkey_auth_json(['status'=>'ok']);
     }
 
@@ -200,7 +229,7 @@ try {
         $store['credentials'][$index]['sign_count'] = max($previous,$auth['counter']); pk_save($store);
         unset($_SESSION['pk_login_challenge']);
         sentryiq_mark_authenticated($masterKey, (string)$record['username']);
-        log_security_event('SUCCESSFUL_VAULT_LOGIN_PASSKEY', get_visitor_ip(), (string)$record['username'], ['stage'=>'passkey']);
+        pk_log_security_event('SUCCESSFUL_VAULT_LOGIN_PASSKEY', pk_visitor_ip(), (string)$record['username'], ['stage'=>'passkey']);
         passkey_auth_json(['status'=>'ok']);
     }
 
