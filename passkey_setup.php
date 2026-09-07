@@ -40,6 +40,13 @@ sentryiq_require_auth();
         for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
         return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
     }
+    function derToPem(buffer) {
+        var bytes = new Uint8Array(buffer), binary = '';
+        for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        var base64 = btoa(binary);
+        var lines = base64.match(/.{1,64}/g) || [];
+        return '-----BEGIN PUBLIC KEY-----\n' + lines.join('\n') + '\n-----END PUBLIC KEY-----\n';
+    }
     function showError(message) {
         var node = document.getElementById('passkey-status');
         node.textContent = message;
@@ -61,9 +68,10 @@ sentryiq_require_auth();
             if (!prf) throw new Error('This device did not provide the secure passkey key material required by SentryIQ.');
             if (!response.getPublicKey) throw new Error('This browser cannot expose the passkey public key required by SentryIQ.');
             var publicKeyDer = response.getPublicKey(); if (!publicKeyDer) throw new Error('The passkey public key was unavailable.');
+            var publicKeyPem = derToPem(publicKeyDer);
             var csrf = document.querySelector('meta[name="csrf-token"]').content;
             var resultResponse = await fetch('passkey_auth.php', { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
-                action:'register', csrf_token:csrf, rawId:bytesToB64url(credential.rawId), clientDataJSON:bytesToB64url(response.clientDataJSON), authenticatorData:bytesToB64url(response.getAuthenticatorData ? response.getAuthenticatorData() : response.authenticatorData), publicKey:bytesToB64url(publicKeyDer), prf:bytesToB64url(prf)
+                action:'register', csrf_token:csrf, rawId:bytesToB64url(credential.rawId), clientDataJSON:bytesToB64url(response.clientDataJSON), authenticatorData:bytesToB64url(response.getAuthenticatorData ? response.getAuthenticatorData() : response.authenticatorData), publicKey:bytesToB64url(new TextEncoder().encode(publicKeyPem)), prf:bytesToB64url(prf)
             }) });
             var result = await resultResponse.json(); if (!resultResponse.ok || result.status !== 'ok') throw new Error(result.message || 'Passkey registration failed.');
             window.location.href = 'index.php';
