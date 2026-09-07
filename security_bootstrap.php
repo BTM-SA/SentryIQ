@@ -5,6 +5,16 @@ declare(strict_types=1);
 const SENTRYIQ_IDLE_TIMEOUT = 900;
 const SENTRYIQ_FRESH_AUTH_WINDOW = 300;
 
+function sentryiq_has_registered_passkey(): bool
+{
+    if (!defined('SENTRYIQ_DATA_DIR') || !is_dir(SENTRYIQ_DATA_DIR)) return false;
+    $path = SENTRYIQ_DATA_DIR . '/passkeys.json';
+    if (!is_file($path) || is_link($path)) return false;
+    $raw = @file_get_contents($path);
+    $records = is_string($raw) ? json_decode($raw, true) : null;
+    return is_array($records) && $records !== [];
+}
+
 function sentryiq_security_bootstrap(): void
 {
     if (PHP_SAPI !== 'cli' && (($_SERVER['HTTPS'] ?? '') !== 'on' && (string)($_SERVER['SERVER_PORT'] ?? '') !== '443')) {
@@ -44,6 +54,22 @@ function sentryiq_security_bootstrap(): void
     header('Referrer-Policy: no-referrer');
     header('Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()');
     header("Content-Security-Policy: default-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'");
+
+    $script = basename((string)($_SERVER['SCRIPT_FILENAME'] ?? ''));
+    $passkeyPath = $script === 'passkey.php' || $script === 'passkey_login.php' || $script === 'passkey_setup.php';
+    $passwordFallback = isset($_GET['password']) && $_GET['password'] === '1';
+
+    if (!$passkeyPath && !$passwordFallback && $script === 'index.php') {
+        $authenticated = isset($_SESSION['master_key']) && is_string($_SESSION['master_key']) && strlen($_SESSION['master_key']) === 32;
+        if ($authenticated && !sentryiq_has_registered_passkey()) {
+            header('Location: passkey_setup.php');
+            exit;
+        }
+        if (!$authenticated && sentryiq_has_registered_passkey()) {
+            header('Location: passkey_login.php');
+            exit;
+        }
+    }
 
     if (isset($_SESSION['master_key'])) {
         $lastActivity = (int)($_SESSION['last_activity'] ?? 0);
