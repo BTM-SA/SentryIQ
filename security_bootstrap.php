@@ -5,18 +5,51 @@ declare(strict_types=1);
 const SENTRYIQ_IDLE_TIMEOUT = 900;
 const SENTRYIQ_FRESH_AUTH_WINDOW = 300;
 
+function sentryiq_data_dir(): string
+{
+    if (defined('SENTRYIQ_DATA_DIR') && is_dir(SENTRYIQ_DATA_DIR) && !is_link(SENTRYIQ_DATA_DIR)) {
+        return SENTRYIQ_DATA_DIR;
+    }
+
+    $configFile = __DIR__ . '/sentryiq_config.php';
+    if (!is_file($configFile) || is_link($configFile)) {
+        return '';
+    }
+
+    $config = require $configFile;
+    if (!is_array($config)) {
+        return '';
+    }
+
+    $dataDir = rtrim((string)($config['data_dir'] ?? ''), '/');
+    if ($dataDir === '' || !str_starts_with($dataDir, '/') || is_link($dataDir) || !is_dir($dataDir)) {
+        return '';
+    }
+
+    if (!defined('SENTRYIQ_DATA_DIR')) {
+        define('SENTRYIQ_DATA_DIR', $dataDir);
+    }
+
+    return SENTRYIQ_DATA_DIR;
+}
+
 function sentryiq_has_registered_passkey(): bool
 {
-    if (!defined('SENTRYIQ_DATA_DIR') || !is_dir(SENTRYIQ_DATA_DIR)) return false;
-    $path = SENTRYIQ_DATA_DIR . '/passkeys.json';
+    $dataDir = sentryiq_data_dir();
+    if ($dataDir === '') return false;
+    $path = $dataDir . '/passkeys.json';
     if (!is_file($path) || is_link($path)) return false;
     $raw = @file_get_contents($path);
     $records = is_string($raw) ? json_decode($raw, true) : null;
-    return is_array($records) && $records !== [];
+    if (!is_array($records)) return false;
+    $credentials = $records['credentials'] ?? null;
+    return is_array($credentials) && $credentials !== [];
 }
 
 function sentryiq_security_bootstrap(): void
 {
+    sentryiq_data_dir();
+
     if (PHP_SAPI !== 'cli' && (($_SERVER['HTTPS'] ?? '') !== 'on' && (string)($_SERVER['SERVER_PORT'] ?? '') !== '443')) {
         http_response_code(400);
         exit('SentryIQ requires HTTPS.');
@@ -56,7 +89,7 @@ function sentryiq_security_bootstrap(): void
     header("Content-Security-Policy: default-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'");
 
     $script = basename((string)($_SERVER['SCRIPT_FILENAME'] ?? ''));
-    $passkeyPath = $script === 'passkey.php' || $script === 'passkey_login.php' || $script === 'passkey_setup.php';
+    $passkeyPath = $script === 'passkey.php' || $script === 'passkey_login.php' || $script === 'passkey_setup.php' || $script === 'passkey_auth.php';
     $passwordFallback = isset($_GET['password']) && $_GET['password'] === '1';
 
     if (!$passkeyPath && !$passwordFallback && $script === 'index.php') {
@@ -157,8 +190,9 @@ function sentryiq_pending_auth_expired(): bool
 
 function cleanup_expired_tokens(): void
 {
-    if (!isset($_SESSION) || !defined('SENTRYIQ_DATA_DIR') || !is_dir(SENTRYIQ_DATA_DIR)) return;
-    foreach (glob(SENTRYIQ_DATA_DIR . '/token_*.json') ?: [] as $file) {
+    $dataDir = sentryiq_data_dir();
+    if (!isset($_SESSION) || $dataDir === '') return;
+    foreach (glob($dataDir . '/token_*.json') ?: [] as $file) {
         if (is_link($file)) continue;
         $raw = @file_get_contents($file);
         $token = is_string($raw) ? json_decode($raw, true) : null;
