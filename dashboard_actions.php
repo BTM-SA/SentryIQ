@@ -16,20 +16,102 @@
 <div id="add-panel" class="vault-panel <?php echo ($active_pane === 'add') ? 'active' : ''; ?>"><div class="form-box"><h3>Create New Vault Entry</h3><form method="POST"><div class="form-group"><label>Resource Label:</label><input type="text" name="label" placeholder="e.g. Personal Email" class="input-field" required></div><div class="form-group"><label>Username / Login ID:</label><input type="text" name="username" class="input-field"></div><div class="form-group"><label>Resource Password:</label><input type="text" name="password" class="input-field" required></div><div class="form-group"><label>Destination Web URL Address:</label><input type="url" name="url" placeholder="https://..." class="input-field"><small class="field-hint" style="display:block;margin-top:5px;color:#777;">HTTPS only. Leave blank if this entry has no web address.</small></div><div class="form-group"><label>Notes:</label><textarea name="notes" class="input-field" rows="5" placeholder="Optional notes about this resource"></textarea></div><button type="submit" name="add_entry" class="btn btn-primary" style="margin-top:10px;">💾 Save Secure Entry</button></form></div></div>
 
 <!-- PANEL SECTION 4: SYSTEM PANEL -->
-<div id="settings-panel" class="vault-panel <?php echo ($active_pane === 'settings') ? 'active' : ''; ?>"><div class="form-box"><h3>⚙️ System</h3><form method="POST"><div class="form-group"><label>Application Username:</label><input type="text" name="app_username" class="input-field" value="<?php echo htmlspecialchars($sys_user); ?>" required></div><div class="form-group"><label>2FA Target Email Delivery Address:</label><input type="email" name="two_fa_email_field" class="input-field" value="<?php echo htmlspecialchars($sys_email); ?>" required></div><div class="form-group"><label>IMAP Password (Optional Update):</label><input type="password" name="imap_password_field" class="input-field" placeholder="Leave blank to preserve current settings"></div><div class="form-group"><label>Application HTTPS URL:</label><input type="url" name="base_url_field" class="input-field" value="<?php echo htmlspecialchars((string)($config['base_url'] ?? '')); ?>" required><small style="display:block;margin-top:5px;color:#777;">Trusted HTTPS URL used for security-sensitive 2FA links.</small></div><div class="form-group"><label>Vault Data Directory:</label><input type="text" name="data_directory" class="input-field" value="<?php echo htmlspecialchars(SENTRYIQ_DATA_DIR); ?>" required><small style="display:block;margin-top:5px;color:#777;">Must be an absolute directory outside the public web root. Existing vault data is copied before the new location is activated.</small></div><button type="submit" name="save_vault_settings" class="btn btn-primary" style="margin-top:10px;">🔄 Save System Settings</button></form></div></div>
+<div id="settings-panel" class="vault-panel <?php echo ($active_pane === 'settings') ? 'active' : ''; ?>">
+    <div class="form-box">
+        <h3>⚙️ System</h3>
+        <form method="POST">
+            <div class="form-group"><label>Application Username:</label><input type="text" name="app_username" class="input-field" value="<?php echo htmlspecialchars($sys_user); ?>" required></div>
+            <div class="form-group"><label>2FA Target Email Delivery Address:</label><input type="email" name="two_fa_email_field" class="input-field" value="<?php echo htmlspecialchars($sys_email); ?>" required></div>
+            <div class="form-group"><label>IMAP Password (Optional Update):</label><input type="password" name="imap_password_field" class="input-field" placeholder="Leave blank to preserve current settings"></div>
+            <div class="form-group"><label>Application HTTPS URL:</label><input type="url" name="base_url_field" class="input-field" value="<?php echo htmlspecialchars((string)($config['base_url'] ?? '')); ?>" required><small style="display:block;margin-top:5px;color:#777;">Trusted HTTPS URL used for security-sensitive 2FA links.</small></div>
+            <div class="form-group"><label>Vault Data Directory:</label><input type="text" name="data_directory" class="input-field" value="<?php echo htmlspecialchars(SENTRYIQ_DATA_DIR); ?>" required><small style="display:block;margin-top:5px;color:#777;">Must be an absolute directory outside the public web root. Existing vault data is copied before the new location is activated.</small></div>
+            <button type="submit" name="save_vault_settings" class="btn btn-primary" style="margin-top:10px;">🔄 Save System Settings</button>
+        </form>
+    </div>
 
-<!-- PANEL SECTION 5: SECURITY LOG -->
-<div id="log-panel" class="vault-panel <?php echo ($active_pane === 'log') ? 'active' : ''; ?>"><div class="form-box"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;"><h3 style="margin:0;">🔐 Security Log</h3><span style="font-size:12px;color:#777;"><?php echo count(read_security_log()); ?> events</span></div><?php $securityEvents = read_security_log(); ?><?php if (empty($securityEvents)): ?><p style="text-align:center;padding:20px;color:#777;">No security events have been recorded yet.</p><?php else: ?>
-    <div class="security-log-table" style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:#e9ecef;text-align:left;"><th style="padding:9px;">Date / Time</th><th style="padding:9px;">Event</th><th style="padding:9px;">User</th><th style="padding:9px;">IP Address</th><th style="padding:9px;">User Agent</th></tr></thead><tbody><?php foreach ($securityEvents as $event): ?><tr style="border-bottom:1px solid #eee;"><td style="padding:9px;white-space:nowrap;"><?php echo htmlspecialchars($event['timestamp'] ?? ''); ?></td><td style="padding:9px;font-weight:bold;"><?php echo htmlspecialchars($event['event'] ?? ''); ?></td><td style="padding:9px;"><?php echo htmlspecialchars($event['username'] ?? 'unknown'); ?></td><td style="padding:9px;"><?php echo htmlspecialchars($event['ip'] ?? 'unknown'); ?></td><td style="padding:9px;max-width:240px;word-break:break-word;color:#666;"><?php echo htmlspecialchars($event['user_agent'] ?? 'unknown'); ?></td></tr><?php endforeach; ?></tbody></table></div>
-    <div class="security-log-list"><?php foreach ($securityEvents as $event): ?><div class="security-log-card"><div class="security-log-card-header"><span class="security-log-event"><?php echo htmlspecialchars($event['event'] ?? ''); ?></span><span class="security-log-time"><?php echo htmlspecialchars($event['timestamp'] ?? ''); ?></span></div><div class="security-log-field"><span class="security-log-label">User</span><span class="security-log-value"><?php echo htmlspecialchars($event['username'] ?? 'unknown'); ?></span></div><div class="security-log-field"><span class="security-log-label">IP Address</span><span class="security-log-value"><?php echo htmlspecialchars($event['ip'] ?? 'unknown'); ?></span></div><div class="security-log-field"><span class="security-log-label">User Agent</span><span class="security-log-value"><?php echo htmlspecialchars($event['user_agent'] ?? 'unknown'); ?></span></div></div><?php endforeach; ?></div>
-<?php endif; ?></div></div>
+    <div class="form-box" style="margin-top:20px;">
+        <h3>🔑 Passkeys</h3>
+        <p style="margin-top:0;color:#666;">Manage the devices that can unlock your SentryIQ vault with Face ID, Touch ID, or passkey authentication.</p>
+        <?php
+        $passkeyStore = [];
+        $passkeyDataDir = sentryiq_data_dir();
+        if ($passkeyDataDir !== '') {
+            $passkeyPath = $passkeyDataDir . '/passkeys.json';
+            if (is_file($passkeyPath) && !is_link($passkeyPath)) {
+                $passkeyRaw = @file_get_contents($passkeyPath);
+                $passkeyDecoded = is_string($passkeyRaw) ? json_decode($passkeyRaw, true) : null;
+                if (is_array($passkeyDecoded)) $passkeyStore = $passkeyDecoded;
+            }
+        }
+        $passkeyCredentials = is_array($passkeyStore['credentials'] ?? null) ? $passkeyStore['credentials'] : [];
+        ?>
+        <div id="passkey-message" style="display:none;"></div>
+        <?php if (empty($passkeyCredentials)): ?>
+            <div style="padding:18px;border:1px solid #e9ecef;border-radius:10px;text-align:center;color:#666;">No passkeys are registered yet.</div>
+        <?php else: ?>
+            <?php foreach ($passkeyCredentials as $index => $credential):
+                $created = (int)($credential['created_at'] ?? 0);
+                $label = 'Passkey ' . ($index + 1);
+                $credentialId = (string)($credential['credential_id'] ?? '');
+            ?>
+                <div style="border:1px solid #e9ecef;border-radius:10px;padding:16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;">
+                    <div style="min-width:0;">
+                        <strong><?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?></strong>
+                        <div style="font-size:13px;color:#777;margin-top:4px;">Added <?php echo $created > 0 ? htmlspecialchars(date('j M Y, H:i', $created), ENT_QUOTES, 'UTF-8') : 'date unavailable'; ?></div>
+                        <div style="font-size:11px;color:#aaa;margin-top:3px;overflow:hidden;text-overflow:ellipsis;max-width:430px;">Credential: <?php echo htmlspecialchars(substr($credentialId, 0, 18) . (strlen($credentialId) > 18 ? '…' : ''), ENT_QUOTES, 'UTF-8'); ?></div>
+                    </div>
+                    <button type="button" class="btn btn-primary remove-passkey" data-credential="<?php echo htmlspecialchars($credentialId, ENT_QUOTES, 'UTF-8'); ?>" <?php echo count($passkeyCredentials) <= 1 ? 'disabled title="Keep at least one passkey registered"' : ''; ?>>Remove</button>
+                </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
+        <div style="padding:18px;border-radius:10px;background:#f8f9fa;border:1px solid #e9ecef;margin-top:16px;">
+            <h4 style="margin-top:0;">Add another device</h4>
+            <p style="font-size:14px;color:#666;">Register another passkey on your phone, Mac, tablet, or another trusted device. Each passkey gets its own protected copy of your existing vault key.</p>
+            <a href="passkey_setup.php?add=1" class="btn btn-primary" style="display:inline-block;text-decoration:none;">＋ Add Another Passkey</a>
+        </div>
+        <p style="font-size:13px;color:#777;margin-top:18px;">SentryIQ will not let you remove the last registered passkey. If you lose access to a device, use the password recovery route to regain access and register a replacement passkey.</p>
+    </div>
 
-<!-- PANEL SECTION 6: EDIT RECORD -->
+    <div class="form-box" style="margin-top:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;gap:10px;flex-wrap:wrap;">
+            <h3 style="margin:0;">🔐 System Log</h3>
+            <span style="font-size:12px;color:#777;"><?php echo count(read_security_log()); ?> events</span>
+        </div>
+        <?php $securityEvents = read_security_log(); ?>
+        <?php if (empty($securityEvents)): ?>
+            <p style="text-align:center;padding:20px;color:#777;">No security events have been recorded yet.</p>
+        <?php else: ?>
+            <div class="security-log-table" style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:#e9ecef;text-align:left;"><th style="padding:9px;">Date / Time</th><th style="padding:9px;">Event</th><th style="padding:9px;">User</th><th style="padding:9px;">IP Address</th><th style="padding:9px;">User Agent</th></tr></thead><tbody><?php foreach ($securityEvents as $event): ?><tr style="border-bottom:1px solid #eee;"><td style="padding:9px;white-space:nowrap;"><?php echo htmlspecialchars($event['timestamp'] ?? ''); ?></td><td style="padding:9px;font-weight:bold;"><?php echo htmlspecialchars($event['event'] ?? ''); ?></td><td style="padding:9px;"><?php echo htmlspecialchars($event['username'] ?? 'unknown'); ?></td><td style="padding:9px;"><?php echo htmlspecialchars($event['ip'] ?? 'unknown'); ?></td><td style="padding:9px;max-width:240px;word-break:break-word;color:#666;"><?php echo htmlspecialchars($event['user_agent'] ?? 'unknown'); ?></td></tr><?php endforeach; ?></tbody></table></div>
+            <div class="security-log-list"><?php foreach ($securityEvents as $event): ?><div class="security-log-card"><div class="security-log-card-header"><span class="security-log-event"><?php echo htmlspecialchars($event['event'] ?? ''); ?></span><span class="security-log-time"><?php echo htmlspecialchars($event['timestamp'] ?? ''); ?></span></div><div class="security-log-field"><span class="security-log-label">User</span><span class="security-log-value"><?php echo htmlspecialchars($event['username'] ?? 'unknown'); ?></span></div><div class="security-log-field"><span class="security-log-label">IP Address</span><span class="security-log-value"><?php echo htmlspecialchars($event['ip'] ?? 'unknown'); ?></span></div><div class="security-log-field"><span class="security-log-label">User Agent</span><span class="security-log-value"><?php echo htmlspecialchars($event['user_agent'] ?? 'unknown'); ?></span></div></div><?php endforeach; ?></div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<!-- PANEL SECTION 5: EDIT RECORD -->
 <div id="edit-panel" class="vault-panel"><div class="form-box"><h3>📝 Modify Vault Entry Data</h3><form method="POST" action="record_actions.php"><input type="hidden" name="action" value="edit"><input type="hidden" name="entry_id" id="edit-entry-id"><div class="form-group"><label>Resource Label:</label><input type="text" name="label" id="edit-label" class="input-field" required></div><div class="form-group"><label>Username / Login ID:</label><input type="text" name="username" id="edit-username" class="input-field"></div><div class="form-group"><label>Resource Password:</label><input type="text" name="password" id="edit-password" class="input-field" required></div><div class="form-group"><label>Destination Web URL Address:</label><input type="url" name="url" id="edit-url" class="input-field" placeholder="https://..."><small style="display:block;margin-top:5px;color:#777;">HTTPS only. Leave blank if this entry has no web address.</small></div><div class="form-group"><label>Notes:</label><textarea name="notes" id="edit-notes" class="input-field" rows="5" placeholder="Optional notes about this resource"></textarea></div><div style="margin-top:15px;display:flex;gap:10px;"><button type="submit" class="btn btn-primary">🔄 Update Record</button><button type="button" class="btn" style="background:#6c757d;color:#fff;" onclick="switchVaultTab('details')">Cancel</button></div></form></div></div>
 
 <script>
 function toggleVaultMobileMenu(){const menu=document.getElementById('vault-mobile-menu');const toggle=document.querySelector('.vault-mobile-menu-toggle');if(!menu||!toggle)return;const open=menu.classList.toggle('mobile-open');toggle.setAttribute('aria-expanded',open?'true':'false');}
 function prepareVaultEditNode(){document.getElementById('edit-entry-id').value=document.getElementById('det-delete-id').value;document.getElementById('edit-label').value=document.getElementById('det-label').textContent;const u=document.getElementById('det-username').textContent;document.getElementById('edit-username').value=(u==='[None Stored]')?'':u;document.getElementById('edit-password').value=document.getElementById('det-password').textContent;const url=document.getElementById('det-url');document.getElementById('edit-url').value=url.hasAttribute('href')?url.href:'';document.getElementById('edit-notes').value=document.getElementById('det-notes').textContent==='[No Notes]'?'':document.getElementById('det-notes').textContent;switchVaultTab('edit');}
 function copyVaultString(buttonElement,targetSecretText){if(!navigator.clipboard){alert('Clipboard API unsupported by your active browser connection environment.');return;}navigator.clipboard.writeText(targetSecretText).then(()=>{const old=buttonElement.style.background;buttonElement.style.background='#2b8a3e';setTimeout(()=>buttonElement.style.background=old,800);}).catch(err=>{console.error('Secure data copy operational failure:',err);alert('Copy transaction aborted by browser security profile restrictions.');});}
-window.addEventListener('DOMContentLoaded',()=>{switchVaultTab('<?php echo $active_pane; ?>');});
+window.addEventListener('DOMContentLoaded',()=>{
+    switchVaultTab('<?php echo $active_pane; ?>');
+    var csrfMeta=document.querySelector('meta[name="csrf-token"]');
+    var csrf=csrfMeta?csrfMeta.content:'';
+    var message=document.getElementById('passkey-message');
+    function showPasskeyMessage(text,ok){if(!message)return;message.textContent=text;message.className=ok?'success':'error';message.style.display='block';}
+    document.querySelectorAll('.remove-passkey').forEach(function(button){
+        button.addEventListener('click',async function(){
+            if(button.disabled)return;
+            if(!window.confirm('Remove this passkey? This device will no longer be able to unlock SentryIQ.'))return;
+            button.disabled=true;
+            try{
+                var response=await fetch('passkey_auth.php',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',csrf_token:csrf,credential_id:button.dataset.credential})});
+                var result=await response.json();
+                if(!response.ok||result.status!=='ok')throw new Error(result.message||'Unable to remove the passkey.');
+                window.location.reload();
+            }catch(error){showPasskeyMessage(error&&error.message?error.message:'Unable to remove the passkey.',false);button.disabled=false;}
+        });
+    });
+});
 </script>
