@@ -78,14 +78,13 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
     .sentryiq-brand-logo { width:104px; height:104px; margin-bottom:12px; }
     .sentryiq-brand-banner { width:100%; max-width:700px; margin-bottom:14px; }
     .box > h2:first-child::before { width:100%; margin-bottom:14px; }
-    .sentryiq-page-header { grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:8px; }
+    .sentryiq-page-header { grid-template-columns:1fr; align-items:start; gap:8px; }
     .sentryiq-vault-brand-wrap { width:auto; min-width:0; }
     .sentryiq-vault-status { font-size:11px; }
     .sentryiq-vault-brand { gap:8px; }
     .sentryiq-vault-logo { width:42px; height:42px; }
     .sentryiq-vault-brand span { display:none; }
-    .sentryiq-page-header .sentryiq-lock-button,
-    .sentryiq-page-header > form .sentryiq-lock-button { width:auto; min-width:max-content; padding:10px 12px; }
+    .sentryiq-lock-form { display:none !important; }
     h2 { font-size: 20px; }
     h3 { font-size: 18px; }
     .vault-mobile-menu-bar { display: block; position: relative; margin: 18px 0 10px; }
@@ -96,6 +95,9 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
     .tab-btn { width: 100%; min-height: 44px; padding: 10px 12px; border: 0; border-bottom: 1px solid #eef0f2; border-radius: 0; text-align: left; background: #fff; }
     .tab-btn:last-child { border-bottom: 0; }
     .tab-btn.active { background: #e9f2ff; color: #0066cc; }
+    .vault-menu-lock-form { display:block; width:100%; }
+    .vault-menu-lock-button { color:#fff; background:#0066cc; }
+    .vault-menu-lock-button:hover { background:#0052a3; }
     .vault-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
     .entry-card { width: 100%; cursor: pointer; }
     .entry-card:focus-visible { outline: 2px solid #0066cc; outline-offset: 2px; }
@@ -122,6 +124,7 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
 @media (min-width: 701px) {
     .vault-mobile-menu-bar { display: none; }
     .security-log-list { display: none; }
+    .vault-menu-lock-form { display:none; }
 }
 
 @media (max-width: 420px) {
