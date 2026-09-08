@@ -19,7 +19,9 @@ if ($configuredDataDir === '' || !str_starts_with($configuredDataDir, '/')) {
     throw new RuntimeException('SentryIQ secure data directory is not configured.');
 }
 
-define('SENTRYIQ_DATA_DIR', rtrim($configuredDataDir, '/'));
+if (!defined('SENTRYIQ_DATA_DIR')) {
+    define('SENTRYIQ_DATA_DIR', rtrim($configuredDataDir, '/'));
+}
 define('DATA_FILE', SENTRYIQ_DATA_DIR . '/passwords.enc');
 define('LOG_FILE', SENTRYIQ_DATA_DIR . '/security_audit.log');
 define('DIAGNOSTIC_LOG_FILE', SENTRYIQ_DATA_DIR . '/diagnostic.log');
@@ -117,7 +119,6 @@ function read_security_log(): array
             continue;
         }
 
-        // Only genuine security audit records belong in the Security Log.
         if (
             !isset($decoded['timestamp']) ||
             !is_string($decoded['timestamp']) ||
@@ -128,8 +129,6 @@ function read_security_log(): array
             continue;
         }
 
-        // Require the core audit fields so diagnostic/malformed
-        // records cannot be displayed as security events.
         if (
             !array_key_exists('username', $decoded) ||
             !array_key_exists('ip', $decoded) ||
