@@ -66,7 +66,7 @@ foreach (is_array($passwords) ? $passwords : [] as $entry) {
 $sys_user = trim((string)($systemConfig['app_username'] ?? $_SESSION['app_username'] ?? ''));
 $sys_email = trim((string)($systemConfig['2fa_email'] ?? TWO_FA_EMAIL));
 $active_pane = (string)($_GET['pane'] ?? 'view');
-if (!in_array($active_pane, ['view','add','settings','log','details','edit'], true)) $active_pane = 'view';
+if (!in_array($active_pane, ['view','add','settings','details','edit'], true)) $active_pane = 'view';
 $csrf = sentryiq_csrf_token();
 ?>
 <!DOCTYPE html>
@@ -78,7 +78,7 @@ $csrf = sentryiq_csrf_token();
 <title>SentryIQ</title>
 <link rel="stylesheet" href="pm_style.css">
 <script>
-const vaultTabLabels={view:'Records',add:'Add Entry',settings:'Settings',log:'Log',details:'Entry Inspection'};
+const vaultTabLabels={view:'Records',add:'Add Entry',settings:'System',details:'Entry Inspection'};
 function updateVaultSectionStatus(tabName){var status=document.querySelector('[data-vault-status]');if(status)status.textContent=vaultTabLabels[tabName]||'SentryIQ';}
 function switchVaultTab(tabName){document.querySelectorAll('.vault-panel').forEach(panel=>panel.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(btn=>btn.classList.remove('active'));var targetPanel=document.getElementById(tabName+'-panel');if(targetPanel)targetPanel.classList.add('active');var btnElement=document.getElementById(tabName+'-btn');if(btnElement)btnElement.classList.add('active');updateVaultSectionStatus(tabName);}
 function toggleVaultMobileMenu(){var menu=document.getElementById('vault-mobile-menu');var toggle=document.querySelector('.vault-mobile-menu-toggle');if(!menu||!toggle)return;var isOpen=menu.classList.toggle('mobile-open');toggle.setAttribute('aria-expanded',isOpen?'true':'false');}
