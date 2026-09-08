@@ -7,6 +7,14 @@
 .sentryiq-vault-banner { display:block; width:min(420px,100%); height:auto; object-fit:contain; border-radius:10px; }
 .sentryiq-vault-status { display:block; margin-top:4px; color:#777; font-size:12px; }
 
+/* Vault page header */
+.sentryiq-page-header { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:12px; width:100%; }
+.sentryiq-page-header .sentryiq-vault-brand-wrap { width:auto; min-width:0; }
+.sentryiq-page-header > a,
+.sentryiq-page-header > form { align-self:start; justify-self:end; flex:0 0 auto; }
+.sentryiq-page-header .sentryiq-lock-button,
+.sentryiq-page-header > form .sentryiq-lock-button { white-space:nowrap; width:auto; }
+
 /* First-run branding */
 .box > h2:first-child { text-align:center; }
 .box > h2:first-child::before { content:""; display:block; width:min(700px,100%); aspect-ratio:1952 / 588; margin:0 auto 18px; background:url('sentryiq-logo-wide.webp') center / contain no-repeat; }
@@ -70,12 +78,15 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
     .sentryiq-brand-logo { width:104px; height:104px; margin-bottom:12px; }
     .sentryiq-brand-banner { width:100%; max-width:700px; margin-bottom:14px; }
     .box > h2:first-child::before { width:100%; margin-bottom:14px; }
-    .sentryiq-vault-brand-wrap { width:100%; }
-    .sentryiq-vault-banner { width:100%; max-width:520px; }
+    .sentryiq-page-header { grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:8px; }
+    .sentryiq-vault-brand-wrap { width:auto; min-width:0; }
+    .sentryiq-vault-banner { width:100%; max-width:360px; }
     .sentryiq-vault-status { font-size:11px; }
     .sentryiq-vault-brand { gap:8px; }
     .sentryiq-vault-logo { width:42px; height:42px; }
     .sentryiq-vault-brand span { display:none; }
+    .sentryiq-page-header .sentryiq-lock-button,
+    .sentryiq-page-header > form .sentryiq-lock-button { width:auto; min-width:max-content; padding:10px 12px; }
     h2 { font-size: 20px; }
     h3 { font-size: 18px; }
     .vault-mobile-menu-bar { display: block; position: relative; margin: 18px 0 10px; }
@@ -124,4 +135,6 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
     .sentryiq-vault-logo { width:38px; height:38px; }
     .tab-btn { font-size: 14px; }
     .btn { width: 100%; }
+    .sentryiq-page-header .sentryiq-lock-button,
+    .sentryiq-page-header > form .sentryiq-lock-button { width:auto; }
 }
