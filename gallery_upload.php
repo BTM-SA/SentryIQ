@@ -66,6 +66,16 @@ try {
     }
     gallery_upload_json(['status' => 'complete', 'results' => $results]);
 } catch (Throwable $exception) {
-    error_log('SentryIQ Gallery upload failed: ' . $exception::class . ': ' . $exception->getMessage());
-    gallery_upload_json(['status' => 'error', 'message' => 'The photo could not be processed. Please try another image or a smaller file.'], 500);
+    $exceptionClass = $exception::class;
+    $exceptionMessage = trim($exception->getMessage());
+    error_log('SentryIQ Gallery upload failed: ' . $exceptionClass . ': ' . $exceptionMessage);
+
+    // Keep the failure actionable during deployment/debugging without exposing
+    // filesystem paths, request data, or a stack trace to the browser.
+    $safeMessage = $exceptionMessage !== '' ? $exceptionMessage : 'An unexpected upload processing error occurred.';
+    gallery_upload_json([
+        'status' => 'error',
+        'message' => 'Upload processing failed: ' . $safeMessage,
+        'error_class' => $exceptionClass,
+    ], 500);
 }
