@@ -5,7 +5,7 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
 <!-- Location: /home/bicheveb/public_html/pm/dashboard_list.php -->
 <div class="sentryiq-page-header">
     <div class="sentryiq-vault-brand-wrap"><img class="sentryiq-vault-banner" src="sentryiq-logo-wide.webp" width="1952" height="588" alt="SentryIQ"><span class="sentryiq-vault-status" data-vault-status>Records</span></div>
-    <a href="?action=logout" class="btn btn-primary sentryiq-lock-button" style="text-decoration:none;">Lock Vault</a>
+    <form method="POST" class="sentryiq-lock-form"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf ?? '', ENT_QUOTES, 'UTF-8'); ?>"><input type="hidden" name="lock_vault" value="1"><button type="submit" class="btn btn-primary sentryiq-lock-button">Lock Vault</button></form>
 </div>
 
 <?php if (isset($_GET['status']) && $_GET['status'] == 'saved') echo "<p class='success'>Entry stored successfully!</p>"; ?>
@@ -26,9 +26,8 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
     <button id="view-btn" class="tab-btn <?php echo ($active_pane === 'view') ? 'active' : ''; ?>" data-vault-tab="view">📋 View Stored Entries</button>
     <button id="add-btn" class="tab-btn <?php echo ($active_pane === 'add') ? 'active' : ''; ?>" data-vault-tab="add">➕ Add New Entry</button>
     <button id="settings-btn" class="tab-btn <?php echo ($active_pane === 'settings') ? 'active' : ''; ?>" data-vault-tab="settings">⚙️ System</button>
-    <button id="log-btn" class="tab-btn <?php echo ($active_pane === 'log') ? 'active' : ''; ?>" data-vault-tab="log">🔐 Log</button>
     <button id="gallery-btn" class="tab-btn" type="button" onclick="window.location.href='gallery.php'">🖼️ Gallery</button>
-    <button id="passkeys-btn" class="tab-btn" type="button" onclick="window.location.href='passkeys.php'">🔑 Passkeys</button>
+    <form method="POST" class="vault-menu-lock-form"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf ?? '', ENT_QUOTES, 'UTF-8'); ?>"><input type="hidden" name="lock_vault" value="1"><button type="submit" class="tab-btn vault-menu-lock-button">🔒 Lock Vault</button></form>
     <button id="details-btn" class="tab-btn" style="display:none;" data-vault-tab="details">👁️ Entry Inspection</button>
 </div>
 
