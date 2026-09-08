@@ -3,9 +3,9 @@ $passwords = normalize_vault_records($passwords ?? []);
 $passwords = array_values(array_filter($passwords, static fn(array $row): bool => ($row['type'] ?? '') !== 'system_config'));
 ?>
 <!-- Location: /home/bicheveb/public_html/pm/dashboard_list.php -->
-<div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
-    <div class="sentryiq-vault-brand-wrap"><img class="sentryiq-vault-banner" src="sentryiq-logo-wide.webp" width="1952" height="588" alt="SentryIQ"><span class="sentryiq-vault-status">Secure Vault</span></div>
-    <a href="?action=logout" class="btn btn-primary" style="text-decoration:none;">Lock Vault</a>
+<div class="sentryiq-page-header">
+    <div class="sentryiq-vault-brand-wrap"><img class="sentryiq-vault-banner" src="sentryiq-logo-wide.webp" width="1952" height="588" alt="SentryIQ"><span class="sentryiq-vault-status" data-vault-status>Records</span></div>
+    <a href="?action=logout" class="btn btn-primary sentryiq-lock-button" style="text-decoration:none;">Lock Vault</a>
 </div>
 
 <?php if (isset($_GET['status']) && $_GET['status'] == 'saved') echo "<p class='success'>Entry stored successfully!</p>"; ?>
