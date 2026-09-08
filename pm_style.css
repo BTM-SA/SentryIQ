@@ -80,7 +80,7 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
     .box > h2:first-child::before { width:100%; margin-bottom:14px; }
     .sentryiq-page-header { grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:8px; }
     .sentryiq-vault-brand-wrap { width:auto; min-width:0; }
-    .sentryiq-vault-banner { width:100%; max-width:360px; }
+    .sentryiq-vault-banner { width:100%; max-width:130px; }
     .sentryiq-vault-status { font-size:11px; }
     .sentryiq-vault-brand { gap:8px; }
     .sentryiq-vault-logo { width:42px; height:42px; }
