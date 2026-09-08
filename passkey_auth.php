@@ -162,10 +162,7 @@ try {
         $credentialId=(string)($request['credential_id']??''); if (pk_unb64($credentialId)===false) throw new RuntimeException('Invalid passkey identifier.');
         $credentials=is_array($store['credentials']??null)?$store['credentials']:[]; if (count($credentials)<=1) throw new RuntimeException('The last passkey cannot be removed. Keep at least one passkey registered, or use password recovery.');
         $removed=false; $remaining=[];
-        foreach ($credentials as $record) {
-            if (is_array($record)&&hash_equals((string)($record['credential_id']??''),$credentialId)) { $removed=true; continue; }
-            $remaining[]=$record;
-        }
+        foreach ($credentials as $record) { if (is_array($record)&&hash_equals((string)($record['credential_id']??''),$credentialId)) { $removed=true; continue; } $remaining[]=$record; }
         if (!$removed) throw new RuntimeException('Passkey not found.');
         $store['credentials']=$remaining; pk_save($store); pk_log_security_event('PASSKEY_REMOVED',pk_visitor_ip(),(string)($_SESSION['app_username']??'unknown'),['credential_id'=>$credentialId]); passkey_auth_json(['status'=>'ok']);
     }
