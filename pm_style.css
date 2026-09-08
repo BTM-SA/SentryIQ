@@ -4,7 +4,7 @@
 .sentryiq-vault-brand { display:flex; align-items:center; gap:10px; margin:0; }
 .sentryiq-vault-logo { width:48px; height:48px; object-fit:contain; display:block; }
 .sentryiq-vault-brand-wrap { min-width:0; }
-.sentryiq-vault-banner { display:block; width:min(420px,100%); height:auto; object-fit:contain; border-radius:10px; }
+.sentryiq-vault-banner { display:block; width:130px; max-width:100%; height:auto; object-fit:contain; border-radius:10px; }
 .sentryiq-vault-status { display:block; margin-top:4px; color:#777; font-size:12px; }
 
 /* Vault page header */
@@ -80,7 +80,6 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
     .box > h2:first-child::before { width:100%; margin-bottom:14px; }
     .sentryiq-page-header { grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:8px; }
     .sentryiq-vault-brand-wrap { width:auto; min-width:0; }
-    .sentryiq-vault-banner { width:100%; max-width:130px; }
     .sentryiq-vault-status { font-size:11px; }
     .sentryiq-vault-brand { gap:8px; }
     .sentryiq-vault-logo { width:42px; height:42px; }
@@ -131,7 +130,6 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
     .sentryiq-brand-logo { width:92px; height:92px; }
     .sentryiq-brand-banner { width:100%; }
     .box > h2:first-child::before { width:100%; }
-    .sentryiq-vault-banner { max-width:100%; }
     .sentryiq-vault-logo { width:38px; height:38px; }
     .tab-btn { font-size: 14px; }
     .btn { width: 100%; }
