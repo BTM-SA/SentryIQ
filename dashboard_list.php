@@ -28,6 +28,7 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
     <button id="settings-btn" class="tab-btn <?php echo ($active_pane === 'settings') ? 'active' : ''; ?>" data-vault-tab="settings">⚙️ System</button>
     <button id="log-btn" class="tab-btn <?php echo ($active_pane === 'log') ? 'active' : ''; ?>" data-vault-tab="log">🔐 Log</button>
     <button id="gallery-btn" class="tab-btn" type="button" onclick="window.location.href='gallery.php'">🖼️ Gallery</button>
+    <button id="passkeys-btn" class="tab-btn" type="button" onclick="window.location.href='passkeys.php'">🔑 Passkeys</button>
     <button id="details-btn" class="tab-btn" style="display:none;" data-vault-tab="details">👁️ Entry Inspection</button>
 </div>
 
