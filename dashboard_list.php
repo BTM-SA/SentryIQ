@@ -6,12 +6,6 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
 <div class="sentryiq-page-header">
     <div class="sentryiq-vault-brand-wrap"><img class="sentryiq-vault-banner" src="sentryiq-logo-wide.webp" width="1952" height="588" alt="SentryIQ"><span class="sentryiq-vault-status" data-vault-status>Records</span></div>
     <form method="POST" class="sentryiq-lock-form"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf ?? '', ENT_QUOTES, 'UTF-8'); ?>"><input type="hidden" name="lock_vault" value="1"><button type="submit" class="btn btn-primary sentryiq-lock-button">Lock Vault</button></form>
-    <div class="vault-mobile-menu-bar">
-        <button type="button" class="vault-mobile-menu-toggle" aria-expanded="false" aria-controls="vault-mobile-menu">
-            <span class="vault-mobile-menu-icon" aria-hidden="true">☰</span>
-            <span id="vault-mobile-menu-label">Menu</span>
-        </button>
-    </div>
 </div>
 
 <?php if (isset($_GET['status']) && $_GET['status'] == 'saved') echo "<p class='success'>Entry stored successfully!</p>"; ?>
@@ -20,6 +14,13 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
 <?php if (isset($_GET['status']) && $_GET['status'] == 'error') echo "<p class='error'>The requested vault record operation could not be completed.</p>"; ?>
 <?php if (isset($_GET['status']) && $_GET['status'] === 'validation' && ($_GET['field'] ?? '') === 'url') echo "<p class='error'>Please enter a valid HTTPS URL, or leave the URL field blank.</p>"; ?>
 <?php if (isset($_GET['status']) && $_GET['status'] === 'validation' && ($_GET['field'] ?? '') === 'required') echo "<p class='error'>Please complete the required fields before saving.</p>"; ?>
+
+<div class="vault-mobile-menu-bar">
+    <button type="button" class="vault-mobile-menu-toggle" aria-expanded="false" aria-controls="vault-mobile-menu">
+        <span class="vault-mobile-menu-icon" aria-hidden="true">☰</span>
+        <span id="vault-mobile-menu-label">Menu</span>
+    </button>
+</div>
 
 <div id="vault-mobile-menu" class="vault-tabs">
     <button id="view-btn" class="tab-btn <?php echo ($active_pane === 'view') ? 'active' : ''; ?>" data-vault-tab="view">📋 View Stored Entries</button>
@@ -77,25 +78,6 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
         toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
     };
 
-    function setupSystemOptions() {
-        var panel = document.getElementById('settings-panel');
-        if (!panel || panel.dataset.optionsReady === '1') return;
-        var boxes = panel.querySelectorAll(':scope > .form-box');
-        if (boxes.length < 3) return;
-
-        boxes[1].style.display = 'none';
-        boxes[2].style.display = 'none';
-
-        var options = document.createElement('div');
-        options.className = 'form-box system-options-panel';
-        options.style.marginTop = '20px';
-        options.innerHTML = '<h3>System Tools</h3>' +
-            '<a href="passkeys.php" class="system-option-link" style="display:block;padding:16px;margin-top:12px;border:1px solid #e9ecef;border-radius:10px;text-decoration:none;color:#212529;background:#fff;"><strong>🔑 Passkeys</strong><span style="display:block;margin-top:4px;color:#777;font-size:13px;">Manage the devices that can unlock your SentryIQ vault.</span></a>' +
-            '<a href="system_log.php" class="system-option-link" style="display:block;padding:16px;margin-top:12px;border:1px solid #e9ecef;border-radius:10px;text-decoration:none;color:#212529;background:#fff;"><strong>🔐 System Log</strong><span style="display:block;margin-top:4px;color:#777;font-size:13px;">View security and authentication events recorded by SentryIQ.</span></a>';
-        panel.appendChild(options);
-        panel.dataset.optionsReady = '1';
-    }
-
     document.addEventListener('DOMContentLoaded', function () {
         var toggle = getToggle();
         var menu = getMenu();
@@ -107,13 +89,10 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
             button.addEventListener('click', function () {
                 var tab = button.getAttribute('data-vault-tab');
                 if (typeof switchVaultTab === 'function') switchVaultTab(tab);
-                if (tab === 'settings') setupSystemOptions();
                 menu.classList.remove('mobile-open');
                 toggle.setAttribute('aria-expanded', 'false');
             });
         });
-
-        setupSystemOptions();
     });
 }());
 </script>
