@@ -20,6 +20,7 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
 
 <div id="vault-mobile-menu" class="vault-tabs">
     <button id="view-btn" class="tab-btn active" type="button" onclick="window.location.href='index.php?pane=view'">📋 Vault</button>
+    <button id="docs-btn" class="tab-btn" type="button" onclick="window.location.href='documents.php'">📄 Docs</button>
     <button id="gallery-btn" class="tab-btn" type="button" onclick="window.location.href='gallery.php'">🖼️ Gallery</button>
     <button id="settings-btn" class="tab-btn" type="button" onclick="window.location.href='index.php?pane=settings'">⚙️ System</button>
     <form method="POST" class="vault-menu-lock-form"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf ?? '', ENT_QUOTES, 'UTF-8'); ?>"><input type="hidden" name="lock_vault" value="1"><button type="submit" class="tab-btn vault-menu-lock-button">🔒 Lock Vault</button></form>
