@@ -47,7 +47,7 @@ $csrf = sentryiq_csrf_token();
         </div>
     </div>
     <div id="passkeys-menu-panel" class="sentryiq-mobile-menu-panel">
-        <a href="index.php">📋 View Stored Entries</a>
+        <a href="index.php">📋 Vault</a>
         <a href="gallery.php">🖼️ Gallery</a>
         <a href="passkeys.php">🔑 Passkeys</a>
         <a href="system_log.php">🔐 System Log</a>
