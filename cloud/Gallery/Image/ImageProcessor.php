@@ -12,6 +12,7 @@ final class ImageProcessor
 
     public function __construct(
         private readonly int $webpQuality = 85,
+        private readonly bool $preserveTransparency = true,
     ) {
         if ($webpQuality < 1 || $webpQuality > 100) {
             throw new RuntimeException('Invalid WebP quality.');
@@ -52,9 +53,14 @@ final class ImageProcessor
             }
             try {
                 imagealphablending($canvas, false);
-                imagesavealpha($canvas, true);
-                $transparent = imagecolorallocatealpha($canvas, 0, 0, 0, 127);
-                imagefilledrectangle($canvas, 0, 0, $width, $height, $transparent);
+                imagesavealpha($canvas, $this->preserveTransparency);
+                if ($this->preserveTransparency) {
+                    $transparent = imagecolorallocatealpha($canvas, 0, 0, 0, 127);
+                    imagefilledrectangle($canvas, 0, 0, $width, $height, $transparent);
+                } else {
+                    $background = imagecolorallocate($canvas, 255, 255, 255);
+                    imagefilledrectangle($canvas, 0, 0, $width, $height, $background);
+                }
                 imagecopy($canvas, $image, 0, 0, 0, 0, $width, $height);
                 ob_start();
                 if (!imagewebp($canvas, null, $this->webpQuality)) {
