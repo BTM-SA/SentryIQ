@@ -9,8 +9,9 @@ use RuntimeException;
 final class ThumbnailGenerator
 {
     public function __construct(
-        private readonly int $maxDimension = 480,
+        private readonly int $maxDimension = 600,
         private readonly int $webpQuality = 80,
+        private readonly bool $preserveTransparency = true,
     ) {
         if ($this->maxDimension < 1 || $this->webpQuality < 1 || $this->webpQuality > 100) {
             throw new RuntimeException('Invalid thumbnail configuration.');
@@ -41,9 +42,14 @@ final class ThumbnailGenerator
             }
             try {
                 imagealphablending($thumbnail, false);
-                imagesavealpha($thumbnail, true);
-                $transparent = imagecolorallocatealpha($thumbnail, 0, 0, 0, 127);
-                imagefilledrectangle($thumbnail, 0, 0, $newWidth, $newHeight, $transparent);
+                imagesavealpha($thumbnail, $this->preserveTransparency);
+                if ($this->preserveTransparency) {
+                    $transparent = imagecolorallocatealpha($thumbnail, 0, 0, 0, 127);
+                    imagefilledrectangle($thumbnail, 0, 0, $newWidth, $newHeight, $transparent);
+                } else {
+                    $background = imagecolorallocate($thumbnail, 255, 255, 255);
+                    imagefilledrectangle($thumbnail, 0, 0, $newWidth, $newHeight, $background);
+                }
                 if (!imagecopyresampled($thumbnail, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height)) {
                     throw new RuntimeException('Unable to resize image for thumbnail.');
                 }
