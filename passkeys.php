@@ -40,7 +40,8 @@ $csrf = sentryiq_csrf_token();
         <div class="sentryiq-page-actions"><a href="index.php" class="btn sentryiq-back" style="text-decoration:none;">Back to Vault</a><div class="sentryiq-mobile-menu"><button type="button" class="sentryiq-mobile-menu-toggle" id="passkeys-menu-toggle" aria-expanded="false" aria-controls="passkeys-menu-panel">☰ Menu</button></div></div>
     </div>
     <div id="passkeys-menu-panel" class="sentryiq-mobile-menu-panel">
-        <a href="index.php">📋 Vault</a>
+        <a href="index.php?pane=view">📋 Vault</a>
+        <a href="documents.php">📄 Docs</a>
         <a href="gallery.php">🖼️ Gallery</a>
         <a href="index.php?pane=settings">⚙️ System</a>
         <form method="POST" style="margin:0;"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>"><input type="hidden" name="lock_vault" value="1"><button type="submit">🔒 Lock Vault</button></form>
