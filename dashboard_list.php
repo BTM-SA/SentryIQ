@@ -37,7 +37,7 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
                 $hash = md5($label);
                 $hue1 = hexdec(substr($hash, 0, 2)) % 360;
                 $hue2 = ($hue1 + 90) % 360;
-                $cardGradient = "linear-gradient(135deg, hsl({$hue1}, 60%, 40%) 0%, hsl({$hue2}, 65%, 25%) 100%)";
+                $cardGradient = "linear-gradient(to bottom right, hsla(214.47, 42.86%, 39.85%, 1) 4.62%, hsla(229.79, 18.54%, 43.26%, 0.7))";
                 $words = explode(' ', trim(preg_replace('/[^a-zA-Z0-9 ]/', '', $label)));
                 $initials = strtoupper(substr($words[0] ?? 'V', 0, 1) . (isset($words[1]) ? substr($words[1], 0, 1) : ''));
                 $hasStoredIcon = !empty($row['icon_path']) && !empty($row['id']);
