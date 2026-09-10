@@ -42,9 +42,10 @@ $csrf = sentryiq_csrf_token();
         </div>
     </div>
     <div id="system-menu-panel" class="system-mobile-menu-panel">
-        <a href="index.php">📋 View Stored Entries</a>
+        <a href="index.php">📋 Vault</a>
         <a href="gallery.php">🖼️ Gallery</a>
         <a href="passkeys.php">🔑 Passkeys</a>
+        <a href="system_log.php">🔐 System Log</a>
         <a href="index.php?pane=settings">⚙️ System</a>
         <form method="POST" style="margin:0;">
             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
