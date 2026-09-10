@@ -5,7 +5,7 @@
 .sentryiq-vault-logo { width:48px; height:48px; object-fit:contain; display:block; }
 .sentryiq-vault-brand-wrap { min-width:0; }
 .sentryiq-vault-banner { display:block; width:130px; max-width:100%; height:auto; object-fit:contain; border-radius:10px; }
-.sentryiq-vault-status { display:block; margin-top:4px; color:#777; font-size:12px; }
+.sentryiq-vault-status { display:inline-flex; align-items:center; width:max-content; max-width:100%; margin-top:6px; padding:3px 8px; border:1px solid #e1e5ea; border-radius:999px; background:#f7f8fa; color:#667085; font-size:10px; line-height:1.2; font-weight:700; letter-spacing:.08em; text-transform:uppercase; white-space:nowrap; }
 
 /* Vault page header */
 .sentryiq-page-header { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:12px; width:100%; }
@@ -58,86 +58,106 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
 .detail-row { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #f1f3f5; }
 .detail-row:last-child { border-bottom: none; margin-bottom: 0; }
 .detail-label { font-size: 11px; text-transform: uppercase; color: #888; font-weight: bold; display: block; margin-bottom: 4px; }
-.detail-value { font-size: 15px; font-weight: 600; color: #222; overflow-wrap: anywhere; word-break: break-word; }
-.secret-badge { background: #e9ecef; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 14px; overflow-wrap: anywhere; }
-.initial-badge { width: 28px; height: 24px; border-radius: 50%; color: #ffffff; font-weight: bold; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; text-shadow: 0 1px 2px rgba(0,0,0,0.1); box-shadow: 0 2px 4px rgba(0,0,0,0.05); padding-bottom: 4px; }
+.detail-value { font-size: 15px; font-weight: 600; color: #222; overflow-wrap:anywhere; word-break:break-word; }
+.secret-badge { background:#e9ecef; padding:4px 8px; border-radius:4px; font-family:monospace; font-size:14px; overflow-wrap:anywhere; }
+.initial-badge { width:28px; height:24px; border-radius:50%; color:#ffffff; font-weight:bold; font-size:14px; display:inline-flex; align-items:center; justify-content:center; vertical-align:middle; text-shadow:0 1px 2px rgba(0,0,0,0.1); box-shadow:0 2px 4px rgba(0,0,0,0.05); padding-bottom:4px; }
 
 /* Mobile security log */
-.security-log-list { display: flex; flex-direction: column; gap: 10px; }
-.security-log-card { background: #fff; border: 1px solid #e3e6f0; border-radius: 8px; padding: 12px; }
-.security-log-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
-.security-log-event { font-weight: 700; overflow-wrap: anywhere; }
-.security-log-time { color: #777; font-size: 11px; white-space: nowrap; }
-.security-log-field { margin-top: 7px; overflow-wrap: anywhere; word-break: break-word; }
-.security-log-label { display: block; color: #777; font-size: 10px; font-weight: 700; text-transform: uppercase; margin-bottom: 2px; }
-.security-log-value { font-size: 12px; }
+.security-log-list { display:flex; flex-direction:column; gap:10px; }
+.security-log-card { background:#fff; border:1px solid #e3e6f0; border-radius:8px; padding:12px; }
+.security-log-card-header { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:8px; }
+.security-log-event { font-weight:700; overflow-wrap:anywhere; }
+.security-log-time { color:#777; font-size:11px; white-space:nowrap; }
+.security-log-field { margin-top:7px; overflow-wrap:anywhere; word-break:break-word; }
+.security-log-label { display:block; color:#777; font-size:10px; font-weight:700; text-transform:uppercase; margin-bottom:2px; }
+.security-log-value { font-size:12px; }
 
 /* Mobile layout */
-@media (max-width: 700px) {
-    body { margin: 0; padding: 10px; }
-    .box { width: 100%; max-width: none; padding: 16px; border-radius: 6px; }
+@media (max-width:700px) {
+    body { margin:0; padding:10px; }
+    .box { width:100%; max-width:none; padding:16px; border-radius:6px; }
     .sentryiq-brand-logo { width:104px; height:104px; margin-bottom:12px; }
     .sentryiq-brand-banner { width:100%; max-width:700px; margin-bottom:14px; }
     .box > h2:first-child::before { width:100%; margin-bottom:14px; }
-    .sentryiq-page-header { grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:10px; }
-    .sentryiq-vault-brand-wrap { width:auto; min-width:0; }
-    .sentryiq-vault-banner { width:130px; max-width:100%; }
-    .sentryiq-vault-status { font-size:11px; }
-    .sentryiq-vault-brand { gap:8px; }
-    .sentryiq-vault-logo { width:42px; height:42px; }
-    .sentryiq-vault-brand span { display:none; }
-    .sentryiq-mobile-header-actions { align-items:center; }
+
+    /* Consistent compact application header */
+    .sentryiq-page-header { grid-template-columns:minmax(0,1fr) auto !important; align-items:center !important; gap:10px !important; margin-bottom:4px; }
+    .sentryiq-page-header .sentryiq-vault-brand-wrap { width:auto !important; min-width:0 !important; flex:1 1 auto; }
+    .sentryiq-page-header .sentryiq-vault-banner { width:118px !important; max-width:100% !important; border-radius:7px; }
+    .sentryiq-page-header .sentryiq-vault-status { display:inline-flex !important; margin-top:5px !important; padding:3px 7px !important; font-size:9px !important; letter-spacing:.09em; }
+    .sentryiq-mobile-header-actions { align-items:center !important; justify-content:flex-end; gap:7px; }
     .sentryiq-lock-form { display:none !important; }
-    .vault-mobile-menu-bar { display:block; position:static; margin:0; }
-    .vault-mobile-menu-toggle { width:auto; min-height:44px; padding:9px 12px; border:1px solid #dee2e6; border-radius:7px; background:#fff; color:#212529; font-weight:700; font-size:14px; display:flex; align-items:center; gap:8px; justify-content:center; cursor:pointer; white-space:nowrap; }
-    .vault-mobile-menu-icon { font-size:20px; line-height:1; }
-    h2 { font-size: 20px; }
-    h3 { font-size: 18px; }
-    .vault-tabs { display: none; flex-direction:column; gap:0; overflow:visible; border:1px solid #dee2e6; border-radius:7px; margin:10px 0 14px; background:#fff; }
+    .sentryiq-page-actions { display:flex; align-items:center; }
+    .sentryiq-page-actions .sentryiq-back,
+    .sentryiq-page-actions .system-back { display:none !important; }
+
+    /* All page-specific mobile menu triggers use one visual treatment */
+    .vault-mobile-menu-toggle,
+    .sentryiq-mobile-menu-toggle,
+    .system-mobile-menu-toggle { min-height:42px !important; padding:8px 11px !important; border:1px solid #dfe3e8 !important; border-radius:9px !important; background:#fff !important; color:#253041 !important; font-size:13px !important; font-weight:700 !important; box-shadow:0 1px 2px rgba(16,24,40,.04); }
+    .vault-mobile-menu-icon { font-size:18px !important; }
+
+    /* Consistent mobile navigation panel */
+    .vault-tabs,
+    .sentryiq-mobile-menu-panel,
+    .system-mobile-menu-panel { margin:10px 0 14px !important; padding:6px !important; border:1px solid #e2e6eb !important; border-radius:11px !important; background:#fff !important; box-shadow:0 8px 24px rgba(16,24,40,.08) !important; }
+    .tab-btn,
+    .sentryiq-mobile-menu-panel a,
+    .sentryiq-mobile-menu-panel button,
+    .system-mobile-menu-panel a,
+    .system-mobile-menu-panel button { min-height:44px !important; padding:11px 12px !important; border:0 !important; border-bottom:1px solid #eef1f4 !important; border-radius:7px !important; background:transparent !important; color:#253041 !important; text-align:left; font-size:14px !important; }
+    .tab-btn:last-child,
+    .sentryiq-mobile-menu-panel form:last-child button,
+    .system-mobile-menu-panel form:last-child button { border-bottom:0 !important; }
+    .tab-btn.active { background:#eef5ff !important; color:#0066cc !important; }
+    .vault-menu-lock-button,
+    .sentryiq-mobile-menu-panel form button,
+    .system-mobile-menu-panel form button { color:#0066cc !important; font-weight:700 !important; background:#f7faff !important; }
+
+    h2 { font-size:20px; }
+    h3 { font-size:18px; }
+    .vault-tabs { display:none; flex-direction:column; gap:0; overflow:visible; }
     .vault-tabs.mobile-open { display:flex; }
-    .tab-btn { width:100%; min-height:44px; padding:10px 12px; border:0; border-bottom:1px solid #eef0f2; border-radius:0; text-align:left; background:#fff; }
-    .tab-btn:last-child { border-bottom:0; }
-    .tab-btn.active { background:#e9f2ff; color:#0066cc; }
     .vault-menu-lock-form { display:block; width:100%; }
-    .vault-menu-lock-button { color:#fff; background:#0066cc; }
-    .vault-menu-lock-button:hover { background:#0052a3; }
-    .vault-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
-    .entry-card { width: 100%; cursor: pointer; }
-    .entry-card:focus-visible { outline: 2px solid #0066cc; outline-offset: 2px; }
-    .entry-card .inspect-button { display: none !important; }
-    .entry-card .entry-card-actions { display: none !important; }
-    .entry-card { display: grid !important; grid-template-columns: 84px minmax(0, 1fr); align-items: stretch; }
-    .entry-card .og-preview-holder { grid-column: 1; grid-row: 1; width: 84px; height: 84px !important; border-radius: 12px 0 0 12px; }
-    .entry-card .entry-card-identity { grid-column: 2; grid-row: 1; align-self: center; min-width: 0; padding: 10px 14px !important; }
-    .entry-card .entry-card-identity .entry-label { max-width: 100%; }
-    .entry-card .entry-card-identity small { max-width: 100%; }
-    .form-box, .detail-card { padding: 14px; }
-    .detail-card > div[style*="display:flex"] { flex-direction: column; }
-    .detail-card > div[style*="display:flex"] .btn { width: 100%; }
-    .detail-card > div[style*="display:flex"] form { width: 100%; }
-    .detail-card > div[style*="display:flex"] form .btn { width: 100%; }
-    .input-field { font-size: 16px; }
-    .entry-row { flex-direction: column; align-items: stretch; gap: 10px; }
-    .security-log-table { display: none; }
-    .security-log-list { display: flex; }
-    .security-log-card-header { flex-direction: column; }
-    .security-log-time { white-space: normal; }
+    .vault-grid { grid-template-columns:1fr !important; gap:12px !important; }
+    .entry-card { width:100%; cursor:pointer; }
+    .entry-card:focus-visible { outline:2px solid #0066cc; outline-offset:2px; }
+    .entry-card .inspect-button { display:none !important; }
+    .entry-card .entry-card-actions { display:none !important; }
+    .entry-card { display:grid !important; grid-template-columns:84px minmax(0,1fr); }
+    .entry-card .og-preview-holder { grid-column:1; grid-row:1; width:84px; height:84px !important; border-radius:12px 0 0 12px; }
+    .entry-card .entry-card-identity { grid-column:2; grid-row:1; align-self:center; min-width:0; padding:10px 14px !important; }
+    .entry-card .entry-card-identity .entry-label { max-width:100%; }
+    .entry-card .entry-card-identity small { max-width:100%; }
+    .form-box, .detail-card { padding:14px; }
+    .detail-card > div[style*="display:flex"] { flex-direction:column; }
+    .detail-card > div[style*="display:flex"] .btn { width:100%; }
+    .detail-card > div[style*="display:flex"] form { width:100%; }
+    .detail-card > div[style*="display:flex"] form .btn { width:100%; }
+    .input-field { font-size:16px; }
+    .entry-row { flex-direction:column; align-items:stretch; gap:10px; }
+    .security-log-table { display:none; }
+    .security-log-list { display:flex; }
+    .security-log-card-header { flex-direction:column; }
+    .security-log-time { white-space:normal; }
 }
 
-@media (min-width: 701px) {
-    .vault-mobile-menu-bar { display: none; }
-    .security-log-list { display: none; }
+@media (min-width:701px) {
+    .vault-mobile-menu-bar { display:none; }
+    .security-log-list { display:none; }
     .vault-menu-lock-form { display:none; }
 }
 
-@media (max-width: 420px) {
-    body { padding: 6px; }
-    .box { padding: 12px; }
+@media (max-width:420px) {
+    body { padding:6px; }
+    .box { padding:12px; }
     .sentryiq-brand-logo { width:92px; height:92px; }
     .sentryiq-brand-banner { width:100%; }
     .box > h2:first-child::before { width:100%; }
+    .sentryiq-vault-banner { width:110px !important; }
     .sentryiq-vault-logo { width:38px; height:38px; }
-    .tab-btn { font-size: 14px; }
-    .btn { width: 100%; }
+    .sentryiq-vault-status { font-size:8px !important; }
+    .tab-btn { font-size:14px; }
+    .btn { width:100%; }
     .sentryiq-lock-form .sentryiq-lock-button { width:auto; }
 }
