@@ -11,8 +11,6 @@ final class ImageProcessor
     private const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
     public function __construct(
-        private readonly int $maxBytes = 15_000_000,
-        private readonly int $maxPixels = 40_000_000,
         private readonly int $webpQuality = 85,
     ) {
         if ($webpQuality < 1 || $webpQuality > 100) {
@@ -22,8 +20,8 @@ final class ImageProcessor
 
     public function toWebp(string $input): string
     {
-        if ($input === '' || strlen($input) > $this->maxBytes) {
-            throw new RuntimeException('Image is empty or exceeds the configured size limit.');
+        if ($input === '') {
+            throw new RuntimeException('Image is empty.');
         }
 
         $finfo = new \finfo(FILEINFO_MIME_TYPE);
@@ -38,8 +36,8 @@ final class ImageProcessor
         }
 
         [$width, $height] = $imageInfo;
-        if ($width < 1 || $height < 1 || ($width * $height) > $this->maxPixels) {
-            throw new RuntimeException('Image dimensions exceed the configured limit.');
+        if ($width < 1 || $height < 1) {
+            throw new RuntimeException('Image dimensions are invalid.');
         }
 
         $image = @imagecreatefromstring($input);
