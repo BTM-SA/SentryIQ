@@ -5,7 +5,15 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
 <!-- Location: /home/bicheveb/public_html/pm/dashboard_list.php -->
 <div class="sentryiq-page-header">
     <div class="sentryiq-vault-brand-wrap"><img class="sentryiq-vault-banner" src="sentryiq-logo-wide.webp" width="1952" height="588" alt="SentryIQ"><span class="sentryiq-vault-status" data-vault-status>Records</span></div>
-    <form method="POST" class="sentryiq-lock-form"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf ?? '', ENT_QUOTES, 'UTF-8'); ?>"><input type="hidden" name="lock_vault" value="1"><button type="submit" class="btn btn-primary sentryiq-lock-button">Lock Vault</button></form>
+    <div class="sentryiq-mobile-header-actions">
+        <form method="POST" class="sentryiq-lock-form"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf ?? '', ENT_QUOTES, 'UTF-8'); ?>"><input type="hidden" name="lock_vault" value="1"><button type="submit" class="btn btn-primary sentryiq-lock-button">Lock Vault</button></form>
+        <div class="vault-mobile-menu-bar">
+            <button type="button" class="vault-mobile-menu-toggle" aria-expanded="false" aria-controls="vault-mobile-menu">
+                <span class="vault-mobile-menu-icon" aria-hidden="true">☰</span>
+                <span id="vault-mobile-menu-label">Menu</span>
+            </button>
+        </div>
+    </div>
 </div>
 
 <?php if (isset($_GET['status']) && $_GET['status'] == 'saved') echo "<p class='success'>Entry stored successfully!</p>"; ?>
@@ -14,13 +22,6 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
 <?php if (isset($_GET['status']) && $_GET['status'] == 'error') echo "<p class='error'>The requested vault record operation could not be completed.</p>"; ?>
 <?php if (isset($_GET['status']) && $_GET['status'] === 'validation' && ($_GET['field'] ?? '') === 'url') echo "<p class='error'>Please enter a valid HTTPS URL, or leave the URL field blank.</p>"; ?>
 <?php if (isset($_GET['status']) && $_GET['status'] === 'validation' && ($_GET['field'] ?? '') === 'required') echo "<p class='error'>Please complete the required fields before saving.</p>"; ?>
-
-<div class="vault-mobile-menu-bar">
-    <button type="button" class="vault-mobile-menu-toggle" aria-expanded="false" aria-controls="vault-mobile-menu">
-        <span class="vault-mobile-menu-icon" aria-hidden="true">☰</span>
-        <span id="vault-mobile-menu-label">Menu</span>
-    </button>
-</div>
 
 <div id="vault-mobile-menu" class="vault-tabs">
     <button id="view-btn" class="tab-btn <?php echo ($active_pane === 'view') ? 'active' : ''; ?>" data-vault-tab="view">📋 View Stored Entries</button>
