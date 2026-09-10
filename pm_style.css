@@ -105,14 +105,14 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
     .sentryiq-mobile-menu-panel a,
     .sentryiq-mobile-menu-panel button,
     .system-mobile-menu-panel a,
-    .system-mobile-menu-panel button { min-height:44px !important; padding:11px 12px !important; border:0 !important; border-bottom:1px solid #eef1f4 !important; border-radius:7px !important; background:transparent !important; color:#253041 !important; text-align:left; font-size:14px !important; }
+    .system-mobile-menu-panel button { min-height:44px !important; padding:11px 12px !important; border:0 !important; border-bottom:1px solid #eef1f4 !important; border-radius:7px !important; background:transparent !important; color:#253041 !important; text-align:left; font-family:Arial,sans-serif !important; font-size:14px !important; font-weight:500 !important; line-height:1.4 !important; }
     .tab-btn:last-child,
     .sentryiq-mobile-menu-panel form:last-child button,
     .system-mobile-menu-panel form:last-child button { border-bottom:0 !important; }
-    .tab-btn.active { background:#eef5ff !important; color:#0066cc !important; }
+    .tab-btn.active { background:#eef5ff !important; color:#0066cc !important; font-weight:500 !important; }
     .vault-menu-lock-button,
     .sentryiq-mobile-menu-panel form button,
-    .system-mobile-menu-panel form button { color:#0066cc !important; font-weight:700 !important; background:#f7faff !important; }
+    .system-mobile-menu-panel form button { color:#0066cc !important; font-weight:600 !important; background:#f7faff !important; }
 
     h2 { font-size:20px; }
     h3 { font-size:18px; }
