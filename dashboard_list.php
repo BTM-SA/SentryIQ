@@ -21,10 +21,11 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
 <?php if (isset($_GET['status']) && $_GET['status'] === 'validation' && ($_GET['field'] ?? '') === 'required') echo "<p class='error'>Please complete the required fields before saving.</p>"; ?>
 
 <div id="vault-mobile-menu" class="vault-tabs">
-    <button id="view-btn" class="tab-btn <?php echo ($active_pane === 'view') ? 'active' : ''; ?>" data-vault-tab="view">📋 View Stored Entries</button>
-    <button id="add-btn" class="tab-btn <?php echo ($active_pane === 'add') ? 'active' : ''; ?>" data-vault-tab="add">➕ Add New Entry</button>
-    <button id="settings-btn" class="tab-btn <?php echo ($active_pane === 'settings') ? 'active' : ''; ?>" data-vault-tab="settings">⚙️ System</button>
+    <button id="view-btn" class="tab-btn active" type="button" onclick="window.location.href='index.php?pane=view'">📋 Vault</button>
     <button id="gallery-btn" class="tab-btn" type="button" onclick="window.location.href='gallery.php'">🖼️ Gallery</button>
+    <button id="passkeys-btn" class="tab-btn" type="button" onclick="window.location.href='passkeys.php'">🔑 Passkeys</button>
+    <button id="system-log-btn" class="tab-btn" type="button" onclick="window.location.href='system_log.php'">🔐 System Log</button>
+    <button id="settings-btn" class="tab-btn" type="button" onclick="window.location.href='index.php?pane=settings'">⚙️ System</button>
     <form method="POST" class="vault-menu-lock-form"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf ?? '', ENT_QUOTES, 'UTF-8'); ?>"><input type="hidden" name="lock_vault" value="1"><button type="submit" class="tab-btn vault-menu-lock-button">🔒 Lock Vault</button></form>
     <button id="details-btn" class="tab-btn" style="display:none;" data-vault-tab="details">👁️ Entry Inspection</button>
 </div>
