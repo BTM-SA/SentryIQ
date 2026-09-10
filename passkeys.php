@@ -35,93 +35,28 @@ $csrf = sentryiq_csrf_token();
 <body>
 <div class="box">
     <div class="sentryiq-page-header">
-        <div class="sentryiq-vault-brand-wrap">
-            <img class="sentryiq-vault-banner" src="sentryiq-logo-wide.webp" width="1952" height="588" alt="SentryIQ">
-            <span class="sentryiq-vault-status">Passkeys</span>
-        </div>
-        <div class="sentryiq-page-actions">
-            <a href="index.php" class="btn sentryiq-back" style="text-decoration:none;">Back to Vault</a>
-            <div class="sentryiq-mobile-menu">
-                <button type="button" class="sentryiq-mobile-menu-toggle" id="passkeys-menu-toggle" aria-expanded="false" aria-controls="passkeys-menu-panel">☰ Menu</button>
-            </div>
-        </div>
+        <div class="sentryiq-vault-brand-wrap"><img class="sentryiq-vault-banner" src="sentryiq-logo-wide.webp" width="1952" height="588" alt="SentryIQ"><span class="sentryiq-vault-status">Passkeys</span></div>
+        <div class="sentryiq-page-actions"><a href="index.php" class="btn sentryiq-back" style="text-decoration:none;">Back to Vault</a><div class="sentryiq-mobile-menu"><button type="button" class="sentryiq-mobile-menu-toggle" id="passkeys-menu-toggle" aria-expanded="false" aria-controls="passkeys-menu-panel">☰ Menu</button></div></div>
     </div>
     <div id="passkeys-menu-panel" class="sentryiq-mobile-menu-panel">
         <a href="index.php">📋 Vault</a>
         <a href="gallery.php">🖼️ Gallery</a>
-        <a href="passkeys.php">🔑 Passkeys</a>
-        <a href="system_log.php">🔐 System Log</a>
         <a href="index.php?pane=settings">⚙️ System</a>
-        <form method="POST" style="margin:0;">
-            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
-            <input type="hidden" name="lock_vault" value="1">
-            <button type="submit">🔒 Lock Vault</button>
-        </form>
+        <form method="POST" style="margin:0;"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>"><input type="hidden" name="lock_vault" value="1"><button type="submit">🔒 Lock Vault</button></form>
     </div>
-
     <div style="max-width:620px;margin:20px auto;">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-            <div>
-                <h2 style="margin-bottom:6px;">🔑 Passkeys</h2>
-                <p style="margin-top:0;color:#666;">Manage the devices that can unlock your SentryIQ vault with Face ID, Touch ID, or passkey authentication.</p>
-            </div>
-            <a href="index.php" class="btn" style="text-decoration:none;">Back to Vault</a>
-        </div>
-
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;"><div><h2 style="margin-bottom:6px;">🔑 Passkeys</h2><p style="margin-top:0;color:#666;">Manage the devices that can unlock your SentryIQ vault with Face ID, Touch ID, or passkey authentication.</p></div><a href="index.php" class="btn" style="text-decoration:none;">Back to Vault</a></div>
         <div id="passkey-message" style="display:none;"></div>
-
         <div style="margin:20px 0;">
-            <?php if (empty($credentials)): ?>
-                <div style="padding:18px;border:1px solid #e9ecef;border-radius:10px;text-align:center;color:#666;">No passkeys are registered yet.</div>
-            <?php else: ?>
-                <?php foreach ($credentials as $index => $credential):
-                    $created = (int)($credential['created_at'] ?? 0);
-                    $label = 'Passkey ' . ($index + 1);
-                    $id = (string)($credential['credential_id'] ?? '');
-                ?>
-                    <div style="border:1px solid #e9ecef;border-radius:10px;padding:16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;">
-                        <div style="min-width:0;">
-                            <strong><?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?></strong>
-                            <div style="font-size:13px;color:#777;margin-top:4px;">Added <?php echo $created > 0 ? htmlspecialchars(date('j M Y, H:i', $created), ENT_QUOTES, 'UTF-8') : 'date unavailable'; ?></div>
-                            <div style="font-size:11px;color:#aaa;margin-top:3px;overflow:hidden;text-overflow:ellipsis;max-width:430px;">Credential: <?php echo htmlspecialchars(substr($id, 0, 18) . (strlen($id) > 18 ? '…' : ''), ENT_QUOTES, 'UTF-8'); ?></div>
-                        </div>
-                        <button type="button" class="btn btn-primary remove-passkey" data-credential="<?php echo htmlspecialchars($id, ENT_QUOTES, 'UTF-8'); ?>" <?php echo count($credentials) <= 1 ? 'disabled title="Keep at least one passkey registered"' : ''; ?>>Remove</button>
-                    </div>
-                <?php endforeach; ?>
-            <?php endif; ?>
+            <?php if (empty($credentials)): ?><div style="padding:18px;border:1px solid #e9ecef;border-radius:10px;text-align:center;color:#666;">No passkeys are registered yet.</div>
+            <?php else: ?><?php foreach ($credentials as $index => $credential): $created=(int)($credential['created_at']??0);$label='Passkey '.($index+1);$id=(string)($credential['credential_id']??''); ?><div style="border:1px solid #e9ecef;border-radius:10px;padding:16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;"><div style="min-width:0;"><strong><?php echo htmlspecialchars($label,ENT_QUOTES,'UTF-8'); ?></strong><div style="font-size:13px;color:#777;margin-top:4px;">Added <?php echo $created>0?htmlspecialchars(date('j M Y, H:i',$created),ENT_QUOTES,'UTF-8'):'date unavailable'; ?></div><div style="font-size:11px;color:#aaa;margin-top:3px;overflow:hidden;text-overflow:ellipsis;max-width:430px;">Credential: <?php echo htmlspecialchars(substr($id,0,18).(strlen($id)>18?'…':''),ENT_QUOTES,'UTF-8'); ?></div></div><button type="button" class="btn btn-primary remove-passkey" data-credential="<?php echo htmlspecialchars($id,ENT_QUOTES,'UTF-8'); ?>" <?php echo count($credentials)<=1?'disabled title="Keep at least one passkey registered"':''; ?>>Remove</button></div><?php endforeach; ?><?php endif; ?>
         </div>
-
-        <div style="padding:18px;border-radius:10px;background:#f8f9fa;border:1px solid #e9ecef;">
-            <h3 style="margin-top:0;">Add another device</h3>
-            <p style="font-size:14px;color:#666;">Register another passkey on your phone, Mac, tablet, or another trusted device. Each passkey gets its own protected copy of your existing vault key.</p>
-            <a href="passkey_setup.php?add=1" class="btn btn-primary" style="display:inline-block;text-decoration:none;">＋ Add Another Passkey</a>
-        </div>
-
+        <div style="padding:18px;border-radius:10px;background:#f8f9fa;border:1px solid #e9ecef;"><h3 style="margin-top:0;">Add another device</h3><p style="font-size:14px;color:#666;">Register another passkey on your phone, Mac, tablet, or another trusted device. Each passkey gets its own protected copy of your existing vault key.</p><a href="passkey_setup.php?add=1" class="btn btn-primary" style="display:inline-block;text-decoration:none;">＋ Add Another Passkey</a></div>
         <p style="font-size:13px;color:#777;margin-top:18px;">SentryIQ will not let you remove the last registered passkey. If you lose access to a device, use the password recovery route to regain access and register a replacement passkey.</p>
     </div>
 </div>
 <script>
-(function () {
-    var toggle = document.getElementById('passkeys-menu-toggle');
-    var panel = document.getElementById('passkeys-menu-panel');
-    if (toggle && panel) toggle.addEventListener('click', function () { var open=panel.classList.toggle('open'); toggle.setAttribute('aria-expanded',open?'true':'false'); });
-    var csrf = document.querySelector('meta[name="csrf-token"]').content;
-    var message = document.getElementById('passkey-message');
-    function showMessage(text, ok) { message.textContent=text; message.className=ok?'success':'error'; message.style.display='block'; }
-    document.querySelectorAll('.remove-passkey').forEach(function (button) {
-        button.addEventListener('click', async function () {
-            if (button.disabled) return;
-            if (!window.confirm('Remove this passkey? This device will no longer be able to unlock SentryIQ.')) return;
-            button.disabled = true;
-            try {
-                var response = await fetch('passkey_auth.php', {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',csrf_token:csrf,credential_id:button.dataset.credential})});
-                var result = await response.json();
-                if (!response.ok || result.status !== 'ok') throw new Error(result.message || 'Unable to remove the passkey.');
-                window.location.reload();
-            } catch (error) { showMessage(error && error.message ? error.message : 'Unable to remove the passkey.', false); button.disabled=false; }
-        });
-    });
-}());
+(function(){var toggle=document.getElementById('passkeys-menu-toggle'),panel=document.getElementById('passkeys-menu-panel');if(toggle&&panel)toggle.addEventListener('click',function(){var open=panel.classList.toggle('open');toggle.setAttribute('aria-expanded',open?'true':'false');});var csrf=document.querySelector('meta[name="csrf-token"]').content,message=document.getElementById('passkey-message');function showMessage(text,ok){message.textContent=text;message.className=ok?'success':'error';message.style.display='block';}document.querySelectorAll('.remove-passkey').forEach(function(button){button.addEventListener('click',async function(){if(button.disabled)return;if(!window.confirm('Remove this passkey? This device will no longer be able to unlock SentryIQ.'))return;button.disabled=true;try{var response=await fetch('passkey_auth.php',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',csrf_token:csrf,credential_id:button.dataset.credential})});var result=await response.json();if(!response.ok||result.status!=='ok')throw new Error(result.message||'Unable to remove the passkey.');window.location.reload();}catch(error){showMessage(error&&error.message?error.message:'Unable to remove the passkey.',false);button.disabled=false;}});});}());
 </script>
 </body>
 </html>
