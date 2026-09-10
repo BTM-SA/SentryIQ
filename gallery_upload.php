@@ -24,6 +24,7 @@ if (!is_array($config)) gallery_upload_json(['status' => 'error', 'message' => '
 $dataDir = rtrim((string)($config['data_dir'] ?? ''), '/');
 if ($dataDir === '' || !str_starts_with($dataDir, '/') || !is_dir($dataDir) || is_link($dataDir)) gallery_upload_json(['status' => 'error', 'message' => 'SentryIQ secure runtime is unavailable.'], 503);
 
+require_once __DIR__ . '/cloud/Gallery/Image/GallerySettings.php';
 require_once __DIR__ . '/cloud/Gallery/Image/ImageProcessor.php';
 require_once __DIR__ . '/cloud/Gallery/Image/ThumbnailGenerator.php';
 require_once __DIR__ . '/cloud/Gallery/Storage/DuplicateIndex.php';
@@ -32,6 +33,7 @@ require_once __DIR__ . '/cloud/Gallery/Storage/PhotoNameAllocator.php';
 require_once __DIR__ . '/cloud/Gallery/Storage/PhotoStorage.php';
 require_once __DIR__ . '/cloud/Gallery/UploadService.php';
 
+use SentryIQCloud\Gallery\Image\GallerySettings;
 use SentryIQCloud\Gallery\Image\ImageProcessor;
 use SentryIQCloud\Gallery\Image\ThumbnailGenerator;
 use SentryIQCloud\Gallery\Storage\DuplicateIndex;
@@ -47,9 +49,10 @@ if (!is_array($tmpNames) || !is_array($errors)) gallery_upload_json(['status' =>
 
 try {
     $galleryRoot = $dataDir . '/gallery';
+    $settings = GallerySettings::load($dataDir);
     $service = new UploadService(
-        new ImageProcessor(),
-        new ThumbnailGenerator(),
+        new ImageProcessor($settings['webp_quality'], $settings['preserve_transparency']),
+        new ThumbnailGenerator($settings['thumbnail_max_dimension'], $settings['thumbnail_quality'], $settings['preserve_transparency']),
         new DuplicateIndex($galleryRoot . '/duplicate-index.json'),
         new PhotoStorage($galleryRoot),
         new PhotoMetadataStore($galleryRoot . '/metadata.json'),
@@ -70,8 +73,6 @@ try {
     $exceptionMessage = trim($exception->getMessage());
     error_log('SentryIQ Gallery upload failed: ' . $exceptionClass . ': ' . $exceptionMessage);
 
-    // Keep the failure actionable during deployment/debugging without exposing
-    // filesystem paths, request data, or a stack trace to the browser.
     $safeMessage = $exceptionMessage !== '' ? $exceptionMessage : 'An unexpected upload processing error occurred.';
     gallery_upload_json([
         'status' => 'error',
