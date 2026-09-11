@@ -36,16 +36,13 @@ final class UploadService
             return ['status' => 'rejected', 'message' => 'Invalid upload source.'];
         }
 
-        $input = file_get_contents($temporaryPath);
-        if ($input === false) {
-            return ['status' => 'rejected', 'message' => 'Unable to read uploaded image.'];
-        }
-
         $filename = null;
         $stored = null;
 
         try {
-            $webp = $this->processor->toWebp($input);
+            // Decode directly from the PHP upload temp file instead of first
+            // loading the complete source image into another memory buffer.
+            $webp = $this->processor->toWebpFromFile($temporaryPath);
             $hash = $this->processor->contentHash($webp);
             $existingPhotoId = $this->duplicateIndex->find($hash);
             if ($existingPhotoId !== null) {
