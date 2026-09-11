@@ -3,7 +3,8 @@
 declare(strict_types=1);
 
 /**
- * Fetch and persist a site's favicon, falling back to its Open Graph image.
+ * Fetch and persist a site's icon, preferring its Open Graph image and
+ * falling back to a declared favicon/icon and then /favicon.ico.
  * Stored assets remain inside SENTRYIQ_DATA_DIR and are never served directly.
  */
 function cache_vault_icon(string $url, string $entryId): array
@@ -79,8 +80,8 @@ function cache_vault_icon(string $url, string $entryId): array
     }
 
     $candidates = [];
-    if ($faviconUrl !== null) $candidates[] = ['type' => 'favicon', 'url' => $faviconUrl];
     if ($ogImageUrl !== null) $candidates[] = ['type' => 'og_image', 'url' => $ogImageUrl];
+    if ($faviconUrl !== null) $candidates[] = ['type' => 'favicon', 'url' => $faviconUrl];
     $candidates[] = ['type' => 'favicon', 'url' => $origin . '/favicon.ico'];
 
     foreach ($candidates as $candidate) {
