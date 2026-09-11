@@ -7,7 +7,7 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
     <div class="sentryiq-vault-brand-wrap"><img class="sentryiq-vault-banner" src="sentryiq-logo-wide.webp" width="1952" height="588" alt="SentryIQ"><span class="sentryiq-vault-status" data-vault-status>Records</span></div>
     <div class="sentryiq-mobile-header-actions">
         <form method="POST" class="sentryiq-lock-form"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf ?? '', ENT_QUOTES, 'UTF-8'); ?>"><input type="hidden" name="lock_vault" value="1"><button type="submit" class="btn btn-primary sentryiq-lock-button">Lock Vault</button></form>
-        <div class="vault-mobile-menu-bar"><button type="button" class="vault-mobile-menu-toggle" aria-expanded="false" aria-controls="vault-mobile-menu"><span class="vault-mobile-menu-icon" aria-hidden="true">☰</span><span id="vault-mobile-menu-label">Menu</span></button></div>
+        <div class="vault-mobile-menu-bar"><button type="button" class="vault-mobile-menu-toggle" aria-expanded="false" aria-controls="vault-mobile-menu"><span class="vault-mobile-menu-icon" aria-hidden="true">☰</span><span id="vault-mobile-menu-label" class="visually-hidden">Menu</span></button></div>
     </div>
 </div>
 
@@ -28,8 +28,8 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
 </div>
 
 <div id="view-panel" class="vault-panel <?php echo ($active_pane === 'view') ? 'active' : ''; ?>">
-    <div style="display:flex;justify-content:flex-end;align-items:center;margin-top:15px;margin-bottom:15px;">
-        <a href="index.php?pane=add" class="btn btn-primary" style="display:inline-block;text-decoration:none;">➕ Add Entry</a>
+    <div class="vault-add-record-wrap">
+        <a href="index.php?pane=add" class="btn btn-primary vault-add-record-button"><span class="vault-add-record-icon" aria-hidden="true">+</span> Add Vault Record</a>
     </div>
     <?php if (empty($passwords)): ?>
         <p style="text-align:center; padding:20px; color:#777;">Secure vault database is currently empty.</p>
