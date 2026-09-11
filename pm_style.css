@@ -161,3 +161,21 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
     .btn { width:100%; }
     .sentryiq-lock-form .sentryiq-lock-button { width:auto; }
 }
+
+/* Header refinement: keep page status below the logo/action row. */
+.sentryiq-page-header .sentryiq-vault-brand-wrap { display:contents; }
+.sentryiq-page-header .sentryiq-vault-banner { grid-column:1; grid-row:1; align-self:start; }
+.sentryiq-page-header .sentryiq-vault-status { grid-column:1 / -1; grid-row:2; align-self:start; justify-self:stretch; width:auto; max-width:none; margin-top:4px; padding:8px 0 0; border:0; border-top:1px solid #e2e6eb; border-radius:0; background:transparent; }
+.sentryiq-page-header .sentryiq-mobile-header-actions { grid-column:2; grid-row:1; }
+
+@media (max-width:700px) {
+    .sentryiq-page-header .sentryiq-vault-status { display:block !important; grid-column:1 / -1 !important; grid-row:2 !important; justify-self:stretch !important; width:auto !important; max-width:none !important; margin-top:4px !important; padding:8px 0 0 !important; border:0 !important; border-top:1px solid #e2e6eb !important; border-radius:0 !important; background:transparent !important; }
+
+    /* Keep the accessible menu label in the DOM, but show only the icon. */
+    .vault-mobile-menu-toggle,
+    .sentryiq-mobile-menu-toggle,
+    .system-mobile-menu-toggle { font-size:0 !important; }
+    .vault-mobile-menu-toggle .vault-mobile-menu-icon,
+    .sentryiq-mobile-menu-toggle .vault-mobile-menu-icon,
+    .system-mobile-menu-toggle .vault-mobile-menu-icon { font-size:18px !important; }
+}
