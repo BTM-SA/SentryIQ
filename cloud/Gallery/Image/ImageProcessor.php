@@ -41,6 +41,61 @@ final class ImageProcessor
             throw new RuntimeException('Image dimensions are invalid.');
         }
 
+        if (class_exists('\\Imagick')) {
+            try {
+                return $this->toWebpWithImagick($input);
+            } catch (RuntimeException $exception) {
+                // Fall back to GD so environments with a partially supported
+                // ImageMagick/WebP build can still process supported images.
+            }
+        }
+
+        return $this->toWebpWithGd($input, $width, $height);
+    }
+
+    private function toWebpWithImagick(string $input): string
+    {
+        $image = new \Imagick();
+        try {
+            if (!$image->readImageBlob($input)) {
+                throw new RuntimeException('Image could not be decoded.');
+            }
+
+            if ($image->getNumberImages() !== 1) {
+                throw new RuntimeException('Animated or multi-frame images are not supported.');
+            }
+
+            $image->setIteratorIndex(0);
+            $image->setImageFormat('webp');
+
+            if ($this->webpQuality === 100) {
+                $image->setOption('webp:lossless', 'true');
+            } else {
+                $image->setOption('webp:lossless', 'false');
+                $image->setImageCompressionQuality($this->webpQuality);
+            }
+
+            if (!$this->preserveTransparency) {
+                $image->setImageAlphaChannel(\Imagick::ALPHACHANNEL_REMOVE);
+                $image->setImageBackgroundColor('white');
+            }
+
+            $output = $image->getImagesBlob();
+            if (!is_string($output) || $output === '') {
+                throw new RuntimeException('WebP conversion produced no data.');
+            }
+
+            return $output;
+        } catch (\ImagickException $exception) {
+            throw new RuntimeException('Image could not be processed.', 0, $exception);
+        } finally {
+            $image->clear();
+            $image->destroy();
+        }
+    }
+
+    private function toWebpWithGd(string $input, int $width, int $height): string
+    {
         $image = @imagecreatefromstring($input);
         if ($image === false) {
             throw new RuntimeException('Image could not be decoded.');
