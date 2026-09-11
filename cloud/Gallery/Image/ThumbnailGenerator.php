@@ -54,7 +54,10 @@ final class ThumbnailGenerator
                     throw new RuntimeException('Unable to resize image for thumbnail.');
                 }
                 ob_start();
-                if (!imagewebp($thumbnail, null, $this->webpQuality)) {
+                $quality = $this->webpQuality === 100 && defined('IMG_WEBP_LOSSLESS')
+                    ? IMG_WEBP_LOSSLESS
+                    : $this->webpQuality;
+                if (!imagewebp($thumbnail, null, $quality)) {
                     throw new RuntimeException('Thumbnail WebP conversion failed.');
                 }
                 $output = ob_get_clean();
