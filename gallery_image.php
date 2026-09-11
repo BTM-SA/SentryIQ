@@ -23,13 +23,13 @@ $path = null;
 
 if (is_array($metadata) && preg_match('/^img\d+\.webp$/', (string)($metadata['filename'] ?? '')) && preg_match('/^[a-f0-9]{64}$/', (string)($metadata['content_hash'] ?? ''))) {
     $bucket = substr($metadata['content_hash'], 0, 2);
-    $candidate = $galleryRoot . '/thumbnails/' . $bucket . '/' . $metadata['filename'];
+    $candidate = $galleryRoot . '/photos/' . $bucket . '/' . $metadata['filename'];
     if (is_file($candidate) && !is_link($candidate)) $path = $candidate;
 }
 
 // Backward compatibility for photos created before sequential filenames were introduced.
 if ($path === null) {
-    $root = $galleryRoot . '/thumbnails';
+    $root = $galleryRoot . '/photos';
     for ($bucket = 0; $bucket < 256; $bucket++) {
         $bucketName = str_pad(dechex($bucket), 2, '0', STR_PAD_LEFT);
         $candidate = $root . '/' . $bucketName . '/' . $id . '.webp';
