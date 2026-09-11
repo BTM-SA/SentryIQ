@@ -50,7 +50,32 @@ final class ImageProcessor
             }
         }
 
-        return $this->toWebpWithGd($input, $width, $height);
+        return $this->toWebpWithGd($input, $width, $height, $mime);
+    }
+
+    public function toWebpFromFile(string $path): string
+    {
+        if ($path === '' || !is_file($path) || is_link($path) || !is_readable($path)) {
+            throw new RuntimeException('Image upload source is unavailable.');
+        }
+
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $mime = $finfo->file($path);
+        if (!is_string($mime) || !in_array($mime, self::ALLOWED_MIME_TYPES, true)) {
+            throw new RuntimeException('Unsupported or invalid image type.');
+        }
+
+        $imageInfo = @getimagesize($path);
+        if ($imageInfo === false) {
+            throw new RuntimeException('Image could not be decoded.');
+        }
+
+        [$width, $height] = $imageInfo;
+        if ($width < 1 || $height < 1) {
+            throw new RuntimeException('Image dimensions are invalid.');
+        }
+
+        return $this->toWebpWithGdFile($path, $width, $height, $mime);
     }
 
     private function toWebpWithImagick(string $input): string
@@ -94,13 +119,40 @@ final class ImageProcessor
         }
     }
 
-    private function toWebpWithGd(string $input, int $width, int $height): string
+    private function toWebpWithGdFile(string $path, int $width, int $height, string $mime): string
+    {
+        $loader = match ($mime) {
+            'image/jpeg' => 'imagecreatefromjpeg',
+            'image/png' => 'imagecreatefrompng',
+            'image/gif' => 'imagecreatefromgif',
+            'image/webp' => 'imagecreatefromwebp',
+            default => null,
+        };
+
+        if ($loader === null || !function_exists($loader)) {
+            throw new RuntimeException('The server cannot decode this image type.');
+        }
+
+        $image = @$loader($path);
+        if ($image === false) {
+            throw new RuntimeException('Image could not be decoded.');
+        }
+
+        return $this->encodeGdImage($image, $width, $height);
+    }
+
+    private function toWebpWithGd(string $input, int $width, int $height, string $mime): string
     {
         $image = @imagecreatefromstring($input);
         if ($image === false) {
             throw new RuntimeException('Image could not be decoded.');
         }
 
+        return $this->encodeGdImage($image, $width, $height);
+    }
+
+    private function encodeGdImage(\GdImage $image, int $width, int $height): string
+    {
         try {
             $canvas = imagecreatetruecolor($width, $height);
             if ($canvas === false) {
