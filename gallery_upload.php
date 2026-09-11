@@ -13,9 +13,37 @@ function gallery_upload_json(array $payload, int $status = 200): never
     exit;
 }
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') { header('Allow: POST'); gallery_upload_json(['status' => 'error', 'message' => 'POST required.'], 405); }
+function gallery_ini_bytes(string $value): int
+{
+    $value = trim($value);
+    if ($value === '') return 0;
+    $last = strtolower(substr($value, -1));
+    $number = (float)$value;
+    return match ($last) {
+        'g' => (int)round($number * 1024 * 1024 * 1024),
+        'm' => (int)round($number * 1024 * 1024),
+        'k' => (int)round($number * 1024),
+        default => (int)round($number),
+    };
+}
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Allow: POST');
+    gallery_upload_json(['status' => 'error', 'message' => 'POST required.'], 405);
+}
 sentryiq_require_auth();
 sentryiq_require_csrf();
+
+$postMaxSize = (string)ini_get('post_max_size');
+$postMaxBytes = gallery_ini_bytes($postMaxSize);
+$contentLength = isset($_SERVER['CONTENT_LENGTH']) ? (int)$_SERVER['CONTENT_LENGTH'] : 0;
+if ($postMaxBytes > 0 && $contentLength > $postMaxBytes && empty($_FILES)) {
+    gallery_upload_json([
+        'status' => 'error',
+        'message' => 'The upload is too large for the server. The current PHP POST limit is ' . $postMaxSize . '.',
+        'error_code' => 'POST_TOO_LARGE',
+    ], 413);
+}
 
 $configFile = __DIR__ . '/sentryiq_config.php';
 if (!is_file($configFile)) gallery_upload_json(['status' => 'error', 'message' => 'SentryIQ configuration is unavailable.'], 503);
