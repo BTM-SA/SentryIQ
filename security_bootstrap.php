@@ -48,7 +48,7 @@ function sentryiq_has_registered_passkey(): bool
 
 function sentryiq_security_bootstrap(): void
 {
-    sentryiq_data_dir();
+    $dataDir = sentryiq_data_dir();
 
     if (PHP_SAPI !== 'cli' && (($_SERVER['HTTPS'] ?? '') !== 'on' && (string)($_SERVER['SERVER_PORT'] ?? '') !== '443')) {
         http_response_code(400);
@@ -71,6 +71,23 @@ function sentryiq_security_bootstrap(): void
             'samesite' => 'Strict',
         ]);
         session_start();
+    }
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['lock_vault'])) {
+        sentryiq_require_csrf();
+        sentryiq_require_auth();
+
+        if ($dataDir !== '' && is_file($dataDir . '/vault_engine.php') && !is_link($dataDir . '/vault_engine.php')) {
+            require_once $dataDir . '/vault_engine.php';
+        }
+
+        if (function_exists('log_security_event')) {
+            log_security_event('VAULT_LOCKED', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown');
+        }
+
+        sentryiq_lock_vault();
+        header('Location: index.php');
+        exit;
     }
 
     set_exception_handler(static function (Throwable $exception): void {
