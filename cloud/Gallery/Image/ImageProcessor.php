@@ -63,7 +63,10 @@ final class ImageProcessor
                 }
                 imagecopy($canvas, $image, 0, 0, 0, 0, $width, $height);
                 ob_start();
-                if (!imagewebp($canvas, null, $this->webpQuality)) {
+                $quality = $this->webpQuality === 100 && defined('IMG_WEBP_LOSSLESS')
+                    ? IMG_WEBP_LOSSLESS
+                    : $this->webpQuality;
+                if (!imagewebp($canvas, null, $quality)) {
                     throw new RuntimeException('WebP conversion failed.');
                 }
                 $output = ob_get_clean();
