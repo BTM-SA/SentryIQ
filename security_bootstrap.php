@@ -61,10 +61,10 @@ function sentryiq_brand_base_url(): string
 function sentryiq_brand_head_inject(string $buffer): string
 {
     if (stripos($buffer, '</head>') === false) return $buffer;
-    if (stripos($buffer, 'sentryiq-icon.png') !== false && stripos($buffer, 'og:image') !== false) return $buffer;
+    if (stripos($buffer, 'sentryiq-icon.php') !== false && stripos($buffer, 'og:image') !== false) return $buffer;
 
     $baseUrl = sentryiq_brand_base_url();
-    $assetUrl = ($baseUrl !== '' ? $baseUrl : '') . '/sentryiq-icon.png';
+    $assetUrl = ($baseUrl !== '' ? $baseUrl : '') . '/sentryiq-icon.php';
 
     $tags = "\n" .
         '<link rel="icon" type="image/png" href="' . htmlspecialchars($assetUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n" .
