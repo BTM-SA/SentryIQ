@@ -61,20 +61,20 @@ function sentryiq_brand_base_url(): string
 function sentryiq_brand_head_inject(string $buffer): string
 {
     if (stripos($buffer, '</head>') === false) return $buffer;
-    if (stripos($buffer, 'sentryiq-logo-wide.webp') !== false && stripos($buffer, 'og:image') !== false) return $buffer;
+    if (stripos($buffer, 'sentryiq-icon.png') !== false && stripos($buffer, 'og:image') !== false) return $buffer;
 
     $baseUrl = sentryiq_brand_base_url();
-    $assetUrl = ($baseUrl !== '' ? $baseUrl : '') . '/sentryiq-logo-wide.webp';
+    $assetUrl = ($baseUrl !== '' ? $baseUrl : '') . '/sentryiq-icon.png';
 
     $tags = "\n" .
-        '<link rel="icon" type="image/webp" href="' . htmlspecialchars($assetUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n" .
+        '<link rel="icon" type="image/png" href="' . htmlspecialchars($assetUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n" .
         '<link rel="apple-touch-icon" href="' . htmlspecialchars($assetUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n" .
         '<meta property="og:type" content="website">' . "\n" .
         '<meta property="og:site_name" content="SentryIQ">' . "\n" .
         '<meta property="og:title" content="SentryIQ">' . "\n" .
         '<meta property="og:description" content="SentryIQ secure digital vault.">' . "\n" .
         '<meta property="og:image" content="' . htmlspecialchars($assetUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n" .
-        '<meta property="og:image:alt" content="SentryIQ secure digital vault logo">' . "\n" .
+        '<meta property="og:image:alt" content="SentryIQ secure digital vault icon">' . "\n" .
         '<meta name="twitter:card" content="summary_large_image">' . "\n" .
         '<meta name="twitter:title" content="SentryIQ">' . "\n" .
         '<meta name="twitter:description" content="SentryIQ secure digital vault.">' . "\n" .
