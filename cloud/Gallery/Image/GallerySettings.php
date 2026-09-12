@@ -10,7 +10,7 @@ final class GallerySettings
 {
     private const DEFAULTS = [
         'webp_quality' => 85,
-        'thumbnail_quality' => 80,
+        'thumbnail_quality' => 50,
         'thumbnail_max_dimension' => 600,
         'preserve_transparency' => true,
     ];
@@ -27,7 +27,7 @@ final class GallerySettings
 
         return [
             'webp_quality' => self::clampInt($decoded['webp_quality'] ?? $defaults['webp_quality'], 1, 100, $defaults['webp_quality']),
-            'thumbnail_quality' => self::clampInt($decoded['thumbnail_quality'] ?? $defaults['thumbnail_quality'], 1, 100, $defaults['thumbnail_quality']),
+            'thumbnail_quality' => self::clampInt($decoded['thumbnail_quality'] ?? $defaults['thumbnail_quality'], 1, 50, $defaults['thumbnail_quality']),
             'thumbnail_max_dimension' => self::clampInt($decoded['thumbnail_max_dimension'] ?? $defaults['thumbnail_max_dimension'], 100, 2000, $defaults['thumbnail_max_dimension']),
             'preserve_transparency' => (bool)($decoded['preserve_transparency'] ?? $defaults['preserve_transparency']),
         ];
@@ -42,7 +42,7 @@ final class GallerySettings
 
         $normalized = [
             'webp_quality' => self::clampInt($settings['webp_quality'] ?? 85, 1, 100, 85),
-            'thumbnail_quality' => self::clampInt($settings['thumbnail_quality'] ?? 80, 1, 100, 80),
+            'thumbnail_quality' => self::clampInt($settings['thumbnail_quality'] ?? 50, 1, 50, 50),
             'thumbnail_max_dimension' => self::clampInt($settings['thumbnail_max_dimension'] ?? 600, 100, 2000, 600),
             'preserve_transparency' => (bool)($settings['preserve_transparency'] ?? true),
         ];
