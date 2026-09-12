@@ -61,24 +61,46 @@ function sentryiq_brand_base_url(): string
 function sentryiq_brand_head_inject(string $buffer): string
 {
     if (stripos($buffer, '</head>') === false) return $buffer;
-    if (stripos($buffer, 'sentryiq-icon.php') !== false && stripos($buffer, 'og:image') !== false) return $buffer;
 
     $baseUrl = sentryiq_brand_base_url();
     $assetUrl = ($baseUrl !== '' ? $baseUrl : '') . '/sentryiq-icon.php';
+    $assetUrlVersioned = $assetUrl . '?v=2';
+    $pageUrl = $baseUrl !== '' ? $baseUrl . '/' : '';
+
+    $iconUrl = htmlspecialchars($assetUrlVersioned, ENT_QUOTES, 'UTF-8');
+    $imageUrl = htmlspecialchars($assetUrl, ENT_QUOTES, 'UTF-8');
+    $pageUrlEscaped = htmlspecialchars($pageUrl, ENT_QUOTES, 'UTF-8');
+    $description = 'SentryIQ secure digital vault.';
+    $descriptionEscaped = htmlspecialchars($description, ENT_QUOTES, 'UTF-8');
+
+    // Replace a previous SentryIQ branding block so updates remain deterministic.
+    $buffer = preg_replace(
+        '/\n?<!-- SentryIQ branding:start -->.*?<!-- SentryIQ branding:end -->\n?/is',
+        "\n",
+        $buffer
+    ) ?? $buffer;
 
     $tags = "\n" .
-        '<link rel="icon" type="image/png" href="' . htmlspecialchars($assetUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n" .
-        '<link rel="apple-touch-icon" href="' . htmlspecialchars($assetUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n" .
+        '<!-- SentryIQ branding:start -->' . "\n" .
+        '<link rel="icon" type="image/png" href="' . $iconUrl . '">' . "\n" .
+        '<link rel="apple-touch-icon" type="image/png" href="' . $iconUrl . '">' . "\n" .
+        '<meta name="description" content="' . $descriptionEscaped . '">' . "\n" .
         '<meta property="og:type" content="website">' . "\n" .
         '<meta property="og:site_name" content="SentryIQ">' . "\n" .
         '<meta property="og:title" content="SentryIQ">' . "\n" .
-        '<meta property="og:description" content="SentryIQ secure digital vault.">' . "\n" .
-        '<meta property="og:image" content="' . htmlspecialchars($assetUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n" .
+        '<meta property="og:description" content="' . $descriptionEscaped . '">' . "\n" .
+        '<meta property="og:url" content="' . $pageUrlEscaped . '">' . "\n" .
+        '<meta property="og:image" content="' . $imageUrl . '">' . "\n" .
+        '<meta property="og:image:width" content="333">' . "\n" .
+        '<meta property="og:image:height" content="338">' . "\n" .
+        '<meta property="og:image:type" content="image/png">' . "\n" .
         '<meta property="og:image:alt" content="SentryIQ secure digital vault icon">' . "\n" .
         '<meta name="twitter:card" content="summary_large_image">' . "\n" .
         '<meta name="twitter:title" content="SentryIQ">' . "\n" .
-        '<meta name="twitter:description" content="SentryIQ secure digital vault.">' . "\n" .
-        '<meta name="twitter:image" content="' . htmlspecialchars($assetUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n";
+        '<meta name="twitter:description" content="' . $descriptionEscaped . '">' . "\n" .
+        '<meta name="twitter:image" content="' . $imageUrl . '">' . "\n" .
+        '<meta name="twitter:image:alt" content="SentryIQ secure digital vault icon">' . "\n" .
+        '<!-- SentryIQ branding:end -->' . "\n";
 
     return str_ireplace('</head>', $tags . '</head>', $buffer);
 }
