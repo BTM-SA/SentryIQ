@@ -49,18 +49,42 @@ register_shutdown_function(static function () use (&$currentUploadName, &$curren
     $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR];
     if (!in_array((int)$error['type'], $fatalTypes, true)) return;
 
+    $message = trim((string)($error['message'] ?? ''));
+    $file = (string)($error['file'] ?? '-');
+    $line = (int)($error['line'] ?? 0);
+
     gallery_upload_log(sprintf(
         'FATAL type=%d name=%s size=%s stage=%s message=%s at=%s:%d memory_limit=%s memory_usage=%d',
         (int)$error['type'],
         $currentUploadName ?? '-',
         $currentUploadSize === null ? '-' : (string)$currentUploadSize,
         $currentUploadStage,
-        trim((string)($error['message'] ?? '')),
-        (string)($error['file'] ?? '-'),
-        (int)($error['line'] ?? 0),
+        $message,
+        $file,
+        $line,
         (string)ini_get('memory_limit'),
         memory_get_usage(true),
     ));
+
+    // A fatal PHP error normally leaves the browser with an empty or non-JSON
+    // response. Clear buffered output so the upload client still gets JSON.
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'Upload failed due to a server error: ' . ($message !== '' ? $message : 'Unknown fatal PHP error.'),
+        'error_type' => (int)$error['type'],
+        'error_file' => $file,
+        'error_line' => $line,
+        'upload_name' => $currentUploadName,
+        'upload_size' => $currentUploadSize,
+        'upload_stage' => $currentUploadStage,
+        'memory_limit' => (string)ini_get('memory_limit'),
+    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 });
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
