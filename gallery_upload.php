@@ -38,6 +38,11 @@ function gallery_upload_log(string $message): void
     @chmod($path, 0600);
 }
 
+function gallery_token_fingerprint(string $token): string
+{
+    return $token === '' ? '-' : substr(hash('sha256', $token), 0, 12);
+}
+
 $currentUploadName = null;
 $currentUploadSize = null;
 $currentUploadStage = 'request';
@@ -89,28 +94,86 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Allow: POST');
     gallery_upload_json(['status' => 'error', 'message' => 'POST required.'], 405);
 }
-sentryiq_require_auth();
-sentryiq_require_csrf();
 
+/*
+ * PHP can discard multipart POST fields when post_max_size is exceeded.
+ * Check the request size before CSRF validation so that an oversized request
+ * cannot be misreported as a CSRF failure. This does not bypass CSRF.
+ */
 $postMaxSize = (string)ini_get('post_max_size');
 $postMaxBytes = gallery_ini_bytes($postMaxSize);
 $contentLength = isset($_SERVER['CONTENT_LENGTH']) ? (int)$_SERVER['CONTENT_LENGTH'] : 0;
-gallery_upload_log(sprintf(
-    'REQUEST content_length=%d post_max_size=%s upload_max_filesize=%s memory_limit=%s',
-    $contentLength,
-    $postMaxSize,
-    (string)ini_get('upload_max_filesize'),
-    (string)ini_get('memory_limit'),
-));
 
-if ($postMaxBytes > 0 && $contentLength > $postMaxBytes && empty($_FILES)) {
-    gallery_upload_log(sprintf('REJECT reason=POST_TOO_LARGE content_length=%d post_max_bytes=%d', $contentLength, $postMaxBytes));
+if ($postMaxBytes > 0 && $contentLength > $postMaxBytes) {
+    gallery_upload_log(sprintf(
+        'REJECT reason=POST_TOO_LARGE content_length=%d post_max_size=%s post_max_bytes=%d',
+        $contentLength,
+        $postMaxSize,
+        $postMaxBytes,
+    ));
     gallery_upload_json([
         'status' => 'error',
         'message' => 'The upload is too large for the server. The current PHP POST limit is ' . $postMaxSize . '.',
         'error_code' => 'POST_TOO_LARGE',
+        'content_length' => $contentLength,
+        'post_max_size' => $postMaxSize,
     ], 413);
 }
+
+sentryiq_require_auth();
+
+/*
+ * Safe CSRF diagnostics: never log the actual token. Fingerprints only allow
+ * us to determine whether the browser and upload request are using the same
+ * token/session without exposing the secret itself.
+ */
+$providedCsrf = (string)($_POST['csrf_token'] ?? '');
+$expectedCsrf = (string)($_SESSION['csrf_token'] ?? '');
+$sessionId = session_id();
+$sessionFingerprint = $sessionId === '' ? '-' : substr(hash('sha256', $sessionId), 0, 12);
+
+if ($expectedCsrf === '' || $providedCsrf === '' || !hash_equals($expectedCsrf, $providedCsrf)) {
+    gallery_upload_log(sprintf(
+        'CSRF_REJECT session=%s expected_present=%s expected_len=%d expected_fp=%s provided_present=%s provided_len=%d provided_fp=%s post_keys=%s content_length=%d',
+        $sessionFingerprint,
+        $expectedCsrf !== '' ? 'yes' : 'no',
+        strlen($expectedCsrf),
+        gallery_token_fingerprint($expectedCsrf),
+        $providedCsrf !== '' ? 'yes' : 'no',
+        strlen($providedCsrf),
+        gallery_token_fingerprint($providedCsrf),
+        implode(',', array_keys($_POST)),
+        $contentLength,
+    ));
+    http_response_code(403);
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'Security validation failed.',
+        'error_code' => 'CSRF_VALIDATION_FAILED',
+        'diagnostic' => [
+            'session_present' => $sessionId !== '',
+            'expected_token_present' => $expectedCsrf !== '',
+            'expected_token_length' => strlen($expectedCsrf),
+            'provided_token_present' => $providedCsrf !== '',
+            'provided_token_length' => strlen($providedCsrf),
+            'post_field_present' => array_key_exists('csrf_token', $_POST),
+            'content_length' => $contentLength,
+        ],
+    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+$postMaxSize = (string)ini_get('post_max_size');
+$postMaxBytes = gallery_ini_bytes($postMaxSize);
+$uploadMaxFilesize = (string)ini_get('upload_max_filesize');
+gallery_upload_log(sprintf(
+    'REQUEST content_length=%d post_max_size=%s upload_max_filesize=%s memory_limit=%s csrf=valid session=%s',
+    $contentLength,
+    $postMaxSize,
+    $uploadMaxFilesize,
+    (string)ini_get('memory_limit'),
+    $sessionFingerprint,
+));
 
 $configFile = __DIR__ . '/sentryiq_config.php';
 if (!is_file($configFile)) gallery_upload_json(['status' => 'error', 'message' => 'SentryIQ configuration is unavailable.'], 503);
