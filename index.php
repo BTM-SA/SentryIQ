@@ -75,6 +75,19 @@ $csrf = sentryiq_csrf_token();
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="csrf-token" content="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
+<meta name="description" content="SentryIQ secure password vault and credential management.">
+<link rel="icon" type="image/png" href="sentryiq-icon.php">
+<link rel="apple-touch-icon" href="sentryiq-icon.php">
+<meta property="og:type" content="website">
+<meta property="og:title" content="SentryIQ">
+<meta property="og:description" content="SentryIQ secure password vault and credential management.">
+<meta property="og:image" content="sentryiq-icon.php">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:alt" content="SentryIQ">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SentryIQ">
+<meta name="twitter:description" content="SentryIQ secure password vault and credential management.">
+<meta name="twitter:image" content="sentryiq-icon.php">
 <title>SentryIQ</title>
 <link rel="stylesheet" href="pm_style.css">
 <script>
