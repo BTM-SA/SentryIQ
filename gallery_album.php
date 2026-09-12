@@ -19,5 +19,23 @@ try{
   if(!$found)throw new RuntimeException('Photo does not exist.');
   $store->move($photoId,$album); log_security_event('GALLERY_PHOTO_MOVED',get_visitor_ip(),$_SESSION['app_username']??'unknown',['photo_id'=>$photoId,'album'=>$album]); echo json_encode(['status'=>'ok','album'=>$store->albumFor($photoId)],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;
  }
+ if($action==='bulk_move'){
+  $photoIds=$_POST['photo_ids']??[]; $album=(string)($_POST['album']??'');
+  if(!is_array($photoIds))throw new RuntimeException('Invalid photo selection.');
+  $photoIds=array_values(array_unique(array_filter($photoIds,static fn(mixed $id):bool=>is_string($id)&&preg_match('/^[a-f0-9]{32}$/',$id)===1)));
+  if($photoIds===[])throw new RuntimeException('No photos were selected.');
+  $metadataStore=new PhotoMetadataStore($galleryRoot.'/metadata.json');
+  $valid=[];
+  foreach($photoIds as $photoId){
+   $metadata=$metadataStore->find($photoId); $found=false;
+   if(is_array($metadata)&&preg_match('/^img\d+\.webp$/',(string)($metadata['filename']??''))&&preg_match('/^[a-f0-9]{64}$/',(string)($metadata['content_hash']??''))){$bucket=substr($metadata['content_hash'],0,2);$thumbnail=$galleryRoot.'/thumbnails/'.$bucket.'/'.$metadata['filename'];$found=is_file($thumbnail)&&!is_link($thumbnail);}
+   if(!$found){$thumbnailRoot=$galleryRoot.'/thumbnails';for($bucket=0;$bucket<256;$bucket++){$bucketName=str_pad(dechex($bucket),2,'0',STR_PAD_LEFT);$thumbnail=$thumbnailRoot.'/'.$bucketName.'/'.$photoId.'.webp';if(is_file($thumbnail)&&!is_link($thumbnail)){$found=true;break;}}}
+   if(!$found)throw new RuntimeException('One or more selected photos do not exist.');
+   $valid[]=$photoId;
+  }
+  $store->moveMany($valid,$album);
+  log_security_event('GALLERY_PHOTOS_MOVED',get_visitor_ip(),$_SESSION['app_username']??'unknown',['photo_ids'=>$valid,'album'=>$album]);
+  echo json_encode(['status'=>'ok','moved_count'=>count($valid),'album'=>$album],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;
+ }
  http_response_code(400);echo json_encode(['status'=>'error','message'=>'Invalid gallery action.']);
 }catch(RuntimeException $exception){http_response_code(400);echo json_encode(['status'=>'error','message'=>$exception->getMessage()],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);}
