@@ -149,6 +149,9 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
     .security-log-list { display:flex; }
     .security-log-card-header { flex-direction:column; }
     .security-log-time { white-space:normal; }
+
+    /* Gallery: make thumbnail taps unambiguous on touch devices. */
+    .gallery-card img { touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
 }
 
 @media (min-width:701px) {
