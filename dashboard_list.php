@@ -1,5 +1,12 @@
 <?php
 $passwords = normalize_vault_records($passwords ?? []);
+$vaultCategories = [];
+foreach ($passwords as $vaultConfigRow) {
+    if (($vaultConfigRow['type'] ?? '') === 'system_config' && is_array($vaultConfigRow['categories'] ?? null)) {
+        $vaultCategories = array_values(array_unique(array_filter(array_map(static fn($value): string => trim((string)$value), $vaultConfigRow['categories']), static fn(string $value): bool => $value !== '')));
+        break;
+    }
+}
 $passwords = array_values(array_filter($passwords, static fn(array $row): bool => ($row['type'] ?? '') !== 'system_config'));
 ?>
 <!-- Location: /home/bicheveb/public_html/pm/dashboard_list.php -->
@@ -14,7 +21,8 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
 <?php if (isset($_GET['status']) && $_GET['status'] == 'saved') echo "<p class='success'>Entry stored successfully!</p>"; ?>
 <?php if (isset($_GET['status']) && $_GET['status'] == 'updated') echo "<p class='success'>Entry updated successfully!</p>"; ?>
 <?php if (isset($_GET['status']) && $_GET['status'] == 'deleted') echo "<p class='success'>Entry deleted safely from disk.</p>"; ?>
-<?php if (isset($_GET['status']) && $_GET['status'] == 'error') echo "<p class='error'>The requested vault record operation could not be completed.</p>"; ?>
+<?php if (isset($_GET['status']) && $_GET['status'] == 'category_added') echo "<p class='success'>Category added successfully.</p>"; ?>
+<?php if (isset($_GET['status']) && $_GET['status'] == 'error') echo "<p class='error'>The requested vault operation could not be completed.</p>"; ?>
 <?php if (isset($_GET['status']) && $_GET['status'] === 'validation' && ($_GET['field'] ?? '') === 'url') echo "<p class='error'>Please enter a valid HTTPS URL, or leave the URL field blank.</p>"; ?>
 <?php if (isset($_GET['status']) && $_GET['status'] === 'validation' && ($_GET['field'] ?? '') === 'required') echo "<p class='error'>Please complete the required fields before saving.</p>"; ?>
 
@@ -28,15 +36,24 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
 </div>
 
 <div id="view-panel" class="vault-panel <?php echo ($active_pane === 'view') ? 'active' : ''; ?>">
+    <div class="vault-category-bar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">
+        <button type="button" class="btn btn-primary vault-category-button active" data-category-filter="__records__">📋 Records</button>
+        <?php foreach ($vaultCategories as $category): ?>
+            <button type="button" class="btn vault-category-button" data-category-filter="<?php echo htmlspecialchars($category, ENT_QUOTES, 'UTF-8'); ?>">📁 <?php echo htmlspecialchars($category, ENT_QUOTES, 'UTF-8'); ?></button>
+        <?php endforeach; ?>
+        <button type="button" id="vault-add-category" class="btn" style="background:#f1f3f5;color:#212529;border:1px solid #dee2e6;">＋ Add Category</button>
+    </div>
+    <div id="vault-category-message" aria-live="polite" style="margin-bottom:12px;"></div>
     <div class="vault-add-record-wrap">
         <a href="index.php?pane=add" class="btn btn-primary vault-add-record-button"><span class="vault-add-record-icon" aria-hidden="true">+</span> Add Vault Record</a>
     </div>
     <?php if (empty($passwords)): ?>
-        <p style="text-align:center; padding:20px; color:#777;">Secure vault database is currently empty.</p>
+        <p id="vault-empty-message" style="text-align:center; padding:20px; color:#777;">Secure vault database is currently empty.</p>
     <?php else: ?>
-        <div class="vault-grid" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:20px; margin-top:15px;">
+        <div id="vault-record-grid" class="vault-grid" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:20px; margin-top:15px;">
             <?php foreach ($passwords as $row):
                 $label = $row['label'] ?? 'Vault';
+                $category = trim((string)($row['category'] ?? ''));
                 $hash = md5($label);
                 $hue1 = hexdec(substr($hash, 0, 2)) % 360;
                 $hue2 = ($hue1 + 90) % 360;
@@ -47,7 +64,7 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
                 $inspectArgs = [$label,$row['username'] ?? '',$row['password'] ?? '',$row['url'] ?? '',$row['notes'] ?? '',(string)($row['id'] ?? '')];
                 $inspectJson = htmlspecialchars(json_encode($inspectArgs, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8');
             ?>
-                <div class="entry-card" tabindex="0" role="button" aria-label="Inspect <?php echo htmlspecialchars($label); ?>" onclick='viewRecordDetails(<?php echo $inspectJson; ?>)' onkeydown='if(event.key === "Enter" || event.key === " "){event.preventDefault();viewRecordDetails(<?php echo $inspectJson; ?>)}' style="background:#fff; border:1px solid #e9ecef; border-radius:12px; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 6px rgba(0,0,0,.02); position:relative;">
+                <div class="entry-card vault-record-card" data-vault-category="<?php echo htmlspecialchars($category, ENT_QUOTES, 'UTF-8'); ?>" tabindex="0" role="button" aria-label="Inspect <?php echo htmlspecialchars($label); ?>" onclick='viewRecordDetails(<?php echo $inspectJson; ?>)' onkeydown='if(event.key === "Enter" || event.key === " "){event.preventDefault();viewRecordDetails(<?php echo $inspectJson; ?>)}' style="background:#fff; border:1px solid #e9ecef; border-radius:12px; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 6px rgba(0,0,0,.02); position:relative;">
                     <div class="og-preview-holder" style="height:100px; background:<?php echo $cardGradient; ?>; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative;">
                         <?php if ($hasStoredIcon): ?><img src="vault-icon.php?id=<?php echo rawurlencode((string)$row['id']); ?>" style="width:36px;height:36px;object-fit:contain;position:relative;z-index:2;filter:drop-shadow(0 4px 6px rgba(0,0,0,.15));" alt="Stored website icon" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-block';"><span style="display:none;color:#fff;font-size:28px;font-weight:700;font-family:monospace;opacity:.3;" aria-hidden="true"><?php echo htmlspecialchars($initials); ?></span>
                         <?php else: ?><span style="color:#fff;font-size:28px;font-weight:700;font-family:monospace;opacity:.3;" aria-hidden="true"><?php echo htmlspecialchars($initials); ?></span><?php endif; ?>
@@ -57,6 +74,7 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
                 </div>
             <?php endforeach; ?>
         </div>
+        <p id="vault-category-empty" style="display:none;text-align:center;padding:20px;color:#777;">No records in this category yet.</p>
     <?php endif; ?>
 </div>
 
@@ -72,22 +90,29 @@ $passwords = array_values(array_filter($passwords, static fn(array $row): bool =
         if(boxes.length<3)return;
         var params=new URLSearchParams(window.location.search);
         var application=params.get('tool')==='application';
-        boxes[0].style.display=application?'block':'none';
-        boxes[1].style.display='none';
-        boxes[2].style.display='none';
+        boxes[0].style.display=application?'block':'none'; boxes[1].style.display='none'; boxes[2].style.display='none';
         if(application){panel.dataset.optionsReady='1';return;}
         var options=document.createElement('div');options.className='form-box system-options-panel';options.style.marginTop='0';
-        options.innerHTML='<h3>System Tools</h3>'+
-            '<a href="index.php?pane=settings&tool=application" class="system-option-link" style="display:block;padding:16px;margin-top:12px;border:1px solid #e9ecef;border-radius:10px;text-decoration:none;color:#212529;background:#fff;"><strong>⚙️ Application Settings</strong><span style="display:block;margin-top:4px;color:#777;font-size:13px;">Manage the application username, 2FA email, HTTPS URL, vault data directory, and IMAP settings.</span></a>'+
-            '<a href="gallery_settings.php" class="system-option-link" style="display:block;padding:16px;margin-top:12px;border:1px solid #e9ecef;border-radius:10px;text-decoration:none;color:#212529;background:#fff;"><strong>🖼️ Gallery Settings</strong><span style="display:block;margin-top:4px;color:#777;font-size:13px;">Control WebP quality, thumbnail quality, thumbnail size, and transparency handling.</span></a>'+
-            '<a href="passkeys.php" class="system-option-link" style="display:block;padding:16px;margin-top:12px;border:1px solid #e9ecef;border-radius:10px;text-decoration:none;color:#212529;background:#fff;"><strong>🔑 Passkeys</strong><span style="display:block;margin-top:4px;color:#777;font-size:13px;">Manage the devices that can unlock your SentryIQ vault.</span></a>'+
-            '<a href="system_log.php" class="system-option-link" style="display:block;padding:16px;margin-top:12px;border:1px solid #e9ecef;border-radius:10px;text-decoration:none;color:#212529;background:#fff;"><strong>🔐 System Log</strong><span style="display:block;margin-top:4px;color:#777;font-size:13px;">View security and authentication events recorded by SentryIQ.</span></a>';
+        options.innerHTML='<h3>System Tools</h3>'+'<a href="index.php?pane=settings&tool=application" class="system-option-link" style="display:block;padding:16px;margin-top:12px;border:1px solid #e9ecef;border-radius:10px;text-decoration:none;color:#212529;background:#fff;"><strong>⚙️ Application Settings</strong><span style="display:block;margin-top:4px;color:#777;font-size:13px;">Manage the application username, 2FA email, HTTPS URL, vault data directory, and IMAP settings.</span></a>'+'<a href="gallery_settings.php" class="system-option-link" style="display:block;padding:16px;margin-top:12px;border:1px solid #e9ecef;border-radius:10px;text-decoration:none;color:#212529;background:#fff;"><strong>🖼️ Gallery Settings</strong><span style="display:block;margin-top:4px;color:#777;font-size:13px;">Control WebP quality, thumbnail quality, thumbnail size, and transparency handling.</span></a>'+'<a href="passkeys.php" class="system-option-link" style="display:block;padding:16px;margin-top:12px;border:1px solid #e9ecef;border-radius:10px;text-decoration:none;color:#212529;background:#fff;"><strong>🔑 Passkeys</strong><span style="display:block;margin-top:4px;color:#777;font-size:13px;">Manage the devices that can unlock your SentryIQ vault.</span></a>'+'<a href="system_log.php" class="system-option-link" style="display:block;padding:16px;margin-top:12px;border:1px solid #e9ecef;border-radius:10px;text-decoration:none;color:#212529;background:#fff;"><strong>🔐 System Log</strong><span style="display:block;margin-top:4px;color:#777;font-size:13px;">View security and authentication events recorded by SentryIQ.</span></a>';
         panel.appendChild(options);panel.dataset.optionsReady='1';
+    }
+    function filterVaultCategory(category){
+        document.querySelectorAll('.vault-category-button').forEach(function(button){button.classList.toggle('active',button.dataset.categoryFilter===category);});
+        var cards=Array.from(document.querySelectorAll('.vault-record-card'));var visible=0;
+        cards.forEach(function(card){var show=category==='__records__'||card.dataset.vaultCategory===category;card.style.display=show?'':'none';if(show)visible++;});
+        var empty=document.getElementById('vault-category-empty');if(empty)empty.style.display=visible===0?'block':'none';
     }
     document.addEventListener('DOMContentLoaded',function(){
         var toggle=getToggle(),menu=getMenu();
         if(toggle&&menu){toggle.addEventListener('click',window.toggleVaultMobileMenu);menu.querySelectorAll('[data-vault-tab]').forEach(function(button){button.addEventListener('click',function(){var tab=button.getAttribute('data-vault-tab');if(typeof switchVaultTab==='function')switchVaultTab(tab);menu.classList.remove('mobile-open');toggle.setAttribute('aria-expanded','false');if(tab==='settings')setupSystemOptions();});});}
         setupSystemOptions();
+        document.querySelectorAll('.vault-category-button').forEach(function(button){button.addEventListener('click',function(){filterVaultCategory(button.dataset.categoryFilter);});});
+        var addCategory=document.getElementById('vault-add-category');
+        if(addCategory)addCategory.addEventListener('click',async function(){
+            var name=window.prompt('Category name:'); if(name===null)return; name=name.trim(); if(!name)return;
+            var csrfMeta=document.querySelector('meta[name="csrf-token"]'); var form=new FormData(); form.append('csrf_token',csrfMeta?csrfMeta.content:''); form.append('action','add_category'); form.append('category',name); addCategory.disabled=true;
+            try{var response=await fetch('vault_actions.php',{method:'POST',body:form,credentials:'same-origin',headers:{Accept:'application/json'}});var text=await response.text();var data;try{data=JSON.parse(text);}catch(_){throw new Error('The category request returned an invalid response.');}if(!response.ok||data.status!=='ok')throw new Error(data.message||'Unable to add category.');window.location.reload();}catch(error){alert(error.message||'Unable to add category.');addCategory.disabled=false;}
+        });
     });
 }());
 </script>
