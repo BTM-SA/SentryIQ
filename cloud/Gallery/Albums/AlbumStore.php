@@ -48,8 +48,17 @@ final class AlbumStore
 
     public function move(string $photoId, string $album): void
     {
-        if (!preg_match('/^[a-f0-9]{32}$/', $photoId)) {
-            throw new RuntimeException('Invalid photo ID.');
+        $this->moveMany([$photoId], $album);
+    }
+
+    public function moveMany(array $photoIds, string $album): void
+    {
+        $photoIds = array_values(array_unique(array_filter(
+            $photoIds,
+            static fn(mixed $id): bool => is_string($id) && preg_match('/^[a-f0-9]{32}$/', $id) === 1
+        )));
+        if ($photoIds === []) {
+            throw new RuntimeException('No photos were selected.');
         }
 
         $album = trim($album);
@@ -58,12 +67,19 @@ final class AlbumStore
             throw new RuntimeException('Album does not exist.');
         }
 
+        $selected = array_fill_keys($photoIds, true);
         foreach ($albums as &$photos) {
-            $photos = array_values(array_filter($photos, static fn(mixed $id): bool => $id !== $photoId));
+            $photos = array_values(array_filter(
+                $photos,
+                static fn(mixed $id): bool => !isset($selected[$id])
+            ));
         }
         unset($photos);
 
-        $albums[$album][] = $photoId;
+        foreach ($photoIds as $photoId) {
+            $albums[$album][] = $photoId;
+        }
+        $albums[$album] = array_values(array_unique($albums[$album]));
         $this->write($albums);
     }
 
