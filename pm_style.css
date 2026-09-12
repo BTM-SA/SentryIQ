@@ -85,26 +85,22 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
     .sentryiq-brand-banner { width:200px; max-width:100%; margin-bottom:14px; }
     .box > h2:first-child::before { width:200px; max-width:100%; margin-bottom:14px; }
 
-    /* Consistent compact application header */
-    .sentryiq-page-header { grid-template-columns:minmax(0,1fr) auto !important; align-items:center !important; gap:10px !important; margin-bottom:4px; }
-    .sentryiq-page-header .sentryiq-vault-brand-wrap { width:auto !important; min-width:0 !important; flex:1 1 auto; }
-    .sentryiq-page-header .sentryiq-vault-banner { width:118px !important; max-width:100% !important; border-radius:7px; }
-    .sentryiq-page-header .sentryiq-vault-status { display:inline-flex !important; margin-top:5px !important; padding:3px 7px !important; font-size:9px !important; letter-spacing:.09em; }
-    .sentryiq-mobile-header-actions { align-items:center !important; justify-content:flex-end; gap:7px; }
+    /* Unified mobile vault header: logo and hamburger share one visual bar. */
+    .sentryiq-page-header { display:flex !important; align-items:center !important; justify-content:space-between !important; gap:10px !important; margin:-6px -6px 8px !important; padding:8px 10px !important; min-height:58px; border:1px solid #e2e6eb; border-radius:10px; background:#fff; box-shadow:0 1px 3px rgba(16,24,40,.05); }
+    .sentryiq-page-header .sentryiq-vault-brand-wrap { display:flex !important; align-items:center !important; min-width:0 !important; flex:1 1 auto; }
+    .sentryiq-page-header .sentryiq-vault-banner { width:118px !important; max-width:100% !important; border-radius:7px; margin:0 !important; }
+    .sentryiq-page-header .sentryiq-vault-status { display:none !important; }
+    .sentryiq-mobile-header-actions { align-items:center !important; justify-content:flex-end; gap:0; margin-left:auto; }
     .sentryiq-lock-form { display:none !important; }
     .sentryiq-page-actions { display:flex; align-items:center; }
     .sentryiq-page-actions .sentryiq-back,
     .sentryiq-page-actions .system-back { display:none !important; }
 
-    /* Mobile vault add action */
-    .vault-add-record-wrap { justify-content:center; }
-    .vault-add-record-button { width:auto !important; max-width:100%; white-space:nowrap; }
-
-    /* All page-specific mobile menu triggers use one visual treatment */
+    /* Icon-only hamburger; the accessible label remains visually hidden. */
     .vault-mobile-menu-toggle,
     .sentryiq-mobile-menu-toggle,
-    .system-mobile-menu-toggle { min-height:42px !important; padding:8px 11px !important; border:1px solid #dfe3e8 !important; border-radius:9px !important; background:#fff !important; color:#253041 !important; font-size:13px !important; font-weight:700 !important; box-shadow:0 1px 2px rgba(16,24,40,.04); }
-    .vault-mobile-menu-icon { font-size:18px !important; }
+    .system-mobile-menu-toggle { width:42px !important; min-width:42px !important; height:42px !important; min-height:42px !important; padding:8px !important; display:inline-flex !important; align-items:center !important; justify-content:center !important; border:1px solid #dfe3e8 !important; border-radius:9px !important; background:#fff !important; color:#253041 !important; font-size:0 !important; font-weight:700 !important; box-shadow:0 1px 2px rgba(16,24,40,.04); }
+    .vault-mobile-menu-icon { font-size:20px !important; line-height:1 !important; }
 
     /* Consistent mobile navigation panel */
     .vault-tabs,
