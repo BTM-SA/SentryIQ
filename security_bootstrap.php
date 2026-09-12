@@ -46,6 +46,43 @@ function sentryiq_has_registered_passkey(): bool
     return is_array($credentials) && $credentials !== [];
 }
 
+function sentryiq_brand_base_url(): string
+{
+    $host = trim((string)($_SERVER['SERVER_NAME'] ?? ''));
+    if ($host === '' || !preg_match('/^[A-Za-z0-9.-]+$/', $host)) return '';
+
+    $scriptPath = str_replace('\\', '/', (string)($_SERVER['SCRIPT_NAME'] ?? ''));
+    $directory = rtrim(str_replace('\\', '/', dirname($scriptPath)), '/');
+    if ($directory === '.' || $directory === '/') $directory = '';
+
+    return 'https://' . $host . $directory;
+}
+
+function sentryiq_brand_head_inject(string $buffer): string
+{
+    if (stripos($buffer, '</head>') === false) return $buffer;
+    if (stripos($buffer, 'sentryiq-logo-wide.webp') !== false && stripos($buffer, 'og:image') !== false) return $buffer;
+
+    $baseUrl = sentryiq_brand_base_url();
+    $assetUrl = ($baseUrl !== '' ? $baseUrl : '') . '/sentryiq-logo-wide.webp';
+
+    $tags = "\n" .
+        '<link rel="icon" type="image/webp" href="' . htmlspecialchars($assetUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n" .
+        '<link rel="apple-touch-icon" href="' . htmlspecialchars($assetUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n" .
+        '<meta property="og:type" content="website">' . "\n" .
+        '<meta property="og:site_name" content="SentryIQ">' . "\n" .
+        '<meta property="og:title" content="SentryIQ">' . "\n" .
+        '<meta property="og:description" content="SentryIQ secure digital vault.">' . "\n" .
+        '<meta property="og:image" content="' . htmlspecialchars($assetUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n" .
+        '<meta property="og:image:alt" content="SentryIQ secure digital vault logo">' . "\n" .
+        '<meta name="twitter:card" content="summary_large_image">' . "\n" .
+        '<meta name="twitter:title" content="SentryIQ">' . "\n" .
+        '<meta name="twitter:description" content="SentryIQ secure digital vault.">' . "\n" .
+        '<meta name="twitter:image" content="' . htmlspecialchars($assetUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n";
+
+    return str_ireplace('</head>', $tags . '</head>', $buffer);
+}
+
 function sentryiq_security_bootstrap(): void
 {
     $dataDir = sentryiq_data_dir();
@@ -129,6 +166,8 @@ function sentryiq_security_bootstrap(): void
         }
         $_SESSION['last_activity'] = time();
     }
+
+    ob_start('sentryiq_brand_head_inject');
 }
 
 function sentryiq_lock_vault(): void
