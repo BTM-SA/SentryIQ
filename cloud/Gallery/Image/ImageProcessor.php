@@ -100,6 +100,7 @@ final class ImageProcessor
             }
 
             $image->setIteratorIndex(0);
+            $this->normalizeImagickOrientation($image);
             $image->setImageFormat('webp');
 
             if ($this->webpQuality === 100) {
@@ -141,6 +142,7 @@ final class ImageProcessor
             }
 
             $image->setIteratorIndex(0);
+            $this->normalizeImagickOrientation($image);
             $image->setImageFormat('webp');
 
             if ($this->webpQuality === 100) {
@@ -169,6 +171,23 @@ final class ImageProcessor
         }
     }
 
+    private function normalizeImagickOrientation(\Imagick $image): void
+    {
+        try {
+            if (method_exists($image, 'autoOrientImage')) {
+                $image->autoOrientImage();
+            }
+            if (defined('Imagick::ORIENTATION_TOPLEFT')) {
+                $image->setImageOrientation(\Imagick::ORIENTATION_TOPLEFT);
+            }
+            // Apply the camera orientation to the pixels once, then remove EXIF
+            // orientation metadata so the browser cannot rotate the WebP again.
+            $image->profileImage('exif', '');
+        } catch (\ImagickException $exception) {
+            throw new RuntimeException('Image orientation could not be normalized.', 0, $exception);
+        }
+    }
+
     private function toWebpWithGdFile(string $path, int $width, int $height, string $mime): string
     {
         $loader = match ($mime) {
@@ -188,7 +207,11 @@ final class ImageProcessor
             throw new RuntimeException('Image could not be decoded.');
         }
 
-        return $this->encodeGdImage($image, $width, $height);
+        if ($mime === 'image/jpeg') {
+            $this->normalizeGdJpegOrientation($image, $path);
+        }
+
+        return $this->encodeGdImage($image);
     }
 
     private function toWebpWithGd(string $input, int $width, int $height, string $mime): string
@@ -201,9 +224,56 @@ final class ImageProcessor
         return $this->encodeGdImage($image, $width, $height);
     }
 
-    private function encodeGdImage(\GdImage $image, int $width, int $height): string
+    private function normalizeGdJpegOrientation(\GdImage &$image, string $path): void
+    {
+        if (!function_exists('exif_read_data')) {
+            return;
+        }
+
+        $exif = @exif_read_data($path, null, true);
+        $orientation = is_array($exif) ? (int)($exif['IFD0']['Orientation'] ?? $exif['Orientation'] ?? 1) : 1;
+
+        switch ($orientation) {
+            case 2:
+                imageflip($image, IMG_FLIP_HORIZONTAL);
+                break;
+            case 3:
+                $rotated = imagerotate($image, 180, 0);
+                if ($rotated !== false) { imagedestroy($image); $image = $rotated; }
+                break;
+            case 4:
+                imageflip($image, IMG_FLIP_VERTICAL);
+                break;
+            case 5:
+                imageflip($image, IMG_FLIP_HORIZONTAL);
+                $rotated = imagerotate($image, 90, 0);
+                if ($rotated !== false) { imagedestroy($image); $image = $rotated; }
+                break;
+            case 6:
+                $rotated = imagerotate($image, -90, 0);
+                if ($rotated !== false) { imagedestroy($image); $image = $rotated; }
+                break;
+            case 7:
+                imageflip($image, IMG_FLIP_HORIZONTAL);
+                $rotated = imagerotate($image, -90, 0);
+                if ($rotated !== false) { imagedestroy($image); $image = $rotated; }
+                break;
+            case 8:
+                $rotated = imagerotate($image, 90, 0);
+                if ($rotated !== false) { imagedestroy($image); $image = $rotated; }
+                break;
+        }
+    }
+
+    private function encodeGdImage(\GdImage $image, ?int $width = null, ?int $height = null): string
     {
         try {
+            $width ??= imagesx($image);
+            $height ??= imagesy($image);
+            if ($width < 1 || $height < 1) {
+                throw new RuntimeException('Image dimensions are invalid.');
+            }
+
             $canvas = imagecreatetruecolor($width, $height);
             if ($canvas === false) {
                 throw new RuntimeException('Unable to allocate image canvas.');
