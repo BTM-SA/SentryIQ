@@ -66,8 +66,6 @@ register_shutdown_function(static function () use (&$currentUploadName, &$curren
         memory_get_usage(true),
     ));
 
-    // A fatal PHP error normally leaves the browser with an empty or non-JSON
-    // response. Clear buffered output so the upload client still gets JSON.
     while (ob_get_level() > 0) {
         ob_end_clean();
     }
