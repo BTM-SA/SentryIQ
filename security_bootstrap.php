@@ -195,7 +195,13 @@ function sentryiq_require_csrf(): void
         exit('Method not allowed.');
     }
 
+    // Multipart/AJAX requests can expose the token through the HTTP header even
+    // when PHP's multipart parser does not populate the expected POST field.
     $provided = (string)($_POST['csrf_token'] ?? '');
+    if ($provided === '') {
+        $provided = trim((string)($_SERVER['HTTP_X_CSRF_TOKEN'] ?? ''));
+    }
+
     $expected = (string)($_SESSION['csrf_token'] ?? '');
     if ($expected === '' || $provided === '' || !hash_equals($expected, $provided)) {
         http_response_code(403);
