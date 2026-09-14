@@ -44,14 +44,18 @@ if ($activeVaultView !== 'records' && !in_array($activeVaultView, $vaultCategori
         <?php foreach ($vaultCategories as $category): ?>
             <a href="index.php?pane=records&amp;vault_view=<?php echo rawurlencode($category); ?>" class="btn" style="display:flex;align-items:center;justify-content:center;min-height:58px;text-decoration:none;background:#f1f3f5;color:#212529;border:1px solid #dee2e6;font-size:16px;">📁 <?php echo htmlspecialchars($category, ENT_QUOTES, 'UTF-8'); ?></a>
         <?php endforeach; ?>
-        <button type="button" id="vault-add-category" class="btn" style="min-height:58px;background:#f1f3f5;color:#212529;border:1px solid #dee2e6;font-size:16px;">＋ Add Category</button>
+        <form method="POST" action="vault_actions.php" style="display:flex;align-items:center;gap:8px;min-height:58px;margin:0;">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+            <input type="hidden" name="action" value="add_category">
+            <input type="text" name="category" class="input-field" placeholder="Category name" maxlength="100" required style="min-width:0;flex:1;margin:0;">
+            <button type="submit" class="btn" style="height:42px;white-space:nowrap;background:#f1f3f5;color:#212529;border:1px solid #dee2e6;font-size:16px;">＋ Add Category</button>
+        </form>
     </div>
-    <div id="vault-category-message" aria-live="polite" style="margin-top:12px;"></div>
 </div>
 <?php endif; ?>
 
 <?php if ($active_pane === 'records'): ?>
-<div id="records-panel" class="vault-panel active">
+<div id="records-panel" class="vault-panel active" data-vault-title="<?php echo htmlspecialchars($activeVaultView === 'records' ? 'Records' : $activeVaultView, ENT_QUOTES, 'UTF-8'); ?>">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
         <a href="index.php?pane=view" class="btn" style="background:#f1f3f5;color:#212529;border:1px solid #dee2e6;text-decoration:none;">← Vault</a>
         <h3 style="margin:0;color:#212529;">📁 <?php echo htmlspecialchars($activeVaultView === 'records' ? 'Records' : $activeVaultView, ENT_QUOTES, 'UTF-8'); ?></h3>
@@ -95,12 +99,6 @@ if ($activeVaultView !== 'records' && !in_array($activeVaultView, $vaultCategori
     document.addEventListener('DOMContentLoaded',function(){
         var toggle=getToggle(),menu=getMenu();
         if(toggle&&menu){toggle.addEventListener('click',window.toggleVaultMobileMenu);menu.querySelectorAll('[data-vault-tab]').forEach(function(button){button.addEventListener('click',function(){var tab=button.getAttribute('data-vault-tab');if(typeof switchVaultTab==='function')switchVaultTab(tab);menu.classList.remove('mobile-open');toggle.setAttribute('aria-expanded','false');});});}
-        var addCategory=document.getElementById('vault-add-category');
-        if(addCategory)addCategory.addEventListener('click',async function(){
-            var name=window.prompt('Category name:');if(name===null)return;name=name.trim();if(!name)return;
-            var form=new FormData();form.append('csrf_token',<?php echo json_encode((string)($csrf ?? '')); ?>);form.append('action','add_category');form.append('category',name);addCategory.disabled=true;
-            try{var response=await fetch('vault_actions.php',{method:'POST',body:form,credentials:'same-origin',headers:{Accept:'application/json'}});var text=await response.text();var data;try{data=JSON.parse(text);}catch(_){throw new Error('The category request returned an invalid response.');}if(!response.ok||data.status!=='ok')throw new Error(data.message||'Unable to add category.');window.location.reload();}catch(error){alert(error.message||'Unable to add category.');addCategory.disabled=false;}
-        });
     });
 }());
 </script>
