@@ -1,12 +1,16 @@
 <?php
-$passwords = normalize_vault_records($passwords ?? []);
+// index.php loads the system_config record before this file is included.
+// Read categories from that already-loaded configuration instead of the
+// normalized vault records, which intentionally remove system_config rows.
 $vaultCategories = [];
-foreach ($passwords as $vaultConfigRow) {
-    if (($vaultConfigRow['type'] ?? '') === 'system_config' && is_array($vaultConfigRow['categories'] ?? null)) {
-        $vaultCategories = array_values(array_unique(array_filter(array_map(static fn($value): string => trim((string)$value), $vaultConfigRow['categories']), static fn(string $value): bool => $value !== '')));
-        break;
-    }
+if (is_array($systemConfig ?? null) && is_array($systemConfig['categories'] ?? null)) {
+    $vaultCategories = array_values(array_unique(array_filter(
+        array_map(static fn($value): string => trim((string)$value), $systemConfig['categories']),
+        static fn(string $value): bool => $value !== ''
+    )));
 }
+
+$passwords = normalize_vault_records($passwords ?? []);
 $passwords = array_values(array_filter($passwords, static fn(array $row): bool => ($row['type'] ?? '') !== 'system_config'));
 $activeVaultView = trim((string)($_GET['vault_view'] ?? 'records'));
 if ($activeVaultView !== 'records' && !in_array($activeVaultView, $vaultCategories, true)) $activeVaultView = 'records';
