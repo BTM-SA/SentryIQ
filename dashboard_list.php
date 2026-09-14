@@ -44,10 +44,10 @@ if ($activeVaultView !== 'records' && !in_array($activeVaultView, $vaultCategori
         <?php foreach ($vaultCategories as $category): ?>
             <a href="index.php?pane=records&amp;vault_view=<?php echo rawurlencode($category); ?>" class="btn" style="display:flex;align-items:center;justify-content:center;min-height:58px;text-decoration:none;background:#f1f3f5;color:#212529;border:1px solid #dee2e6;font-size:16px;">📁 <?php echo htmlspecialchars($category, ENT_QUOTES, 'UTF-8'); ?></a>
         <?php endforeach; ?>
-        <form method="POST" action="vault_actions.php" style="display:flex;align-items:center;gap:8px;min-height:58px;margin:0;">
+        <form method="POST" action="vault_category_actions.php" style="display:flex;align-items:center;gap:8px;min-height:58px;margin:0;">
             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf ?? '', ENT_QUOTES, 'UTF-8'); ?>">
             <input type="hidden" name="action" value="add_category">
-            <input type="text" name="category" class="input-field" placeholder="Category name" maxlength="100" required style="min-width:0;flex:1;margin:0;">
+            <input type="text" name="category" class="input-field" placeholder="Category name" maxlength="50" required style="min-width:0;flex:1;margin:0;">
             <button type="submit" class="btn" style="height:42px;white-space:nowrap;background:#f1f3f5;color:#212529;border:1px solid #dee2e6;font-size:16px;">＋ Add Category</button>
         </form>
     </div>
