@@ -165,12 +165,20 @@ function normalize_vault_records(array $records): array
         if (!is_array($record)) continue;
 
         if (($record['type'] ?? '') === 'system_config') {
+            $categories = is_array($record['categories'] ?? null)
+                ? array_values(array_unique(array_filter(
+                    array_map(static fn($value): string => trim((string)$value), $record['categories']),
+                    static fn(string $value): bool => $value !== ''
+                )))
+                : [];
+
             $normalized[] = [
                 'id' => 'sys_config_node',
                 'type' => 'system_config',
                 'app_username' => trim((string)($record['app_username'] ?? '')),
                 '2fa_email' => trim((string)($record['2fa_email'] ?? '')),
                 'imap_password' => (string)($record['imap_password'] ?? ''),
+                'categories' => $categories,
             ];
             continue;
         }
@@ -185,6 +193,7 @@ function normalize_vault_records(array $records): array
         $normalized[] = [
             'id' => $id,
             'label' => trim((string)($record['label'] ?? '')),
+            'category' => trim((string)($record['category'] ?? '')),
             'username' => trim((string)($record['username'] ?? '')),
             'password' => (string)($record['password'] ?? ''),
             'url' => $url,
