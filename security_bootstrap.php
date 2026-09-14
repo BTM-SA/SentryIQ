@@ -195,6 +195,27 @@ function sentryiq_require_csrf(): void
         exit('Method not allowed.');
     }
 
+    // PHP can discard multipart $_POST/$_FILES completely when the request
+    // exceeds post_max_size. Report that as an upload-size failure rather than
+    // incorrectly calling it a CSRF failure.
+    $postMax = trim((string)ini_get('post_max_size'));
+    $contentLength = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
+    if ($postMax !== '' && $contentLength > 0) {
+        $last = strtolower(substr($postMax, -1));
+        $number = (float)$postMax;
+        $multiplier = match ($last) {
+            'g' => 1024 * 1024 * 1024,
+            'm' => 1024 * 1024,
+            'k' => 1024,
+            default => 1,
+        };
+        $postMaxBytes = (int)round($number * $multiplier);
+        if ($postMaxBytes > 0 && $contentLength > $postMaxBytes && empty($_POST) && empty($_FILES)) {
+            http_response_code(413);
+            exit('Upload too large for the server.');
+        }
+    }
+
     // Multipart/AJAX requests can expose the token through the HTTP header even
     // when PHP's multipart parser does not populate the expected POST field.
     $provided = (string)($_POST['csrf_token'] ?? '');
