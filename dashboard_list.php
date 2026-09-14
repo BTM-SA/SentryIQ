@@ -44,12 +44,16 @@ if ($activeVaultView !== 'records' && !in_array($activeVaultView, $vaultCategori
         <?php foreach ($vaultCategories as $category): ?>
             <a href="index.php?pane=records&amp;vault_view=<?php echo rawurlencode($category); ?>" class="btn" style="display:flex;align-items:center;justify-content:center;min-height:58px;text-decoration:none;background:#f1f3f5;color:#212529;border:1px solid #dee2e6;font-size:16px;">📁 <?php echo htmlspecialchars($category, ENT_QUOTES, 'UTF-8'); ?></a>
         <?php endforeach; ?>
-        <form method="POST" action="vault_category_actions.php" style="display:flex;align-items:center;gap:8px;min-height:58px;margin:0;">
-            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf ?? '', ENT_QUOTES, 'UTF-8'); ?>">
-            <input type="hidden" name="action" value="add_category">
-            <input type="text" name="category" class="input-field" placeholder="Category name" maxlength="50" required style="min-width:0;flex:1;margin:0;">
-            <button type="submit" class="btn" style="height:42px;white-space:nowrap;background:#f1f3f5;color:#212529;border:1px solid #dee2e6;font-size:16px;">＋ Add Category</button>
-        </form>
+        <div class="vault-add-category-wrap" style="display:flex;align-items:center;min-height:58px;">
+            <button type="button" id="show-add-category" class="btn" onclick="showAddCategoryForm()" style="width:100%;min-height:42px;background:#f1f3f5;color:#212529;border:1px solid #dee2e6;font-size:16px;">＋ Add Category</button>
+            <form id="add-category-form" method="POST" action="vault_category_actions.php" style="display:none;width:100%;align-items:center;gap:8px;margin:0;">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                <input type="hidden" name="action" value="add_category">
+                <input type="text" id="new-category-name" name="category" class="input-field" placeholder="Category name" maxlength="50" required style="min-width:0;flex:1;margin:0;">
+                <button type="submit" class="btn" style="height:42px;white-space:nowrap;background:#f1f3f5;color:#212529;border:1px solid #dee2e6;font-size:16px;">Add</button>
+                <button type="button" class="btn" onclick="hideAddCategoryForm()" style="height:42px;white-space:nowrap;background:#fff;color:#495057;border:1px solid #dee2e6;font-size:16px;">Cancel</button>
+            </form>
+        </div>
     </div>
 </div>
 <?php endif; ?>
@@ -96,6 +100,24 @@ if ($activeVaultView !== 'records' && !in_array($activeVaultView, $vaultCategori
     function getMenu(){return document.getElementById('vault-mobile-menu');}
     function getToggle(){return document.querySelector('.vault-mobile-menu-toggle');}
     window.toggleVaultMobileMenu=function(){var menu=getMenu(),toggle=getToggle();if(!menu||!toggle)return;var open=menu.classList.toggle('mobile-open');toggle.setAttribute('aria-expanded',open?'true':'false');};
+    window.showAddCategoryForm=function(){
+        var button=document.getElementById('show-add-category');
+        var form=document.getElementById('add-category-form');
+        var input=document.getElementById('new-category-name');
+        if(!button||!form)return;
+        button.style.display='none';
+        form.style.display='flex';
+        if(input){input.focus();}
+    };
+    window.hideAddCategoryForm=function(){
+        var button=document.getElementById('show-add-category');
+        var form=document.getElementById('add-category-form');
+        var input=document.getElementById('new-category-name');
+        if(!button||!form)return;
+        form.style.display='none';
+        button.style.display='flex';
+        if(input){input.value='';}
+    };
     document.addEventListener('DOMContentLoaded',function(){
         var toggle=getToggle(),menu=getMenu();
         if(toggle&&menu){toggle.addEventListener('click',window.toggleVaultMobileMenu);menu.querySelectorAll('[data-vault-tab]').forEach(function(button){button.addEventListener('click',function(){var tab=button.getAttribute('data-vault-tab');if(typeof switchVaultTab==='function')switchVaultTab(tab);menu.classList.remove('mobile-open');toggle.setAttribute('aria-expanded','false');});});}
