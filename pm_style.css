@@ -86,7 +86,7 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
     .box > h2:first-child::before { width:200px; max-width:100%; margin-bottom:14px; }
 
     /* Unified mobile vault header: logo and hamburger share one visual bar. */
-    .sentryiq-page-header { display:flex !important; align-items:center !important; justify-content:space-between !important; gap:10px !important; margin:-6px -6px 8px !important; padding:8px 10px !important; min-height:58px; border:1px solid #e2e6eb; border-radius:10px; background:#fff; box-shadow:0 1px 3px rgba(16,24,40,.05); }
+    .sentryiq-page-header { display:flex !important; align-items:center !important; justify-content:space-between !important; gap:10px !important; margin:0 !important; padding:8px 10px !important; min-height:58px; border:1px solid #e2e6eb; border-radius:10px; background:#fff; box-shadow:0 1px 3px rgba(16,24,40,.05); }
     .sentryiq-page-header .sentryiq-vault-brand-wrap { display:flex !important; align-items:center !important; min-width:0 !important; flex:1 1 auto; }
     .sentryiq-page-header .sentryiq-vault-banner { width:118px !important; max-width:100% !important; border-radius:7px; margin:0 !important; }
     .sentryiq-page-header .sentryiq-vault-status { display:none !important; }
