@@ -104,4 +104,73 @@
             if (input) input.disabled = false;
         }
     }, true);
+
+    // Keep the Gallery compact: show the upload controls and album-creation
+    // fields only after the user explicitly asks for them.
+    function setupGalleryActionPanel(selector, buttonText, panelLabel) {
+        const panel = document.querySelector(selector);
+        if (!panel || panel.dataset.actionPanelReady === '1') return;
+
+        panel.dataset.actionPanelReady = '1';
+        const heading = panel.querySelector('h3');
+        const form = panel.querySelector('form');
+        const message = panel.querySelector('.gallery-message');
+        if (!form) return;
+
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'btn btn-primary gallery-action-toggle';
+        toggle.textContent = buttonText;
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.setAttribute('aria-label', panelLabel);
+
+        const details = document.createElement('div');
+        details.className = 'gallery-action-details';
+        details.hidden = true;
+
+        if (heading) details.appendChild(heading);
+        details.appendChild(form);
+        if (message) details.appendChild(message);
+
+        panel.innerHTML = '';
+        panel.appendChild(toggle);
+        panel.appendChild(details);
+
+        toggle.addEventListener('click', function () {
+            const open = !details.hidden;
+            details.hidden = open;
+            toggle.setAttribute('aria-expanded', open ? 'false' : 'true');
+            toggle.textContent = open ? buttonText : `✕ Close ${panelLabel}`;
+
+            if (!open) {
+                const firstInput = details.querySelector('input:not([type="hidden"])');
+                if (firstInput) firstInput.focus();
+            }
+        });
+    }
+
+    function setupGalleryActionPanels() {
+        const style = document.createElement('style');
+        style.textContent = `
+            .gallery-action-toggle { margin-top: 18px; }
+            .gallery-action-details[hidden] { display: none !important; }
+            .gallery-action-details { margin-top: 12px; }
+            .gallery-upload, .gallery-albums { border: 0; padding: 0; background: transparent; }
+            .gallery-action-details .gallery-upload,
+            .gallery-action-details .gallery-albums { padding: 0; }
+            @media (max-width: 600px) {
+                .gallery-action-toggle { width: 100%; box-sizing: border-box; justify-content: center; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        setupGalleryActionPanel('.gallery-upload', '📷 Upload Photo', 'Upload Photo');
+        setupGalleryActionPanel('.gallery-albums', '➕ Create Album', 'Create Album');
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupGalleryActionPanels, { once: true });
+    } else {
+        setupGalleryActionPanels();
+    }
 }());
