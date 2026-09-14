@@ -100,9 +100,6 @@ final class ImageProcessor
             }
 
             $image->setIteratorIndex(0);
-            // Do not auto-orient, rotate, flip, or otherwise transform the
-            // source pixels during conversion. The source image geometry is
-            // preserved exactly as decoded.
             $image->setImageFormat('webp');
 
             if ($this->webpQuality === 100) {
@@ -144,9 +141,6 @@ final class ImageProcessor
             }
 
             $image->setIteratorIndex(0);
-            // Do not auto-orient, rotate, flip, or otherwise transform the
-            // source pixels during conversion. The source image geometry is
-            // preserved exactly as decoded.
             $image->setImageFormat('webp');
 
             if ($this->webpQuality === 100) {
@@ -194,6 +188,10 @@ final class ImageProcessor
             throw new RuntimeException('Image could not be decoded.');
         }
 
+        if ($mime === 'image/jpeg') {
+            $image = $this->applyJpegExifOrientation($image, $path);
+        }
+
         return $this->encodeGdImage($image);
     }
 
@@ -205,6 +203,71 @@ final class ImageProcessor
         }
 
         return $this->encodeGdImage($image, $width, $height);
+    }
+
+    private function applyJpegExifOrientation(\GdImage $image, string $path): \GdImage
+    {
+        if (!function_exists('exif_read_data')) {
+            return $image;
+        }
+
+        $exif = @exif_read_data($path, 'IFD0', true);
+        $orientation = (int)($exif['IFD0']['Orientation'] ?? 1);
+
+        if ($orientation === 1) {
+            return $image;
+        }
+
+        $transformed = match ($orientation) {
+            2 => $this->flipGdImage($image, IMG_FLIP_HORIZONTAL),
+            3 => imagerotate($image, 180, 0),
+            4 => $this->flipGdImage($image, IMG_FLIP_VERTICAL),
+            5 => $this->transposeGdImage($image),
+            6 => imagerotate($image, -90, 0),
+            7 => $this->transverseGdImage($image),
+            8 => imagerotate($image, 90, 0),
+            default => $image,
+        };
+
+        if ($transformed === false) {
+            return $image;
+        }
+
+        if ($transformed !== $image) {
+            imagedestroy($image);
+        }
+
+        return $transformed;
+    }
+
+    private function flipGdImage(\GdImage $image, int $mode): \GdImage
+    {
+        if (function_exists('imageflip')) {
+            imageflip($image, $mode);
+            return $image;
+        }
+
+        throw new RuntimeException('The server cannot apply JPEG orientation.');
+    }
+
+    private function transposeGdImage(\GdImage $image): \GdImage
+    {
+        $rotated = imagerotate($image, -90, 0);
+        if ($rotated === false) {
+            throw new RuntimeException('The server cannot apply JPEG orientation.');
+        }
+        imageflip($rotated, IMG_FLIP_HORIZONTAL);
+        return $rotated;
+    }
+
+    private function transverseGdImage(\GdImage $image): \GdImage
+    {
+        $rotated = imagerotate($image, 90, 0);
+        if ($rotated === false) {
+            throw new RuntimeException('The server cannot apply JPEG orientation.');
+        }
+        imageflip($rotated, IMG_FLIP_HORIZONTAL);
+        return $rotated;
     }
 
     private function encodeGdImage(\GdImage $image, ?int $width = null, ?int $height = null): string
