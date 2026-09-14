@@ -53,7 +53,10 @@
                         method: 'POST',
                         body: uploadData,
                         credentials: 'same-origin',
-                        headers: { Accept: 'application/json' },
+                        headers: {
+                            Accept: 'application/json',
+                            'X-CSRF-Token': csrf
+                        },
                         cache: 'no-store'
                     });
 
