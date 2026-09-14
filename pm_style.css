@@ -81,6 +81,7 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
 @media (max-width:700px) {
     body { margin:0; padding:10px; }
     .box { width:100%; max-width:none; padding:16px; border-radius:6px; }
+    .box:has(.sentryiq-page-header) { padding-top:0 !important; }
     .sentryiq-brand-logo { width:104px; height:104px; margin-bottom:12px; }
     .sentryiq-brand-banner { width:200px; max-width:100%; margin-bottom:14px; }
     .box > h2:first-child::before { width:200px; max-width:100%; margin-bottom:14px; }
