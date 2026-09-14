@@ -105,7 +105,7 @@ body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; 
     /* Consistent mobile navigation panel */
     .vault-tabs,
     .sentryiq-mobile-menu-panel,
-    .system-mobile-menu-panel { margin:10px 0 14px !important; padding:6px !important; border:1px solid #e2e6eb !important; border-radius:11px !important; background:#fff !important; box-shadow:0 8px 24px rgba(16,24,40,.08) !important; }
+    .system-mobile-menu-panel { margin:0 0 14px !important; padding:6px !important; border:1px solid #e2e6eb !important; border-radius:11px !important; background:#fff !important; box-shadow:0 8px 24px rgba(16,24,40,.08) !important; }
     .tab-btn,
     .sentryiq-mobile-menu-panel a,
     .sentryiq-mobile-menu-panel button,
