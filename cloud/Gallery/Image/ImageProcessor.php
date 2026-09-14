@@ -183,6 +183,11 @@ final class ImageProcessor
             throw new RuntimeException('The server cannot decode this image type.');
         }
 
+        // EXIF normalization can require a second full-size GD image. Raise
+        // PHP's request memory ceiling when the host permits it rather than
+        // changing the uploaded image's dimensions or quality.
+        $this->ensureGdMemoryForImage($width, $height);
+
         $image = @$loader($path);
         if ($image === false) {
             throw new RuntimeException('Image could not be decoded.');
@@ -197,12 +202,52 @@ final class ImageProcessor
 
     private function toWebpWithGd(string $input, int $width, int $height, string $mime): string
     {
+        $this->ensureGdMemoryForImage($width, $height);
+
         $image = @imagecreatefromstring($input);
         if ($image === false) {
             throw new RuntimeException('Image could not be decoded.');
         }
 
         return $this->encodeGdImage($image, $width, $height);
+    }
+
+    private function ensureGdMemoryForImage(int $width, int $height): void
+    {
+        $currentLimit = ini_get('memory_limit');
+        $currentBytes = is_string($currentLimit) ? $this->iniBytes($currentLimit) : 0;
+        if ($currentBytes === 0) {
+            return;
+        }
+
+        // Two full true-colour GD images plus PHP/application overhead. This
+        // only raises the PHP memory ceiling; it never changes image geometry
+        // or WebP quality settings.
+        $requiredBytes = ($width * $height * 8) + (64 * 1024 * 1024);
+        if ($requiredBytes <= $currentBytes) {
+            return;
+        }
+
+        $targetBytes = max(256 * 1024 * 1024, $requiredBytes);
+        $targetLimit = (int)ceil($targetBytes / (1024 * 1024)) . 'M';
+        @ini_set('memory_limit', $targetLimit);
+    }
+
+    private function iniBytes(string $value): int
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return 0;
+        }
+
+        $last = strtolower(substr($value, -1));
+        $number = (float)$value;
+        return match ($last) {
+            'g' => (int)round($number * 1024 * 1024 * 1024),
+            'm' => (int)round($number * 1024 * 1024),
+            'k' => (int)round($number * 1024),
+            default => (int)round($number),
+        };
     }
 
     private function applyJpegExifOrientation(\GdImage $image, string $path): \GdImage
