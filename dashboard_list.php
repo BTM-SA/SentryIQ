@@ -98,7 +98,7 @@ if ($activeVaultView !== 'records' && !in_array($activeVaultView, $vaultCategori
         var addCategory=document.getElementById('vault-add-category');
         if(addCategory)addCategory.addEventListener('click',async function(){
             var name=window.prompt('Category name:');if(name===null)return;name=name.trim();if(!name)return;
-            var csrfMeta=document.querySelector('meta[name="csrf-token"]');var form=new FormData();form.append('csrf_token',csrfMeta?csrfMeta.content:'');form.append('action','add_category');form.append('category',name);addCategory.disabled=true;
+            var form=new FormData();form.append('csrf_token',<?php echo json_encode((string)($csrf ?? '')); ?>);form.append('action','add_category');form.append('category',name);addCategory.disabled=true;
             try{var response=await fetch('vault_actions.php',{method:'POST',body:form,credentials:'same-origin',headers:{Accept:'application/json'}});var text=await response.text();var data;try{data=JSON.parse(text);}catch(_){throw new Error('The category request returned an invalid response.');}if(!response.ok||data.status!=='ok')throw new Error(data.message||'Unable to add category.');window.location.reload();}catch(error){alert(error.message||'Unable to add category.');addCategory.disabled=false;}
         });
     });
