@@ -1,16 +1,32 @@
 <?php
-// index.php loads the system_config record before this file is included.
-// Read categories from that already-loaded configuration instead of the
-// normalized vault records, which intentionally remove system_config rows.
+// Categories live in the encrypted system_config record. Read the vault once
+// before normalizing records, because normalization removes system_config rows.
 $vaultCategories = [];
-if (is_array($systemConfig ?? null) && is_array($systemConfig['categories'] ?? null)) {
+$rawVaultRecords = is_array($passwords ?? null) ? $passwords : [];
+
+foreach ($rawVaultRecords as $vaultConfigRow) {
+    if (($vaultConfigRow['type'] ?? '') !== 'system_config') {
+        continue;
+    }
+
+    if (is_array($vaultConfigRow['categories'] ?? null)) {
+        $vaultCategories = array_values(array_unique(array_filter(
+            array_map(static fn($value): string => trim((string)$value), $vaultConfigRow['categories']),
+            static fn(string $value): bool => $value !== ''
+        )));
+    }
+    break;
+}
+
+// Fallback to the configuration already extracted by index.php.
+if ($vaultCategories === [] && is_array($systemConfig ?? null) && is_array($systemConfig['categories'] ?? null)) {
     $vaultCategories = array_values(array_unique(array_filter(
         array_map(static fn($value): string => trim((string)$value), $systemConfig['categories']),
         static fn(string $value): bool => $value !== ''
     )));
 }
 
-$passwords = normalize_vault_records($passwords ?? []);
+$passwords = normalize_vault_records($rawVaultRecords);
 $passwords = array_values(array_filter($passwords, static fn(array $row): bool => ($row['type'] ?? '') !== 'system_config'));
 $activeVaultView = trim((string)($_GET['vault_view'] ?? 'records'));
 if ($activeVaultView !== 'records' && !in_array($activeVaultView, $vaultCategories, true)) $activeVaultView = 'records';
