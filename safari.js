@@ -105,13 +105,14 @@
         }
     }, true);
 
-    // Keep the Gallery compact: show the upload controls and album-creation
-    // fields only after the user explicitly asks for them.
-    function setupGalleryActionPanel(selector, buttonText, panelLabel) {
-        const panel = document.querySelector(selector);
-        if (!panel || panel.dataset.actionPanelReady === '1') return;
+    // Mobile-only Gallery controls. Desktop keeps the existing forms visible.
+    function setupMobileGalleryActionPanel(selector, buttonText, panelLabel) {
+        if (!window.matchMedia('(max-width: 600px)').matches) return;
 
-        panel.dataset.actionPanelReady = '1';
+        const panel = document.querySelector(selector);
+        if (!panel || panel.dataset.mobileActionPanelReady === '1') return;
+
+        panel.dataset.mobileActionPanelReady = '1';
         const heading = panel.querySelector('h3');
         const form = panel.querySelector('form');
         const message = panel.querySelector('.gallery-message');
@@ -149,28 +150,26 @@
         });
     }
 
-    function setupGalleryActionPanels() {
+    function setupMobileGalleryActionPanels() {
+        if (!window.matchMedia('(max-width: 600px)').matches) return;
+
         const style = document.createElement('style');
         style.textContent = `
-            .gallery-action-toggle { margin-top: 18px; }
+            .gallery-action-toggle { width: 100%; box-sizing: border-box; justify-content: center; margin-top: 0; }
             .gallery-action-details[hidden] { display: none !important; }
             .gallery-action-details { margin-top: 12px; }
-            .gallery-upload, .gallery-albums { border: 0; padding: 0; background: transparent; }
             .gallery-action-details .gallery-upload,
-            .gallery-action-details .gallery-albums { padding: 0; }
-            @media (max-width: 600px) {
-                .gallery-action-toggle { width: 100%; box-sizing: border-box; justify-content: center; }
-            }
+            .gallery-action-details .gallery-albums { border: 0; padding: 0; background: transparent; }
         `;
         document.head.appendChild(style);
 
-        setupGalleryActionPanel('.gallery-upload', '📷 Upload Photo', 'Upload Photo');
-        setupGalleryActionPanel('.gallery-albums', '➕ Create Album', 'Create Album');
+        setupMobileGalleryActionPanel('.gallery-upload', '📷 Upload Photo', 'Upload Photo');
+        setupMobileGalleryActionPanel('.gallery-albums', '➕ Create Album', 'Create Album');
     }
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', setupGalleryActionPanels, { once: true });
+        document.addEventListener('DOMContentLoaded', setupMobileGalleryActionPanels, { once: true });
     } else {
-        setupGalleryActionPanels();
+        setupMobileGalleryActionPanels();
     }
 }());
