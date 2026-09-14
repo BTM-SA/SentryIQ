@@ -216,20 +216,35 @@ final class ImageProcessor
                 throw new RuntimeException('Image dimensions are invalid.');
             }
 
+            // Avoid allocating a second full-size true-colour canvas for the
+            // normal transparency-preserving path. On large phone photos that
+            // extra allocation can exceed a 128 MB PHP memory limit even
+            // though GD already holds the decoded source image in memory.
+            if ($this->preserveTransparency) {
+                imagesavealpha($image, true);
+                ob_start();
+                $quality = $this->webpQuality === 100 && defined('IMG_WEBP_LOSSLESS')
+                    ? IMG_WEBP_LOSSLESS
+                    : $this->webpQuality;
+                if (!imagewebp($image, null, $quality)) {
+                    throw new RuntimeException('WebP conversion failed.');
+                }
+                $output = ob_get_clean();
+                if (!is_string($output) || $output === '') {
+                    throw new RuntimeException('WebP conversion produced no data.');
+                }
+                return $output;
+            }
+
             $canvas = imagecreatetruecolor($width, $height);
             if ($canvas === false) {
                 throw new RuntimeException('Unable to allocate image canvas.');
             }
             try {
                 imagealphablending($canvas, false);
-                imagesavealpha($canvas, $this->preserveTransparency);
-                if ($this->preserveTransparency) {
-                    $transparent = imagecolorallocatealpha($canvas, 0, 0, 0, 127);
-                    imagefilledrectangle($canvas, 0, 0, $width, $height, $transparent);
-                } else {
-                    $background = imagecolorallocate($canvas, 255, 255, 255);
-                    imagefilledrectangle($canvas, 0, 0, $width, $height, $background);
-                }
+                imagesavealpha($canvas, false);
+                $background = imagecolorallocate($canvas, 255, 255, 255);
+                imagefilledrectangle($canvas, 0, 0, $width, $height, $background);
                 imagecopy($canvas, $image, 0, 0, 0, 0, $width, $height);
                 ob_start();
                 $quality = $this->webpQuality === 100 && defined('IMG_WEBP_LOSSLESS')
