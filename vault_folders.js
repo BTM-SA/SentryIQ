@@ -60,9 +60,14 @@
         addFolderSelector(addForm, data);
         var editForm = document.querySelector('#edit-panel form');
         addFolderSelector(editForm, data);
+        if (editForm) {
+            editForm.action = 'vault_actions.php';
+            var action = editForm.querySelector('input[name="action"]');
+            if (action) action.value = 'edit';
+        }
     }
 
-    function wireFolderCards(data) {
+    function wireFolderCards() {
         var category = currentCategory();
         document.querySelectorAll('.vault-folder-card').forEach(function (card) {
             var nameNode = card.querySelector('span:last-child');
@@ -122,7 +127,7 @@
     document.addEventListener('DOMContentLoaded', function () {
         fetchFolderData().then(function (data) {
             wireAddAndEditForms(data);
-            wireFolderCards(data);
+            wireFolderCards();
             applyFolderView(data);
         }).catch(function (error) {
             console.error('SentryIQ folder UI initialization failed:', error);
