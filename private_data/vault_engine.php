@@ -316,7 +316,7 @@ function vault_read_envelope(): array|false
     if (($envelope['kdf']['name'] ?? '') !== 'argon2id13') throw new RuntimeException('vault_read_envelope:kdf_name_invalid');
     if (!isset($envelope['cipher']) || !is_array($envelope['cipher'])) throw new RuntimeException('vault_read_envelope:cipher_invalid');
     if (($envelope['cipher']['name'] ?? '') !== 'aes-256-gcm') throw new RuntimeException('vault_read_envelope:cipher_name_invalid');
-    if (($envelope['cipher']['nonce_bytes'] ?? null) !== SENTRYQ_GCM_NONCE_BYTES) throw new RuntimeException('vault_read_envelope:nonce_bytes_invalid');
+    if (($envelope['cipher']['nonce_bytes'] ?? null) !== SENTRYIQ_GCM_NONCE_BYTES) throw new RuntimeException('vault_read_envelope:nonce_bytes_invalid');
     if (($envelope['cipher']['tag_bytes'] ?? null) !== SENTRYIQ_GCM_TAG_BYTES) throw new RuntimeException('vault_read_envelope:tag_bytes_invalid');
 
     $salt = vault_decode_base64((string)($envelope['kdf']['salt'] ?? ''), SODIUM_CRYPTO_PWHASH_SALTBYTES);
