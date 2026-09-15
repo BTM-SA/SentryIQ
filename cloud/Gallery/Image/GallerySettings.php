@@ -9,9 +9,12 @@ use RuntimeException;
 final class GallerySettings
 {
     private const DEFAULTS = [
-        'webp_quality' => 85,
-        'thumbnail_quality' => 50,
+        'saved_quality' => 85,
+        'saved_max_dimension' => 0,
+        'thumbnail_quality' => 80,
         'thumbnail_max_dimension' => 600,
+        'preview_quality' => 85,
+        'preview_max_dimension' => 1600,
         'preserve_transparency' => true,
     ];
 
@@ -26,9 +29,12 @@ final class GallerySettings
         if (!is_array($decoded)) return $defaults;
 
         return [
-            'webp_quality' => self::clampInt($decoded['webp_quality'] ?? $defaults['webp_quality'], 1, 100, $defaults['webp_quality']),
-            'thumbnail_quality' => self::clampInt($decoded['thumbnail_quality'] ?? $defaults['thumbnail_quality'], 1, 50, $defaults['thumbnail_quality']),
+            'saved_quality' => self::clampInt($decoded['saved_quality'] ?? $decoded['webp_quality'] ?? $defaults['saved_quality'], 1, 100, $defaults['saved_quality']),
+            'saved_max_dimension' => self::clampInt($decoded['saved_max_dimension'] ?? $defaults['saved_max_dimension'], 0, 8000, $defaults['saved_max_dimension']),
+            'thumbnail_quality' => self::clampInt($decoded['thumbnail_quality'] ?? $defaults['thumbnail_quality'], 1, 100, $defaults['thumbnail_quality']),
             'thumbnail_max_dimension' => self::clampInt($decoded['thumbnail_max_dimension'] ?? $defaults['thumbnail_max_dimension'], 100, 2000, $defaults['thumbnail_max_dimension']),
+            'preview_quality' => self::clampInt($decoded['preview_quality'] ?? $defaults['preview_quality'], 1, 100, $defaults['preview_quality']),
+            'preview_max_dimension' => self::clampInt($decoded['preview_max_dimension'] ?? $defaults['preview_max_dimension'], 200, 4000, $defaults['preview_max_dimension']),
             'preserve_transparency' => (bool)($decoded['preserve_transparency'] ?? $defaults['preserve_transparency']),
         ];
     }
@@ -41,9 +47,12 @@ final class GallerySettings
         }
 
         $normalized = [
-            'webp_quality' => self::clampInt($settings['webp_quality'] ?? 85, 1, 100, 85),
-            'thumbnail_quality' => self::clampInt($settings['thumbnail_quality'] ?? 50, 1, 50, 50),
+            'saved_quality' => self::clampInt($settings['saved_quality'] ?? 85, 1, 100, 85),
+            'saved_max_dimension' => self::clampInt($settings['saved_max_dimension'] ?? 0, 0, 8000, 0),
+            'thumbnail_quality' => self::clampInt($settings['thumbnail_quality'] ?? 80, 1, 100, 80),
             'thumbnail_max_dimension' => self::clampInt($settings['thumbnail_max_dimension'] ?? 600, 100, 2000, 600),
+            'preview_quality' => self::clampInt($settings['preview_quality'] ?? 85, 1, 100, 85),
+            'preview_max_dimension' => self::clampInt($settings['preview_max_dimension'] ?? 1600, 200, 4000, 1600),
             'preserve_transparency' => (bool)($settings['preserve_transparency'] ?? true),
         ];
 
