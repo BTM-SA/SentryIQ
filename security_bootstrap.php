@@ -237,6 +237,14 @@ function sentryiq_require_csrf(): void
 function sentryiq_require_auth(): void
 {
     if (!isset($_SESSION['master_key']) || !is_string($_SESSION['master_key']) || strlen($_SESSION['master_key']) !== 32) {
+        $isAjax = strtolower((string)($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest';
+        $acceptsJson = str_contains(strtolower((string)($_SERVER['HTTP_ACCEPT'] ?? '')), 'application/json');
+
+        if (!$isAjax && !$acceptsJson && $_SERVER['REQUEST_METHOD'] === 'GET') {
+            header('Location: index.php');
+            exit;
+        }
+
         http_response_code(403);
         exit('Authentication required.');
     }
