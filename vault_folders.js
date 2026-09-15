@@ -51,6 +51,70 @@
         if (panel) panel.insertBefore(notice, panel.firstChild);
     }
 
+    function styleCreateFolderForm() {
+        var form = document.getElementById('create-folder-form');
+        if (!form) return;
+
+        form.classList.add('vault-create-folder-form');
+
+        function apply() {
+            var mobile = window.matchMedia('(max-width: 420px)').matches;
+            var input = form.querySelector('input[name="folder"]');
+            var buttons = form.querySelectorAll('button');
+
+            if (mobile) {
+                form.style.setProperty('display', form.style.display === 'none' ? 'none' : 'flex', 'important');
+                form.style.setProperty('flex-direction', 'column', 'important');
+                form.style.setProperty('align-items', 'stretch', 'important');
+                form.style.setProperty('gap', '10px', 'important');
+                form.style.setProperty('margin', '0 0 16px', 'important');
+                form.style.setProperty('padding', '14px', 'important');
+                form.style.setProperty('border', '0', 'important');
+                form.style.setProperty('border-radius', '16px', 'important');
+                form.style.setProperty('background', 'var(--neo-surface, #e7ebf1)', 'important');
+                form.style.setProperty('box-shadow', '8px 8px 16px var(--neo-shadow-dark, rgba(142,151,166,.55)), -8px -8px 16px var(--neo-shadow-light, rgba(255,255,255,.96))', 'important');
+                if (input) {
+                    input.style.setProperty('width', '100%', 'important');
+                    input.style.setProperty('flex', '0 0 auto', 'important');
+                    input.style.setProperty('min-width', '0', 'important');
+                    input.style.setProperty('height', '46px', 'important');
+                    input.style.setProperty('font-size', '16px', 'important');
+                }
+                buttons.forEach(function (button) {
+                    button.style.setProperty('width', '100%', 'important');
+                    button.style.setProperty('min-height', '46px', 'important');
+                    button.style.setProperty('white-space', 'normal', 'important');
+                    button.style.setProperty('border-radius', '14px', 'important');
+                });
+            } else {
+                form.style.removeProperty('flex-direction');
+                form.style.removeProperty('align-items');
+                form.style.removeProperty('gap');
+                form.style.removeProperty('padding');
+                form.style.removeProperty('border');
+                form.style.removeProperty('border-radius');
+                form.style.removeProperty('background');
+                form.style.removeProperty('box-shadow');
+                if (input) {
+                    input.style.removeProperty('width');
+                    input.style.removeProperty('flex');
+                    input.style.removeProperty('min-width');
+                    input.style.removeProperty('height');
+                    input.style.removeProperty('font-size');
+                }
+                buttons.forEach(function (button) {
+                    button.style.removeProperty('width');
+                    button.style.removeProperty('min-height');
+                    button.style.removeProperty('white-space');
+                    button.style.removeProperty('border-radius');
+                });
+            }
+        }
+
+        apply();
+        window.addEventListener('resize', apply);
+    }
+
     function addFolderSelector(form, data) {
         if (!form || form.querySelector('[data-vault-folder-selector]')) return;
         var categorySelect = form.querySelector('select[name="category"]');
@@ -312,6 +376,7 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         showManagementStatus();
+        styleCreateFolderForm();
         fetchFolderData().then(function (data) {
             wireAddAndEditForms(data);
             wireFolderCards();
