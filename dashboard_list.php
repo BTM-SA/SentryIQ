@@ -22,6 +22,13 @@ foreach ($rawVaultRecords as $vaultConfigRow) {
 if ($vaultCategories === [] && is_array($systemConfig ?? null) && is_array($systemConfig['categories'] ?? null)) {
     $vaultCategories = array_values(array_unique(array_filter(array_map(static fn($value): string => trim((string)$value), $systemConfig['categories']), static fn(string $value): bool => $value !== '')));
 }
+if ($vaultFolders === [] && is_array($systemConfig ?? null) && is_array($systemConfig['folders'] ?? null)) {
+    foreach ($systemConfig['folders'] as $folderCategory => $folderList) {
+        if (!is_string($folderCategory) || !is_array($folderList)) continue;
+        $cleanFolders = array_values(array_unique(array_filter(array_map(static fn($value): string => trim((string)$value), $folderList), static fn(string $value): bool => $value !== '')));
+        if ($cleanFolders !== []) $vaultFolders[$folderCategory] = $cleanFolders;
+    }
+}
 $passwords = normalize_vault_records($rawVaultRecords);
 $passwords = array_values(array_filter($passwords, static fn(array $row): bool => ($row['type'] ?? '') !== 'system_config'));
 $activeVaultView = trim((string)($_GET['vault_view'] ?? 'records'));
