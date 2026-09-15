@@ -54,14 +54,11 @@
     function styleCreateFolderForm() {
         var form = document.getElementById('create-folder-form');
         if (!form) return;
-
         form.classList.add('vault-create-folder-form');
-
         function apply() {
             var mobile = window.matchMedia('(max-width: 420px)').matches;
             var input = form.querySelector('input[name="folder"]');
             var buttons = form.querySelectorAll('button');
-
             if (mobile) {
                 form.style.setProperty('display', form.style.display === 'none' ? 'none' : 'flex', 'important');
                 form.style.setProperty('flex-direction', 'column', 'important');
@@ -87,30 +84,11 @@
                     button.style.setProperty('border-radius', '14px', 'important');
                 });
             } else {
-                form.style.removeProperty('flex-direction');
-                form.style.removeProperty('align-items');
-                form.style.removeProperty('gap');
-                form.style.removeProperty('padding');
-                form.style.removeProperty('border');
-                form.style.removeProperty('border-radius');
-                form.style.removeProperty('background');
-                form.style.removeProperty('box-shadow');
-                if (input) {
-                    input.style.removeProperty('width');
-                    input.style.removeProperty('flex');
-                    input.style.removeProperty('min-width');
-                    input.style.removeProperty('height');
-                    input.style.removeProperty('font-size');
-                }
-                buttons.forEach(function (button) {
-                    button.style.removeProperty('width');
-                    button.style.removeProperty('min-height');
-                    button.style.removeProperty('white-space');
-                    button.style.removeProperty('border-radius');
-                });
+                ['flex-direction','align-items','gap','padding','border','border-radius','background','box-shadow'].forEach(function (property) { form.style.removeProperty(property); });
+                if (input) ['width','flex','min-width','height','font-size'].forEach(function (property) { input.style.removeProperty(property); });
+                buttons.forEach(function (button) { ['width','min-height','white-space','border-radius'].forEach(function (property) { button.style.removeProperty(property); }); });
             }
         }
-
         apply();
         window.addEventListener('resize', apply);
     }
@@ -128,7 +106,6 @@
         select.name = 'folder';
         select.className = 'input-field';
         select.disabled = true;
-        select.innerHTML = '<option value="">Category level (no folder)</option>';
         group.appendChild(label);
         group.appendChild(select);
         categorySelect.closest('.form-group').insertAdjacentElement('afterend', group);
@@ -147,7 +124,6 @@
         }
         categorySelect.addEventListener('change', refresh);
         refresh();
-
         var params = new URLSearchParams(window.location.search);
         var initialCategory = params.get('vault_view');
         if (initialCategory && data.folders[initialCategory]) {
@@ -188,7 +164,6 @@
         card.style.overflow = 'visible';
         card.style.touchAction = 'pan-y';
         card.style.transition = 'transform 180ms ease';
-
         var action = document.createElement('button');
         action.type = 'button';
         action.textContent = 'Delete';
@@ -201,7 +176,6 @@
             confirmDelete(message, handler);
         });
         card.appendChild(action);
-
         function updateSwipeMode() {
             var mobile = window.matchMedia('(max-width: 700px)').matches;
             action.style.display = mobile ? 'flex' : 'none';
@@ -209,13 +183,7 @@
         }
         updateSwipeMode();
         window.addEventListener('resize', updateSwipeMode);
-
-        var startX = 0;
-        var startY = 0;
-        var deltaX = 0;
-        var tracking = false;
-        var moved = false;
-
+        var startX = 0, startY = 0, deltaX = 0, tracking = false, moved = false;
         card.addEventListener('touchstart', function (event) {
             if (!window.matchMedia('(max-width: 700px)').matches || event.touches.length !== 1) return;
             startX = event.touches[0].clientX;
@@ -224,32 +192,23 @@
             tracking = true;
             moved = false;
         }, { passive: true });
-
         card.addEventListener('touchmove', function (event) {
             if (!tracking || event.touches.length !== 1) return;
             deltaX = event.touches[0].clientX - startX;
             var deltaY = event.touches[0].clientY - startY;
             if (Math.abs(deltaY) > Math.abs(deltaX) || deltaX > 0) return;
             if (Math.abs(deltaX) > 10) moved = true;
-            var offset = Math.max(deltaX, -78);
-            card.style.transform = 'translateX(' + offset + 'px)';
+            card.style.transform = 'translateX(' + Math.max(deltaX, -78) + 'px)';
         }, { passive: true });
-
         card.addEventListener('touchend', function () {
             if (!tracking) return;
             tracking = false;
-            if (deltaX <= -45) {
-                card.style.transform = 'translateX(-78px)';
-            } else {
-                card.style.transform = '';
-            }
+            card.style.transform = deltaX <= -45 ? 'translateX(-78px)' : '';
         }, { passive: true });
-
         card.addEventListener('touchcancel', function () {
             tracking = false;
             card.style.transform = '';
         }, { passive: true });
-
         card.addEventListener('click', function (event) {
             if (moved) {
                 event.preventDefault();
@@ -257,6 +216,10 @@
                 moved = false;
             }
         }, true);
+    }
+
+    function folderUrl(category, folder) {
+        return 'index.php?pane=records&vault_view=' + encodeURIComponent(category) + '&vault_folder=' + encodeURIComponent(folder);
     }
 
     function wireFolderCards() {
@@ -270,16 +233,14 @@
             card.style.cursor = 'pointer';
             card.setAttribute('role', 'link');
             card.setAttribute('tabindex', '0');
-            card.addEventListener('click', function () {
-                window.location.href = 'index.php?pane=records&vault_view=' + encodeURIComponent(category) + '&vault_folder=' + encodeURIComponent(folder);
-            });
+            function openFolder() { window.location.href = folderUrl(category, folder); }
+            card.addEventListener('click', openFolder);
             card.addEventListener('keydown', function (event) {
                 if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
-                    window.location.href = 'index.php?pane=records&vault_view=' + encodeURIComponent(category) + '&vault_folder=' + encodeURIComponent(folder);
+                    openFolder();
                 }
             });
-
             var controls = document.createElement('span');
             controls.style.cssText = 'margin-left:auto;display:flex;gap:5px;flex:0 0 auto;';
             controls.appendChild(managementButton('Rename', function () {
@@ -295,7 +256,6 @@
                 });
             }));
             card.appendChild(controls);
-
             addSwipeDelete(card, 'Delete the folder "' + folder + '"? Records in it will remain in the category, but will no longer belong to a folder.', function () {
                 postAction('delete_folder', { category: category, folder: folder });
             });
@@ -311,7 +271,6 @@
             var category = decodeURIComponent(match[1]);
             if (!category) return;
             card.setAttribute('data-category-wired', '1');
-
             var controls = document.createElement('span');
             controls.style.cssText = 'display:flex;justify-content:center;gap:6px;margin-top:8px;';
             controls.appendChild(managementButton('Rename', function () {
@@ -325,9 +284,8 @@
                 confirmDelete('Delete the category "' + category + '"? Its folders will be removed and its records will be kept as uncategorised.', function () {
                     postAction('delete_category', { category: category });
                 });
-            });
+            }));
             card.appendChild(controls);
-
             addSwipeDelete(card, 'Delete the category "' + category + '"? Its folders will be removed and its records will be kept as uncategorised.', function () {
                 postAction('delete_category', { category: category });
             });
@@ -377,11 +335,8 @@
     document.addEventListener('DOMContentLoaded', function () {
         showManagementStatus();
         styleCreateFolderForm();
-
-        // Navigation must be wired immediately; it must not depend on the async data request.
         wireFolderCards();
         wireCategoryCards();
-
         fetchFolderData().then(function (data) {
             wireAddAndEditForms(data);
             applyFolderView(data);
@@ -389,4 +344,4 @@
             console.error('SentryIQ folder data initialization failed:', error);
         });
     });
-}());
+})();
