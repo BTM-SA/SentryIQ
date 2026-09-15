@@ -130,13 +130,21 @@
         action.textContent = 'Delete';
         action.setAttribute('aria-label', 'Delete');
         action.className = 'vault-swipe-delete';
-        action.style.cssText = 'position:absolute;top:0;right:-78px;width:78px;height:100%;border:0;border-radius:0 10px 10px 0;background:#dc3545;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.12);';
+        action.style.cssText = 'position:absolute;top:0;right:-78px;width:78px;height:100%;border:0;border-radius:0 10px 10px 0;background:#dc3545;color:#fff;font-weight:700;display:none;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.12);';
         action.addEventListener('click', function (event) {
             event.preventDefault();
             event.stopPropagation();
             confirmDelete(message, handler);
         });
         card.appendChild(action);
+
+        function updateSwipeMode() {
+            var mobile = window.matchMedia('(max-width: 700px)').matches;
+            action.style.display = mobile ? 'flex' : 'none';
+            if (!mobile) card.style.transform = '';
+        }
+        updateSwipeMode();
+        window.addEventListener('resize', updateSwipeMode);
 
         var startX = 0;
         var startY = 0;
@@ -145,7 +153,7 @@
         var moved = false;
 
         card.addEventListener('touchstart', function (event) {
-            if (event.touches.length !== 1) return;
+            if (!window.matchMedia('(max-width: 700px)').matches || event.touches.length !== 1) return;
             startX = event.touches[0].clientX;
             startY = event.touches[0].clientY;
             deltaX = 0;
@@ -199,7 +207,6 @@
             card.setAttribute('role', 'link');
             card.setAttribute('tabindex', '0');
             card.addEventListener('click', function () {
-                if (card.getAttribute('data-swipe-open') === '1') return;
                 window.location.href = 'index.php?pane=records&vault_view=' + encodeURIComponent(category) + '&vault_folder=' + encodeURIComponent(folder);
             });
             card.addEventListener('keydown', function (event) {
@@ -254,7 +261,7 @@
                 confirmDelete('Delete the category "' + category + '"? Its folders will be removed and its records will be kept as uncategorised.', function () {
                     postAction('delete_category', { category: category });
                 });
-            }));
+            });
             card.appendChild(controls);
 
             addSwipeDelete(card, 'Delete the category "' + category + '"? Its folders will be removed and its records will be kept as uncategorised.', function () {
