@@ -19,10 +19,7 @@ require_once $dataDir . '/vault_engine.php';
 function save_category_vault(array $records): bool
 {
     $masterKey = $_SESSION['master_key'] ?? null;
-    if (!is_string($masterKey) || strlen($masterKey) !== 32) {
-        return false;
-    }
-
+    if (!is_string($masterKey) || strlen($masterKey) !== 32) return false;
     try {
         $parts = vault_read_envelope();
         return vault_write_encrypted_records($records, $masterKey, $parts['kdf']);
@@ -32,131 +29,24 @@ function save_category_vault(array $records): bool
     }
 }
 
+function vault_name_key(string $value): string
+{
+    return function_exists('mb_strtolower') ? mb_strtolower($value, 'UTF-8') : strtolower($value);
+}
+
+function valid_vault_name(string $value): bool
+{
+    return $value !== '' && strlen($value) <= 50 && (bool)preg_match('/^[\p{L}\p{N}][\p{L}\p{N} ._&()\-]{0,49}$/u', $value);
+}
+
+function redirect_category(string $status, string $category = ''): never
+{
+    $url = 'index.php?status=' . rawurlencode($status) . '&pane=' . ($category === '' ? 'view' : 'records&vault_view=' . rawurlencode($category));
+    header('Location: ' . $url);
+    exit;
+}
+
 $action = (string)($_POST['action'] ?? '');
-
-if ($action === 'create_folder') {
-    $category = trim((string)($_POST['category'] ?? ''));
-    $folder = trim((string)($_POST['folder'] ?? ''));
-
-    if (
-        $category === '' ||
-        strlen($category) > 50 ||
-        !preg_match('/^[\p{L}\p{N}][\p{L}\p{N} ._&()\-]{0,49}$/u', $category) ||
-        $folder === '' ||
-        strlen($folder) > 50 ||
-        !preg_match('/^[\p{L}\p{N}][\p{L}\p{N} ._&()\-]{0,49}$/u', $folder)
-    ) {
-        header('Location: index.php?status=error&pane=records&vault_view=' . rawurlencode($category));
-        exit;
-    }
-
-    $passwords = load_passwords();
-    if ($passwords === false) {
-        sentryiq_lock_vault();
-        http_response_code(503);
-        exit('Vault unavailable.');
-    }
-
-    $categoryKey = function_exists('mb_strtolower') ? mb_strtolower($category, 'UTF-8') : strtolower($category);
-    $folderKey = function_exists('mb_strtolower') ? mb_strtolower($folder, 'UTF-8') : strtolower($folder);
-    $foundConfig = false;
-    $categoryExists = false;
-
-    foreach ($passwords as $index => $entry) {
-        if (($entry['type'] ?? '') !== 'system_config') {
-            continue;
-        }
-
-        $foundConfig = true;
-        $categories = is_array($entry['categories'] ?? null) ? $entry['categories'] : [];
-        foreach ($categories as $existingCategory) {
-            $existingCategoryKey = function_exists('mb_strtolower')
-                ? mb_strtolower(trim((string)$existingCategory), 'UTF-8')
-                : strtolower(trim((string)$existingCategory));
-            if ($existingCategoryKey === $categoryKey) {
-                $categoryExists = true;
-                break;
-            }
-        }
-
-        if (!$categoryExists) {
-            header('Location: index.php?status=error&pane=records&vault_view=' . rawurlencode($category));
-            exit;
-        }
-
-        $folders = is_array($entry['folders'] ?? null) ? $entry['folders'] : [];
-        $categoryFolders = [];
-        foreach ($folders as $folderCategory => $folderList) {
-            if (is_string($folderCategory)) {
-                $categoryFolders[$folderCategory] = is_array($folderList) ? array_values(array_filter(array_map(static fn($value): string => trim((string)$value), $folderList), static fn(string $value): bool => $value !== '')) : [];
-            }
-        }
-
-        $storedCategory = $category;
-        foreach (array_keys($categoryFolders) as $existingCategory) {
-            $existingCategoryKey = function_exists('mb_strtolower')
-                ? mb_strtolower(trim((string)$existingCategory), 'UTF-8')
-                : strtolower(trim((string)$existingCategory));
-            if ($existingCategoryKey === $categoryKey) {
-                $storedCategory = $existingCategory;
-                break;
-            }
-        }
-
-        $existingFolders = $categoryFolders[$storedCategory] ?? [];
-        foreach ($existingFolders as $existingFolder) {
-            $existingFolderKey = function_exists('mb_strtolower')
-                ? mb_strtolower($existingFolder, 'UTF-8')
-                : strtolower($existingFolder);
-            if ($existingFolderKey === $folderKey) {
-                header('Location: index.php?status=error&pane=records&vault_view=' . rawurlencode($category));
-                exit;
-            }
-        }
-
-        $existingFolders[] = $folder;
-        natcasesort($existingFolders);
-        $categoryFolders[$storedCategory] = array_values($existingFolders);
-        $passwords[$index]['folders'] = $categoryFolders;
-        break;
-    }
-
-    if (!$foundConfig) {
-        header('Location: index.php?status=error&pane=records&vault_view=' . rawurlencode($category));
-        exit;
-    }
-
-    if (!save_category_vault($passwords)) {
-        header('Location: index.php?status=error&pane=records&vault_view=' . rawurlencode($category));
-        exit;
-    }
-
-    log_security_event(
-        'VAULT_FOLDER_CREATED',
-        get_visitor_ip(),
-        $_SESSION['app_username'] ?? 'unknown',
-        ['category' => $category, 'folder' => $folder]
-    );
-
-    header('Location: index.php?status=folder_added&pane=records&vault_view=' . rawurlencode($category));
-    exit;
-}
-
-if ($action !== 'add_category') {
-    header('Location: index.php?pane=view');
-    exit;
-}
-
-$category = trim((string)($_POST['category'] ?? ''));
-if (
-    $category === '' ||
-    strlen($category) > 50 ||
-    !preg_match('/^[\p{L}\p{N}][\p{L}\p{N} ._&()\-]{0,49}$/u', $category)
-) {
-    header('Location: index.php?status=error&pane=view');
-    exit;
-}
-
 $passwords = load_passwords();
 if ($passwords === false) {
     sentryiq_lock_vault();
@@ -164,59 +54,196 @@ if ($passwords === false) {
     exit('Vault unavailable.');
 }
 
-$categoryKey = function_exists('mb_strtolower')
-    ? mb_strtolower($category, 'UTF-8')
-    : strtolower($category);
+if ($action === 'create_folder') {
+    $category = trim((string)($_POST['category'] ?? ''));
+    $folder = trim((string)($_POST['folder'] ?? ''));
+    if (!valid_vault_name($category) || !valid_vault_name($folder)) redirect_category('error', $category);
 
-$foundConfig = false;
-foreach ($passwords as $index => $entry) {
-    if (($entry['type'] ?? '') !== 'system_config') {
-        continue;
+    $categoryKey = vault_name_key($category);
+    $folderKey = vault_name_key($folder);
+    foreach ($passwords as $index => $entry) {
+        if (($entry['type'] ?? '') !== 'system_config') continue;
+        $categories = is_array($entry['categories'] ?? null) ? $entry['categories'] : [];
+        $categoryExists = false;
+        foreach ($categories as $existingCategory) if (vault_name_key(trim((string)$existingCategory)) === $categoryKey) { $categoryExists = true; break; }
+        if (!$categoryExists) redirect_category('error', $category);
+
+        $folders = is_array($entry['folders'] ?? null) ? $entry['folders'] : [];
+        $storedCategory = $category;
+        foreach (array_keys($folders) as $existingCategory) if (vault_name_key(trim((string)$existingCategory)) === $categoryKey) { $storedCategory = (string)$existingCategory; break; }
+        $existingFolders = is_array($folders[$storedCategory] ?? null) ? array_values(array_filter(array_map('strval', $folders[$storedCategory]), static fn(string $v): bool => trim($v) !== '')) : [];
+        foreach ($existingFolders as $existingFolder) if (vault_name_key(trim($existingFolder)) === $folderKey) redirect_category('error', $category);
+        $existingFolders[] = $folder;
+        natcasesort($existingFolders);
+        $folders[$storedCategory] = array_values($existingFolders);
+        $passwords[$index]['folders'] = $folders;
+        if (!save_category_vault($passwords)) redirect_category('error', $category);
+        log_security_event('VAULT_FOLDER_CREATED', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown', ['category'=>$category,'folder'=>$folder]);
+        redirect_category('folder_added', $category);
     }
+    redirect_category('error', $category);
+}
 
-    $foundConfig = true;
-    $existing = is_array($entry['categories'] ?? null) ? $entry['categories'] : [];
-    $categories = array_values(array_unique(array_filter(
-        array_map(static fn($value): string => trim((string)$value), $existing),
-        static fn(string $value): bool => $value !== ''
-    )));
+if ($action === 'rename_folder') {
+    $category = trim((string)($_POST['category'] ?? ''));
+    $folder = trim((string)($_POST['folder'] ?? ''));
+    $newFolder = trim((string)($_POST['new_folder'] ?? ''));
+    if (!valid_vault_name($category) || !valid_vault_name($folder) || !valid_vault_name($newFolder)) redirect_category('error', $category);
+    $categoryKey = vault_name_key($category);
+    $folderKey = vault_name_key($folder);
+    $newFolderKey = vault_name_key($newFolder);
+    foreach ($passwords as $index => $entry) {
+        if (($entry['type'] ?? '') !== 'system_config') continue;
+        $folders = is_array($entry['folders'] ?? null) ? $entry['folders'] : [];
+        $storedCategory = null;
+        foreach (array_keys($folders) as $existingCategory) if (vault_name_key(trim((string)$existingCategory)) === $categoryKey) { $storedCategory = (string)$existingCategory; break; }
+        if ($storedCategory === null) redirect_category('error', $category);
+        $existingFolders = is_array($folders[$storedCategory] ?? null) ? array_values(array_map('strval', $folders[$storedCategory])) : [];
+        $found = false;
+        foreach ($existingFolders as $existingFolder) {
+            if (vault_name_key(trim($existingFolder)) === $newFolderKey && vault_name_key(trim($existingFolder)) !== $folderKey) redirect_category('error', $category);
+        }
+        foreach ($existingFolders as $folderIndex => $existingFolder) {
+            if (vault_name_key(trim($existingFolder)) !== $folderKey) continue;
+            $existingFolders[$folderIndex] = $newFolder;
+            $found = true;
+            break;
+        }
+        if (!$found) redirect_category('error', $category);
+        natcasesort($existingFolders);
+        $folders[$storedCategory] = array_values($existingFolders);
+        $passwords[$index]['folders'] = $folders;
+        foreach ($passwords as $recordIndex => $record) {
+            if (($record['type'] ?? '') === 'system_config') continue;
+            if (vault_name_key(trim((string)($record['category'] ?? ''))) === vault_name_key($storedCategory) && vault_name_key(trim((string)($record['folder'] ?? ''))) === $folderKey) {
+                $passwords[$recordIndex]['folder'] = $newFolder;
+            }
+        }
+        if (!save_category_vault($passwords)) redirect_category('error', $category);
+        log_security_event('VAULT_FOLDER_RENAMED', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown', ['category'=>$category,'folder'=>$folder,'new_folder'=>$newFolder]);
+        redirect_category('folder_renamed', $category);
+    }
+    redirect_category('error', $category);
+}
 
-    foreach ($categories as $existingCategory) {
-        $existingKey = function_exists('mb_strtolower')
-            ? mb_strtolower($existingCategory, 'UTF-8')
-            : strtolower($existingCategory);
+if ($action === 'delete_folder') {
+    $category = trim((string)($_POST['category'] ?? ''));
+    $folder = trim((string)($_POST['folder'] ?? ''));
+    if (!valid_vault_name($category) || !valid_vault_name($folder)) redirect_category('error', $category);
+    $categoryKey = vault_name_key($category);
+    $folderKey = vault_name_key($folder);
+    foreach ($passwords as $index => $entry) {
+        if (($entry['type'] ?? '') !== 'system_config') continue;
+        $folders = is_array($entry['folders'] ?? null) ? $entry['folders'] : [];
+        $storedCategory = null;
+        foreach (array_keys($folders) as $existingCategory) if (vault_name_key(trim((string)$existingCategory)) === $categoryKey) { $storedCategory = (string)$existingCategory; break; }
+        if ($storedCategory === null) redirect_category('error', $category);
+        $existingFolders = is_array($folders[$storedCategory] ?? null) ? array_values(array_map('strval', $folders[$storedCategory])) : [];
+        $remaining = [];
+        $found = false;
+        foreach ($existingFolders as $existingFolder) {
+            if (vault_name_key(trim($existingFolder)) === $folderKey) { $found = true; continue; }
+            $remaining[] = $existingFolder;
+        }
+        if (!$found) redirect_category('error', $category);
+        if ($remaining === []) unset($folders[$storedCategory]); else $folders[$storedCategory] = array_values($remaining);
+        $passwords[$index]['folders'] = $folders;
+        // Preserve records: deleting a folder moves its records to the category level.
+        foreach ($passwords as $recordIndex => $record) {
+            if (($record['type'] ?? '') === 'system_config') continue;
+            if (vault_name_key(trim((string)($record['category'] ?? ''))) === vault_name_key($storedCategory) && vault_name_key(trim((string)($record['folder'] ?? ''))) === $folderKey) $passwords[$recordIndex]['folder'] = '';
+        }
+        if (!save_category_vault($passwords)) redirect_category('error', $category);
+        log_security_event('VAULT_FOLDER_DELETED', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown', ['category'=>$category,'folder'=>$folder]);
+        redirect_category('folder_deleted', $category);
+    }
+    redirect_category('error', $category);
+}
 
-        if ($existingKey === $categoryKey) {
-            header('Location: index.php?status=error&pane=view');
-            exit;
+if ($action === 'rename_category') {
+    $category = trim((string)($_POST['category'] ?? ''));
+    $newCategory = trim((string)($_POST['new_category'] ?? ''));
+    if (!valid_vault_name($category) || !valid_vault_name($newCategory)) redirect_category('error');
+    $categoryKey = vault_name_key($category);
+    $newCategoryKey = vault_name_key($newCategory);
+    $found = false;
+    foreach ($passwords as $index => $entry) {
+        if (($entry['type'] ?? '') !== 'system_config') continue;
+        $categories = is_array($entry['categories'] ?? null) ? array_values(array_map('strval', $entry['categories'])) : [];
+        foreach ($categories as $existingCategory) {
+            if (vault_name_key(trim($existingCategory)) === $newCategoryKey && vault_name_key(trim($existingCategory)) !== $categoryKey) redirect_category('error');
+        }
+        foreach ($categories as $categoryIndex => $existingCategory) if (vault_name_key(trim($existingCategory)) === $categoryKey) { $categories[$categoryIndex] = $newCategory; $found = true; break; }
+        if (!$found) redirect_category('error');
+        natcasesort($categories);
+        $passwords[$index]['categories'] = array_values($categories);
+        $folders = is_array($entry['folders'] ?? null) ? $entry['folders'] : [];
+        foreach (array_keys($folders) as $folderCategory) if (vault_name_key(trim((string)$folderCategory)) === $categoryKey) { $folders[$newCategory] = $folders[$folderCategory]; unset($folders[$folderCategory]); break; }
+        $passwords[$index]['folders'] = $folders;
+        break;
+    }
+    if (!$found) redirect_category('error');
+    foreach ($passwords as $recordIndex => $record) {
+        if (($record['type'] ?? '') === 'system_config') continue;
+        if (vault_name_key(trim((string)($record['category'] ?? ''))) === $categoryKey) $passwords[$recordIndex]['category'] = $newCategory;
+    }
+    if (!save_category_vault($passwords)) redirect_category('error');
+    log_security_event('VAULT_CATEGORY_RENAMED', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown', ['category'=>$category,'new_category'=>$newCategory]);
+    redirect_category('category_renamed');
+}
+
+if ($action === 'delete_category') {
+    $category = trim((string)($_POST['category'] ?? ''));
+    if (!valid_vault_name($category)) redirect_category('error');
+    $categoryKey = vault_name_key($category);
+    $found = false;
+    foreach ($passwords as $index => $entry) {
+        if (($entry['type'] ?? '') !== 'system_config') continue;
+        $categories = is_array($entry['categories'] ?? null) ? array_values(array_map('strval', $entry['categories'])) : [];
+        $remaining = [];
+        foreach ($categories as $existingCategory) {
+            if (vault_name_key(trim($existingCategory)) === $categoryKey) { $found = true; continue; }
+            $remaining[] = $existingCategory;
+        }
+        if (!$found) redirect_category('error');
+        $passwords[$index]['categories'] = array_values($remaining);
+        $folders = is_array($entry['folders'] ?? null) ? $entry['folders'] : [];
+        foreach (array_keys($folders) as $folderCategory) if (vault_name_key(trim((string)$folderCategory)) === $categoryKey) unset($folders[$folderCategory]);
+        $passwords[$index]['folders'] = $folders;
+        break;
+    }
+    if (!$found) redirect_category('error');
+    // Preserve credentials: deleting a category makes its records uncategorised.
+    foreach ($passwords as $recordIndex => $record) {
+        if (($record['type'] ?? '') === 'system_config') continue;
+        if (vault_name_key(trim((string)($record['category'] ?? ''))) === $categoryKey) {
+            $passwords[$recordIndex]['category'] = '';
+            $passwords[$recordIndex]['folder'] = '';
         }
     }
+    if (!save_category_vault($passwords)) redirect_category('error');
+    log_security_event('VAULT_CATEGORY_DELETED', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown', ['category'=>$category]);
+    redirect_category('category_deleted');
+}
 
+if ($action !== 'add_category') redirect_category('view');
+
+$category = trim((string)($_POST['category'] ?? ''));
+if (!valid_vault_name($category)) redirect_category('error');
+$categoryKey = vault_name_key($category);
+$foundConfig = false;
+foreach ($passwords as $index => $entry) {
+    if (($entry['type'] ?? '') !== 'system_config') continue;
+    $foundConfig = true;
+    $existing = is_array($entry['categories'] ?? null) ? $entry['categories'] : [];
+    $categories = array_values(array_unique(array_filter(array_map(static fn($value): string => trim((string)$value), $existing), static fn(string $value): bool => $value !== '')));
+    foreach ($categories as $existingCategory) if (vault_name_key($existingCategory) === $categoryKey) redirect_category('error');
     $categories[] = $category;
     natcasesort($categories);
     $passwords[$index]['categories'] = array_values($categories);
     break;
 }
-
-if (!$foundConfig) {
-    $passwords[] = [
-        'id' => 'sys_config_node',
-        'type' => 'system_config',
-        'categories' => [$category],
-    ];
-}
-
-if (!save_category_vault($passwords)) {
-    header('Location: index.php?status=error&pane=view');
-    exit;
-}
-
-log_security_event(
-    'VAULT_CATEGORY_CREATED',
-    get_visitor_ip(),
-    $_SESSION['app_username'] ?? 'unknown',
-    ['category' => $category]
-);
-
-header('Location: index.php?status=category_added&pane=view');
-exit;
+if (!$foundConfig) $passwords[] = ['id'=>'sys_config_node','type'=>'system_config','categories'=>[$category]];
+if (!save_category_vault($passwords)) redirect_category('error');
+log_security_event('VAULT_CATEGORY_CREATED', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown', ['category'=>$category]);
+redirect_category('category_added');
