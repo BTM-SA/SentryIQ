@@ -113,6 +113,80 @@
         return button;
     }
 
+    function confirmDelete(message, handler) {
+        if (window.confirm(message)) handler();
+    }
+
+    function addSwipeDelete(card, message, handler) {
+        if (!card || card.getAttribute('data-swipe-delete-wired') === '1') return;
+        card.setAttribute('data-swipe-delete-wired', '1');
+        card.style.position = 'relative';
+        card.style.overflow = 'visible';
+        card.style.touchAction = 'pan-y';
+        card.style.transition = 'transform 180ms ease';
+
+        var action = document.createElement('button');
+        action.type = 'button';
+        action.textContent = 'Delete';
+        action.setAttribute('aria-label', 'Delete');
+        action.className = 'vault-swipe-delete';
+        action.style.cssText = 'position:absolute;top:0;right:-78px;width:78px;height:100%;border:0;border-radius:0 10px 10px 0;background:#dc3545;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.12);';
+        action.addEventListener('click', function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            confirmDelete(message, handler);
+        });
+        card.appendChild(action);
+
+        var startX = 0;
+        var startY = 0;
+        var deltaX = 0;
+        var tracking = false;
+        var moved = false;
+
+        card.addEventListener('touchstart', function (event) {
+            if (event.touches.length !== 1) return;
+            startX = event.touches[0].clientX;
+            startY = event.touches[0].clientY;
+            deltaX = 0;
+            tracking = true;
+            moved = false;
+        }, { passive: true });
+
+        card.addEventListener('touchmove', function (event) {
+            if (!tracking || event.touches.length !== 1) return;
+            deltaX = event.touches[0].clientX - startX;
+            var deltaY = event.touches[0].clientY - startY;
+            if (Math.abs(deltaY) > Math.abs(deltaX) || deltaX > 0) return;
+            if (Math.abs(deltaX) > 10) moved = true;
+            var offset = Math.max(deltaX, -78);
+            card.style.transform = 'translateX(' + offset + 'px)';
+        }, { passive: true });
+
+        card.addEventListener('touchend', function () {
+            if (!tracking) return;
+            tracking = false;
+            if (deltaX <= -45) {
+                card.style.transform = 'translateX(-78px)';
+            } else {
+                card.style.transform = '';
+            }
+        }, { passive: true });
+
+        card.addEventListener('touchcancel', function () {
+            tracking = false;
+            card.style.transform = '';
+        }, { passive: true });
+
+        card.addEventListener('click', function (event) {
+            if (moved) {
+                event.preventDefault();
+                event.stopPropagation();
+                moved = false;
+            }
+        }, true);
+    }
+
     function wireFolderCards() {
         var category = currentCategory();
         document.querySelectorAll('.vault-folder-card').forEach(function (card) {
@@ -125,6 +199,7 @@
             card.setAttribute('role', 'link');
             card.setAttribute('tabindex', '0');
             card.addEventListener('click', function () {
+                if (card.getAttribute('data-swipe-open') === '1') return;
                 window.location.href = 'index.php?pane=records&vault_view=' + encodeURIComponent(category) + '&vault_folder=' + encodeURIComponent(folder);
             });
             card.addEventListener('keydown', function (event) {
@@ -144,10 +219,15 @@
                 postAction('rename_folder', { category: category, folder: folder, new_folder: newName });
             }));
             controls.appendChild(managementButton('Delete', function () {
-                if (!window.confirm('Delete the folder "' + folder + '"? Records in it will remain in the category, but will no longer belong to a folder.')) return;
-                postAction('delete_folder', { category: category, folder: folder });
+                confirmDelete('Delete the folder "' + folder + '"? Records in it will remain in the category, but will no longer belong to a folder.', function () {
+                    postAction('delete_folder', { category: category, folder: folder });
+                });
             }));
             card.appendChild(controls);
+
+            addSwipeDelete(card, 'Delete the folder "' + folder + '"? Records in it will remain in the category, but will no longer belong to a folder.', function () {
+                postAction('delete_folder', { category: category, folder: folder });
+            });
         });
     }
 
@@ -160,6 +240,7 @@
             var category = decodeURIComponent(match[1]);
             if (!category) return;
             card.setAttribute('data-category-wired', '1');
+
             var controls = document.createElement('span');
             controls.style.cssText = 'display:flex;justify-content:center;gap:6px;margin-top:8px;';
             controls.appendChild(managementButton('Rename', function () {
@@ -170,10 +251,15 @@
                 postAction('rename_category', { category: category, new_category: newName });
             }));
             controls.appendChild(managementButton('Delete', function () {
-                if (!window.confirm('Delete the category "' + category + '"? Its folders will be removed and its records will be kept as uncategorised.')) return;
-                postAction('delete_category', { category: category });
+                confirmDelete('Delete the category "' + category + '"? Its folders will be removed and its records will be kept as uncategorised.', function () {
+                    postAction('delete_category', { category: category });
+                });
             }));
             card.appendChild(controls);
+
+            addSwipeDelete(card, 'Delete the category "' + category + '"? Its folders will be removed and its records will be kept as uncategorised.', function () {
+                postAction('delete_category', { category: category });
+            });
         });
     }
 
