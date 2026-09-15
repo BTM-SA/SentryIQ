@@ -377,13 +377,16 @@
     document.addEventListener('DOMContentLoaded', function () {
         showManagementStatus();
         styleCreateFolderForm();
+
+        // Navigation must be wired immediately; it must not depend on the async data request.
+        wireFolderCards();
+        wireCategoryCards();
+
         fetchFolderData().then(function (data) {
             wireAddAndEditForms(data);
-            wireFolderCards();
-            wireCategoryCards();
             applyFolderView(data);
         }).catch(function (error) {
-            console.error('SentryIQ folder UI initialization failed:', error);
+            console.error('SentryIQ folder data initialization failed:', error);
         });
     });
 }());
