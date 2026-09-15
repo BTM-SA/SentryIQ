@@ -34,6 +34,23 @@
         form.submit();
     }
 
+    function showManagementStatus() {
+        var status = new URLSearchParams(window.location.search).get('status');
+        var messages = {
+            category_renamed: 'Category renamed successfully.',
+            category_deleted: 'Category deleted. Its records are now uncategorised.',
+            folder_renamed: 'Folder renamed successfully.',
+            folder_deleted: 'Folder deleted. Its records remain in the category.',
+            folder_added: 'Folder created successfully.'
+        };
+        if (!status || !messages[status]) return;
+        var notice = document.createElement('p');
+        notice.className = 'success';
+        notice.textContent = messages[status];
+        var panel = document.querySelector('.box');
+        if (panel) panel.insertBefore(notice, panel.firstChild);
+    }
+
     function addFolderSelector(form, data) {
         if (!form || form.querySelector('[data-vault-folder-selector]')) return;
         var categorySelect = form.querySelector('select[name="category"]');
@@ -143,7 +160,6 @@
             var category = decodeURIComponent(match[1]);
             if (!category) return;
             card.setAttribute('data-category-wired', '1');
-            card.style.position = 'relative';
             var controls = document.createElement('span');
             controls.style.cssText = 'display:flex;justify-content:center;gap:6px;margin-top:8px;';
             controls.appendChild(managementButton('Rename', function () {
@@ -202,6 +218,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
+        showManagementStatus();
         fetchFolderData().then(function (data) {
             wireAddAndEditForms(data);
             wireFolderCards();
