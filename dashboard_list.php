@@ -1,13 +1,21 @@
 <?php
-// Categories live in the encrypted system_config record. Read the vault once
+// Categories and folders live in the encrypted system_config record. Read the vault once
 // before normalizing records, because normalization removes system_config rows.
 $vaultCategories = [];
+$vaultFolders = [];
 $rawVaultRecords = is_array($passwords ?? null) ? $passwords : [];
 
 foreach ($rawVaultRecords as $vaultConfigRow) {
     if (($vaultConfigRow['type'] ?? '') !== 'system_config') continue;
     if (is_array($vaultConfigRow['categories'] ?? null)) {
         $vaultCategories = array_values(array_unique(array_filter(array_map(static fn($value): string => trim((string)$value), $vaultConfigRow['categories']), static fn(string $value): bool => $value !== '')));
+    }
+    if (is_array($vaultConfigRow['folders'] ?? null)) {
+        foreach ($vaultConfigRow['folders'] as $folderCategory => $folderList) {
+            if (!is_string($folderCategory) || !is_array($folderList)) continue;
+            $cleanFolders = array_values(array_unique(array_filter(array_map(static fn($value): string => trim((string)$value), $folderList), static fn(string $value): bool => $value !== '')));
+            if ($cleanFolders !== []) $vaultFolders[$folderCategory] = $cleanFolders;
+        }
     }
     break;
 }
@@ -18,6 +26,17 @@ $passwords = normalize_vault_records($rawVaultRecords);
 $passwords = array_values(array_filter($passwords, static fn(array $row): bool => ($row['type'] ?? '') !== 'system_config'));
 $activeVaultView = trim((string)($_GET['vault_view'] ?? 'records'));
 if ($activeVaultView !== 'records' && !in_array($activeVaultView, $vaultCategories, true)) $activeVaultView = 'records';
+$activeCategoryFolders = [];
+if ($activeVaultView !== 'records') {
+    foreach ($vaultFolders as $folderCategory => $folderList) {
+        $folderCategoryKey = function_exists('mb_strtolower') ? mb_strtolower($folderCategory, 'UTF-8') : strtolower($folderCategory);
+        $activeCategoryKey = function_exists('mb_strtolower') ? mb_strtolower($activeVaultView, 'UTF-8') : strtolower($activeVaultView);
+        if ($folderCategoryKey === $activeCategoryKey) {
+            $activeCategoryFolders = $folderList;
+            break;
+        }
+    }
+}
 ?>
 <!-- Location: /home/bicheveb/public_html/pm/dashboard_list.php -->
 <div class="sentryiq-page-header">
@@ -31,6 +50,7 @@ if ($activeVaultView !== 'records' && !in_array($activeVaultView, $vaultCategori
 <?php if (isset($_GET['status']) && $_GET['status'] == 'updated') echo "<p class='success'>Entry updated successfully!</p>"; ?>
 <?php if (isset($_GET['status']) && $_GET['status'] == 'deleted') echo "<p class='success'>Entry deleted safely from disk.</p>"; ?>
 <?php if (isset($_GET['status']) && $_GET['status'] == 'category_added') echo "<p class='success'>Category added successfully.</p>"; ?>
+<?php if (isset($_GET['status']) && $_GET['status'] == 'folder_added') echo "<p class='success'>Folder added successfully.</p>"; ?>
 <?php if (isset($_GET['status']) && $_GET['status'] == 'error') echo "<p class='error'>The requested vault operation could not be completed.</p>"; ?>
 <?php if (isset($_GET['status']) && $_GET['status'] === 'validation' && ($_GET['field'] ?? '') === 'url') echo "<p class='error'>Please enter a valid HTTPS URL, or leave the URL field blank.</p>"; ?>
 <?php if (isset($_GET['status']) && $_GET['status'] === 'validation' && ($_GET['field'] ?? '') === 'required') echo "<p class='error'>Please complete the required fields before saving.</p>"; ?>
@@ -72,8 +92,28 @@ if ($activeVaultView !== 'records' && !in_array($activeVaultView, $vaultCategori
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
         <a href="index.php?pane=view" class="btn" style="background:#f1f3f5;color:#212529;border:1px solid #dee2e6;text-decoration:none;">← Vault</a>
         <h3 style="margin:0;color:#212529;">📁 <?php echo htmlspecialchars($activeVaultView === 'records' ? 'Records' : $activeVaultView, ENT_QUOTES, 'UTF-8'); ?></h3>
+        <?php if ($activeVaultView !== 'records'): ?>
+            <button type="button" class="btn" onclick="showCreateFolderForm()" style="background:#f1f3f5;color:#212529;border:1px solid #dee2e6;">📁 Create Folder</button>
+        <?php endif; ?>
         <a href="index.php?pane=add&amp;vault_view=<?php echo rawurlencode($activeVaultView); ?>" class="btn btn-primary vault-add-record-button" style="text-decoration:none;"><span class="vault-add-record-icon" aria-hidden="true">+</span> Add Vault Record</a>
     </div>
+    <?php if ($activeVaultView !== 'records'): ?>
+        <form id="create-folder-form" method="POST" action="vault_category_actions.php" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 16px;padding:12px;background:#f8f9fa;border:1px solid #e3e6f0;border-radius:8px;">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+            <input type="hidden" name="action" value="create_folder">
+            <input type="hidden" name="category" value="<?php echo htmlspecialchars($activeVaultView, ENT_QUOTES, 'UTF-8'); ?>">
+            <input type="text" id="new-folder-name" name="folder" class="input-field" placeholder="Folder name" maxlength="50" required style="flex:1 1 220px;width:auto;min-width:0;margin:0;">
+            <button type="submit" class="btn btn-primary" style="white-space:nowrap;">Create Folder</button>
+            <button type="button" class="btn" onclick="hideCreateFolderForm()" style="background:#fff;color:#495057;border:1px solid #dee2e6;white-space:nowrap;">Cancel</button>
+        </form>
+        <?php if ($activeCategoryFolders !== []): ?>
+            <div class="vault-folder-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin:0 0 18px;">
+                <?php foreach ($activeCategoryFolders as $folder): ?>
+                    <div class="vault-folder-card" style="display:flex;align-items:center;gap:10px;padding:14px 16px;background:#fff;border:1px solid #e3e6f0;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.03);"><span aria-hidden="true" style="font-size:22px;">📁</span><span style="font-weight:600;color:#212529;overflow-wrap:anywhere;"> <?php echo htmlspecialchars($folder, ENT_QUOTES, 'UTF-8'); ?></span></div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    <?php endif; ?>
     <?php $visiblePasswords = $activeVaultView === 'records' ? $passwords : array_values(array_filter($passwords, static fn(array $row): bool => trim((string)($row['category'] ?? '')) === $activeVaultView)); ?>
     <?php if (empty($visiblePasswords)): ?>
         <p id="vault-empty-message" style="text-align:center;padding:20px;color:#777;"><?php echo $activeVaultView === 'records' ? 'Secure vault database is currently empty.' : 'No records in this category yet.'; ?></p>
@@ -111,6 +151,8 @@ if ($activeVaultView !== 'records' && !in_array($activeVaultView, $vaultCategori
     window.toggleVaultMobileMenu=function(){var menu=getMenu(),toggle=getToggle();if(!menu||!toggle)return;var open=menu.classList.toggle('mobile-open');toggle.setAttribute('aria-expanded',open?'true':'false');};
     window.showAddCategoryForm=function(){var button=document.getElementById('show-add-category'),form=document.getElementById('add-category-form'),input=document.getElementById('new-category-name');if(!button||!form)return;button.style.display='none';form.style.display='flex';if(input)input.focus();};
     window.hideAddCategoryForm=function(){var button=document.getElementById('show-add-category'),form=document.getElementById('add-category-form'),input=document.getElementById('new-category-name');if(!button||!form)return;form.style.display='none';button.style.display='flex';if(input)input.value='';};
+    window.showCreateFolderForm=function(){var button=document.querySelector('[onclick="showCreateFolderForm()"]'),form=document.getElementById('create-folder-form'),input=document.getElementById('new-folder-name');if(!form)return;if(button)button.style.display='none';form.style.display='flex';if(input)input.focus();};
+    window.hideCreateFolderForm=function(){var button=document.querySelector('[onclick="showCreateFolderForm()"]'),form=document.getElementById('create-folder-form'),input=document.getElementById('new-folder-name');if(!form)return;form.style.display='none';if(button)button.style.display='inline-block';if(input)input.value='';};
     function setupSystemOptions(){
         var panel=document.getElementById('settings-panel');
         if(!panel||panel.dataset.optionsReady==='1')return;
