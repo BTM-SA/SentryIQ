@@ -7,6 +7,7 @@ namespace SentryIQCloud\Gallery;
 use Throwable;
 use RuntimeException;
 use SentryIQCloud\Gallery\Image\ImageProcessor;
+use SentryIQCloud\Gallery\Image\ImageDerivativeGenerator;
 use SentryIQCloud\Gallery\Image\ThumbnailGenerator;
 use SentryIQCloud\Gallery\Storage\DuplicateIndex;
 use SentryIQCloud\Gallery\Storage\PhotoMetadataStore;
@@ -17,6 +18,7 @@ final class UploadService
 {
     public function __construct(
         private readonly ImageProcessor $processor,
+        private readonly ImageDerivativeGenerator $savedImageGenerator,
         private readonly ThumbnailGenerator $thumbnailGenerator,
         private readonly DuplicateIndex $duplicateIndex,
         private readonly PhotoStorage $storage,
@@ -40,9 +42,8 @@ final class UploadService
         $stored = null;
 
         try {
-            // Decode directly from the PHP upload temp file instead of first
-            // loading the complete source image into another memory buffer.
-            $webp = $this->processor->toWebpFromFile($temporaryPath);
+            $normalizedWebp = $this->processor->toWebpFromFile($temporaryPath);
+            $webp = $this->savedImageGenerator->fromWebp($normalizedWebp);
             $hash = $this->processor->contentHash($webp);
             $existingPhotoId = $this->duplicateIndex->find($hash);
             if ($existingPhotoId !== null) {
@@ -53,7 +54,6 @@ final class UploadService
                 ];
             }
 
-            // Reserve the lowest available generated name only after duplicate detection.
             $filename = $this->nameAllocator->next();
             $thumbnail = $this->thumbnailGenerator->fromWebp($webp);
             $stored = $this->storage->store($webp, $thumbnail, $hash, $filename);
@@ -73,7 +73,6 @@ final class UploadService
                 throw $exception;
             }
 
-            // The physical file now owns this number; remove only the temporary reservation.
             $this->nameAllocator->release($filename);
             $filename = null;
 
@@ -88,15 +87,8 @@ final class UploadService
                 @unlink($stored['path']);
                 @unlink($stored['thumbnail_path']);
             }
-
-            if ($filename !== null) {
-                $this->nameAllocator->release($filename);
-            }
-
-            if ($exception instanceof RuntimeException) {
-                return ['status' => 'rejected', 'message' => $exception->getMessage()];
-            }
-
+            if ($filename !== null) $this->nameAllocator->release($filename);
+            if ($exception instanceof RuntimeException) return ['status' => 'rejected', 'message' => $exception->getMessage()];
             throw $exception;
         }
     }
