@@ -109,7 +109,8 @@
         select.innerHTML = '<option value="">Category level (no folder)</option>';
         group.appendChild(label);
         group.appendChild(select);
-        categorySelect.closest('.form-group').insertAdjacentElement('afterend', group);
+        var categoryGroup = categorySelect.closest('.form-group');
+        if (categoryGroup) categoryGroup.insertAdjacentElement('afterend', group);
 
         function refresh() {
             var category = categorySelect.value;
@@ -263,19 +264,38 @@
         });
     }
 
-    function categoryActionUrl(action, category) {
-        return 'index.php?pane=records&vault_view=' + encodeURIComponent(category) + '&vault_action=' + encodeURIComponent(action);
+    function menuButton(label, handler, destructive) {
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = label;
+        button.style.cssText = 'display:block;width:100%;padding:11px 12px;text-align:left;border:0;border-radius:10px;background:transparent;color:' + (destructive ? '#b02a37' : '#212529') + ';font-size:15px;cursor:pointer;';
+        button.addEventListener('mouseenter', function () {
+            button.style.background = 'rgba(0,0,0,.05)';
+        });
+        button.addEventListener('mouseleave', function () {
+            button.style.background = 'transparent';
+        });
+        button.addEventListener('click', function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            handler();
+        });
+        return button;
     }
 
-    function addCategoryOptions(card, category) {
-        if (!card || card.getAttribute('data-category-options-wired') === '1') return;
-        card.setAttribute('data-category-options-wired', '1');
+    function wireCategoryHeaderOptions() {
+        var category = currentCategory();
+        var params = new URLSearchParams(window.location.search);
+        if (!category || category === 'records' || params.get('vault_folder')) return;
 
-        var wrapper = document.createElement('div');
-        wrapper.className = 'vault-category-card-wrap';
-        wrapper.style.cssText = 'position:relative;min-width:0;';
-        card.parentNode.insertBefore(wrapper, card);
-        wrapper.appendChild(card);
+        var header = document.querySelector('#records-panel > div:first-child');
+        var title = header ? header.querySelector('h3') : null;
+        if (!header || !title || title.getAttribute('data-category-options-wired') === '1') return;
+        title.setAttribute('data-category-options-wired', '1');
+
+        var wrapper = document.createElement('span');
+        wrapper.className = 'vault-category-header-options';
+        wrapper.style.cssText = 'position:relative;display:flex;align-items:center;gap:8px;flex:0 0 auto;';
 
         var optionsButton = document.createElement('button');
         optionsButton.type = 'button';
@@ -283,41 +303,47 @@
         optionsButton.textContent = 'Options';
         optionsButton.setAttribute('aria-expanded', 'false');
         optionsButton.setAttribute('aria-label', 'Options for ' + category);
-        optionsButton.style.cssText = 'display:none;position:absolute;right:8px;top:8px;z-index:5;min-height:38px;padding:7px 12px;border:1px solid #dee2e6;border-radius:10px;background:#fff;color:#212529;font-weight:600;box-shadow:0 3px 8px rgba(0,0,0,.10);';
+        optionsButton.style.cssText = 'display:none;min-height:38px;padding:7px 12px;border:1px solid #dee2e6;border-radius:10px;background:#fff;color:#212529;font-weight:600;box-shadow:0 3px 8px rgba(0,0,0,.10);cursor:pointer;';
 
         var menu = document.createElement('div');
         menu.className = 'vault-category-options-menu';
-        menu.style.cssText = 'display:none;position:absolute;right:8px;top:52px;z-index:20;min-width:190px;padding:7px;border:1px solid #dee2e6;border-radius:12px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.16);';
-
-        function menuButton(label, handler, destructive) {
-            var button = document.createElement('button');
-            button.type = 'button';
-            button.textContent = label;
-            button.style.cssText = 'display:block;width:100%;padding:11px 12px;text-align:left;border:0;border-radius:8px;background:transparent;color:' + (destructive ? '#b02a37' : '#212529') + ';font-size:15px;cursor:pointer;';
-            button.addEventListener('click', function (event) {
-                event.preventDefault();
-                event.stopPropagation();
-                menu.style.display = 'none';
-                optionsButton.setAttribute('aria-expanded', 'false');
-                handler();
-            });
-            return button;
-        }
+        menu.style.cssText = 'display:none;position:absolute;right:0;top:calc(100% + 8px);z-index:100;min-width:200px;padding:7px;border:1px solid #dee2e6;border-radius:12px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.16);';
 
         menu.appendChild(menuButton('＋ Add Record', function () {
+            menu.style.display = 'none';
+            optionsButton.setAttribute('aria-expanded', 'false');
             window.location.href = 'index.php?pane=add&vault_view=' + encodeURIComponent(category);
         }, false));
+
         menu.appendChild(menuButton('📁 Create Folder', function () {
-            window.location.href = categoryActionUrl('create_folder', category);
+            menu.style.display = 'none';
+            optionsButton.setAttribute('aria-expanded', 'false');
+            var form = document.getElementById('create-folder-form');
+            if (typeof window.showCreateFolderForm === 'function') {
+                window.showCreateFolderForm();
+            } else if (form) {
+                form.style.display = 'flex';
+            }
+            if (form) {
+                form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                var input = form.querySelector('input[name="folder"]');
+                if (input) input.focus();
+            }
         }, false));
+
         menu.appendChild(menuButton('✏ Rename', function () {
+            menu.style.display = 'none';
+            optionsButton.setAttribute('aria-expanded', 'false');
             var newName = window.prompt('Rename category:', category);
             if (newName === null) return;
             newName = newName.trim();
             if (!newName || newName === category) return;
             postAction('rename_category', { category: category, new_category: newName });
         }, false));
+
         menu.appendChild(menuButton('🗑 Delete', function () {
+            menu.style.display = 'none';
+            optionsButton.setAttribute('aria-expanded', 'false');
             confirmDelete('Delete the category "' + category + '"? Its records will be kept but moved to uncategorised.', function () {
                 postAction('delete_category', { category: category });
             });
@@ -333,6 +359,12 @@
 
         wrapper.appendChild(optionsButton);
         wrapper.appendChild(menu);
+        title.appendChild(wrapper);
+        title.style.display = 'flex';
+        title.style.alignItems = 'center';
+        title.style.justifyContent = 'space-between';
+        title.style.gap = '10px';
+        title.style.width = '100%';
 
         document.addEventListener('click', function (event) {
             if (!wrapper.contains(event.target)) {
@@ -341,7 +373,7 @@
             }
         });
 
-        function updateCategoryOptionsMode() {
+        function updateMode() {
             var mobile = window.matchMedia('(max-width: 700px)').matches;
             optionsButton.style.display = mobile ? 'block' : 'none';
             if (!mobile) {
@@ -349,8 +381,8 @@
                 optionsButton.setAttribute('aria-expanded', 'false');
             }
         }
-        updateCategoryOptionsMode();
-        window.addEventListener('resize', updateCategoryOptionsMode);
+        updateMode();
+        window.addEventListener('resize', updateMode);
     }
 
     function wireCategoryCards() {
@@ -361,7 +393,8 @@
             if (!match) return;
             var category = decodeURIComponent(match[1]);
             if (!category) return;
-            addCategoryOptions(card, category);
+            card.setAttribute('data-category-wired', '1');
+            card.style.cursor = 'pointer';
         });
     }
 
@@ -420,6 +453,7 @@
         styleCreateFolderForm();
         wireFolderCards();
         wireCategoryCards();
+        wireCategoryHeaderOptions();
         fetchFolderData().then(function (data) {
             wireAddAndEditForms(data);
             applyFolderView(data);
