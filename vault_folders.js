@@ -106,6 +106,7 @@
         select.name = 'folder';
         select.className = 'input-field';
         select.disabled = true;
+        select.innerHTML = '<option value="">Category level (no folder)</option>';
         group.appendChild(label);
         group.appendChild(select);
         categorySelect.closest('.form-group').insertAdjacentElement('afterend', group);
@@ -178,7 +179,7 @@
         card.appendChild(action);
         function updateSwipeMode() {
             var mobile = window.matchMedia('(max-width: 700px)').matches;
-            action.style.display = mobile ? 'flex' : 'none';
+            action.style.display = 'none';
             if (!mobile) card.style.transform = '';
         }
         updateSwipeMode();
@@ -271,24 +272,7 @@
             var category = decodeURIComponent(match[1]);
             if (!category) return;
             card.setAttribute('data-category-wired', '1');
-            var controls = document.createElement('span');
-            controls.style.cssText = 'display:flex;justify-content:center;gap:6px;margin-top:8px;';
-            controls.appendChild(managementButton('Rename', function () {
-                var newName = window.prompt('Rename category:', category);
-                if (newName === null) return;
-                newName = newName.trim();
-                if (!newName || newName === category) return;
-                postAction('rename_category', { category: category, new_category: newName });
-            }));
-            controls.appendChild(managementButton('Delete', function () {
-                confirmDelete('Delete the category "' + category + '"? Its folders will be removed and its records will be kept as uncategorised.', function () {
-                    postAction('delete_category', { category: category });
-                });
-            }));
-            card.appendChild(controls);
-            addSwipeDelete(card, 'Delete the category "' + category + '"? Its folders will be removed and its records will be kept as uncategorised.', function () {
-                postAction('delete_category', { category: category });
-            });
+            /* Category cards are navigation-only. Management controls are intentionally omitted. */
         });
     }
 
