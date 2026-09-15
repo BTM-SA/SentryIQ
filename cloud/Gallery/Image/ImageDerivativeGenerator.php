@@ -12,6 +12,7 @@ final class ImageDerivativeGenerator
         private readonly int $maxDimension,
         private readonly int $webpQuality,
         private readonly bool $preserveTransparency = true,
+        private readonly bool $forceEncode = false,
     ) {
         if ($this->maxDimension < 0 || $this->webpQuality < 1 || $this->webpQuality > 100) {
             throw new RuntimeException('Invalid image derivative configuration.');
@@ -28,14 +29,20 @@ final class ImageDerivativeGenerator
             $width = imagesx($image);
             $height = imagesy($image);
             if ($width < 1 || $height < 1) throw new RuntimeException('Invalid image dimensions.');
-            if ($this->maxDimension === 0 || max($width, $height) <= $this->maxDimension) return $webp;
+            $needsResize = $this->maxDimension > 0 && max($width, $height) > $this->maxDimension;
+            if (!$needsResize && !$this->forceEncode) return $webp;
 
-            $scale = $this->maxDimension / max($width, $height);
-            $newWidth = max(1, (int)round($width * $scale));
-            $newHeight = max(1, (int)round($height * $scale));
+            if ($needsResize) {
+                $scale = $this->maxDimension / max($width, $height);
+                $newWidth = max(1, (int)round($width * $scale));
+                $newHeight = max(1, (int)round($height * $scale));
+            } else {
+                $newWidth = $width;
+                $newHeight = $height;
+            }
+
             $canvas = imagecreatetruecolor($newWidth, $newHeight);
             if ($canvas === false) throw new RuntimeException('Unable to allocate image canvas.');
-
             try {
                 imagealphablending($canvas, false);
                 imagesavealpha($canvas, $this->preserveTransparency);
