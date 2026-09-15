@@ -44,6 +44,15 @@ $csrf = sentryiq_csrf_token();
 <meta property="og:type" content="website"><meta property="og:title" content="SentryIQ"><meta property="og:description" content="SentryIQ secure password vault and credential management."><meta property="og:image" content="sentryiq-icon.php"><meta property="og:image:type" content="image/png"><meta property="og:image:alt" content="SentryIQ">
 <meta name="twitter:card" content="summary"><meta name="twitter:title" content="SentryIQ"><meta name="twitter:description" content="SentryIQ secure password vault and credential management."><meta name="twitter:image" content="sentryiq-icon.php">
 <title>SentryIQ</title><link rel="stylesheet" href="pm_style.css">
+<style>
+#records-panel > div:first-child {
+    margin: 2em 0 16px !important;
+}
+#records-panel > div:first-child h3 {
+    order: 10;
+    flex-basis: 100%;
+}
+</style>
 <script src="vault_folders.js"></script>
 <script>
 const vaultTabLabels={view:'Vault',records:'Records',add:'Add Entry',settings:'System',details:'Entry Inspection'};
