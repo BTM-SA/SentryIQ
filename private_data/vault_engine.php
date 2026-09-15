@@ -172,6 +172,22 @@ function normalize_vault_records(array $records): array
                 )))
                 : [];
 
+            $folders = [];
+            if (is_array($record['folders'] ?? null)) {
+                foreach ($record['folders'] as $folderCategory => $folderList) {
+                    if (!is_string($folderCategory) || !is_array($folderList)) continue;
+
+                    $cleanFolders = array_values(array_unique(array_filter(
+                        array_map(static fn($value): string => trim((string)$value), $folderList),
+                        static fn(string $value): bool => $value !== ''
+                    )));
+
+                    if ($cleanFolders !== []) {
+                        $folders[trim($folderCategory)] = $cleanFolders;
+                    }
+                }
+            }
+
             $normalized[] = [
                 'id' => 'sys_config_node',
                 'type' => 'system_config',
@@ -179,6 +195,7 @@ function normalize_vault_records(array $records): array
                 '2fa_email' => trim((string)($record['2fa_email'] ?? '')),
                 'imap_password' => (string)($record['imap_password'] ?? ''),
                 'categories' => $categories,
+                'folders' => $folders,
             ];
             continue;
         }
@@ -299,7 +316,7 @@ function vault_read_envelope(): array|false
     if (($envelope['kdf']['name'] ?? '') !== 'argon2id13') throw new RuntimeException('vault_read_envelope:kdf_name_invalid');
     if (!isset($envelope['cipher']) || !is_array($envelope['cipher'])) throw new RuntimeException('vault_read_envelope:cipher_invalid');
     if (($envelope['cipher']['name'] ?? '') !== 'aes-256-gcm') throw new RuntimeException('vault_read_envelope:cipher_name_invalid');
-    if (($envelope['cipher']['nonce_bytes'] ?? null) !== SENTRYIQ_GCM_NONCE_BYTES) throw new RuntimeException('vault_read_envelope:nonce_bytes_invalid');
+    if (($envelope['cipher']['nonce_bytes'] ?? null) !== SENTRYQ_GCM_NONCE_BYTES) throw new RuntimeException('vault_read_envelope:nonce_bytes_invalid');
     if (($envelope['cipher']['tag_bytes'] ?? null) !== SENTRYIQ_GCM_TAG_BYTES) throw new RuntimeException('vault_read_envelope:tag_bytes_invalid');
 
     $salt = vault_decode_base64((string)($envelope['kdf']['salt'] ?? ''), SODIUM_CRYPTO_PWHASH_SALTBYTES);
