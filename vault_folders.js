@@ -263,6 +263,96 @@
         });
     }
 
+    function categoryActionUrl(action, category) {
+        return 'index.php?pane=records&vault_view=' + encodeURIComponent(category) + '&vault_action=' + encodeURIComponent(action);
+    }
+
+    function addCategoryOptions(card, category) {
+        if (!card || card.getAttribute('data-category-options-wired') === '1') return;
+        card.setAttribute('data-category-options-wired', '1');
+
+        var wrapper = document.createElement('div');
+        wrapper.className = 'vault-category-card-wrap';
+        wrapper.style.cssText = 'position:relative;min-width:0;';
+        card.parentNode.insertBefore(wrapper, card);
+        wrapper.appendChild(card);
+
+        var optionsButton = document.createElement('button');
+        optionsButton.type = 'button';
+        optionsButton.className = 'vault-category-options-button';
+        optionsButton.textContent = 'Options';
+        optionsButton.setAttribute('aria-expanded', 'false');
+        optionsButton.setAttribute('aria-label', 'Options for ' + category);
+        optionsButton.style.cssText = 'display:none;position:absolute;right:8px;top:8px;z-index:5;min-height:38px;padding:7px 12px;border:1px solid #dee2e6;border-radius:10px;background:#fff;color:#212529;font-weight:600;box-shadow:0 3px 8px rgba(0,0,0,.10);';
+
+        var menu = document.createElement('div');
+        menu.className = 'vault-category-options-menu';
+        menu.style.cssText = 'display:none;position:absolute;right:8px;top:52px;z-index:20;min-width:190px;padding:7px;border:1px solid #dee2e6;border-radius:12px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.16);';
+
+        function menuButton(label, handler, destructive) {
+            var button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = label;
+            button.style.cssText = 'display:block;width:100%;padding:11px 12px;text-align:left;border:0;border-radius:8px;background:transparent;color:' + (destructive ? '#b02a37' : '#212529') + ';font-size:15px;cursor:pointer;';
+            button.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                menu.style.display = 'none';
+                optionsButton.setAttribute('aria-expanded', 'false');
+                handler();
+            });
+            return button;
+        }
+
+        menu.appendChild(menuButton('＋ Add Record', function () {
+            window.location.href = 'index.php?pane=add&vault_view=' + encodeURIComponent(category);
+        }, false));
+        menu.appendChild(menuButton('📁 Create Folder', function () {
+            window.location.href = categoryActionUrl('create_folder', category);
+        }, false));
+        menu.appendChild(menuButton('✏ Rename', function () {
+            var newName = window.prompt('Rename category:', category);
+            if (newName === null) return;
+            newName = newName.trim();
+            if (!newName || newName === category) return;
+            postAction('rename_category', { category: category, new_category: newName });
+        }, false));
+        menu.appendChild(menuButton('🗑 Delete', function () {
+            confirmDelete('Delete the category "' + category + '"? Its records will be kept but moved to uncategorised.', function () {
+                postAction('delete_category', { category: category });
+            });
+        }, true));
+
+        optionsButton.addEventListener('click', function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            var open = menu.style.display === 'block';
+            menu.style.display = open ? 'none' : 'block';
+            optionsButton.setAttribute('aria-expanded', open ? 'false' : 'true');
+        });
+
+        wrapper.appendChild(optionsButton);
+        wrapper.appendChild(menu);
+
+        document.addEventListener('click', function (event) {
+            if (!wrapper.contains(event.target)) {
+                menu.style.display = 'none';
+                optionsButton.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        function updateCategoryOptionsMode() {
+            var mobile = window.matchMedia('(max-width: 700px)').matches;
+            optionsButton.style.display = mobile ? 'block' : 'none';
+            if (!mobile) {
+                menu.style.display = 'none';
+                optionsButton.setAttribute('aria-expanded', 'false');
+            }
+        }
+        updateCategoryOptionsMode();
+        window.addEventListener('resize', updateCategoryOptionsMode);
+    }
+
     function wireCategoryCards() {
         document.querySelectorAll('#view-panel a[href*="vault_view="]').forEach(function (card) {
             if (card.getAttribute('data-category-wired') === '1') return;
@@ -271,8 +361,7 @@
             if (!match) return;
             var category = decodeURIComponent(match[1]);
             if (!category) return;
-            card.setAttribute('data-category-wired', '1');
-            /* Category cards are navigation-only. Management controls are intentionally omitted. */
+            addCategoryOptions(card, category);
         });
     }
 
@@ -316,6 +405,16 @@
         if (back) back.href = 'index.php?pane=records&vault_view=' + encodeURIComponent(category);
     }
 
+    function applyCategoryAction() {
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('vault_action') !== 'create_folder') return;
+        var form = document.getElementById('create-folder-form');
+        if (!form) return;
+        form.style.display = 'flex';
+        var input = form.querySelector('input[name="folder"]');
+        if (input) input.focus();
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         showManagementStatus();
         styleCreateFolderForm();
@@ -324,8 +423,10 @@
         fetchFolderData().then(function (data) {
             wireAddAndEditForms(data);
             applyFolderView(data);
+            applyCategoryAction();
         }).catch(function (error) {
             console.error('SentryIQ folder data initialization failed:', error);
+            applyCategoryAction();
         });
     });
 })();
