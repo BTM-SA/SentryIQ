@@ -41,6 +41,21 @@ function save_passwords(array $records): bool
     }
 }
 
+function vault_action_folder_for_category(array $passwords, string $category, string $folder): string
+{
+    $category = trim($category);
+    $folder = trim($folder);
+    if ($category === '' || $folder === '') return '';
+    foreach ($passwords as $entry) {
+        if (($entry['type'] ?? '') !== 'system_config' || !is_array($entry['folders'] ?? null)) continue;
+        foreach ($entry['folders'] as $folderCategory => $folderList) {
+            if (!is_string($folderCategory) || !is_array($folderList) || strcasecmp(trim($folderCategory), $category) !== 0) continue;
+            foreach ($folderList as $allowedFolder) if (strcasecmp(trim((string)$allowedFolder), $folder) === 0) return trim((string)$allowedFolder);
+        }
+    }
+    return '';
+}
+
 $action = (string)($_POST['action'] ?? '');
 $passwords = load_passwords();
 if ($passwords === false) { sentryiq_lock_vault(); http_response_code(503); exit('Vault unavailable.'); }
@@ -80,30 +95,33 @@ if ($action === 'add') {
     $rawUrl = trim((string)($_POST['url'] ?? ''));
     $notes = trim((string)($_POST['notes'] ?? ''));
     $category = trim((string)($_POST['category'] ?? ''));
+    $folder = trim((string)($_POST['folder'] ?? ''));
     $validCategories = [];
     foreach ($passwords as $entry) if (($entry['type'] ?? '') === 'system_config' && is_array($entry['categories'] ?? null)) $validCategories = array_values(array_filter(array_map('strval', $entry['categories'])));
     if ($category !== '' && !in_array($category, $validCategories, true)) $category = '';
+    if ($category === '') $folder = '';
+    elseif ($folder !== '') { $folder = vault_action_folder_for_category($passwords, $category, $folder); if ($folder === '') { header('Location: index.php?status=error&pane=add'); exit; } }
 
-    vault_action_diagnostic('VAULT_RECORD_ADD_STARTED', ['label_present'=>$label !== '','username_present'=>$username !== '','password_present'=>$password !== '','url_present'=>$rawUrl !== '','notes_present'=>$notes !== '','category_present'=>$category !== '','record_count_before'=>count($passwords)]);
     $url = $rawUrl === '' ? '' : vault_validate_url($rawUrl);
     if ($label === '' || $password === '' || $url === false) { header('Location: index.php?status=error&pane=add'); exit; }
 
     $entryId = bin2hex(random_bytes(16));
     $icon = ['icon_type'=>null,'icon_path'=>null,'icon_source'=>null,'icon_fetched_at'=>null];
     if ($url !== '') $icon = cache_vault_icon($url, $entryId);
-    $passwords[] = ['id'=>$entryId,'label'=>$label,'category'=>$category,'username'=>$username,'password'=>$password,'url'=>$url,'notes'=>$notes,'icon_type'=>$icon['icon_type'],'icon_path'=>$icon['icon_path'],'icon_source'=>$icon['icon_source'],'icon_fetched_at'=>$icon['icon_fetched_at'],'created_at'=>date('c'),'updated_at'=>null];
+    $passwords[] = ['id'=>$entryId,'label'=>$label,'category'=>$category,'folder'=>$folder,'username'=>$username,'password'=>$password,'url'=>$url,'notes'=>$notes,'icon_type'=>$icon['icon_type'],'icon_path'=>$icon['icon_path'],'icon_source'=>$icon['icon_source'],'icon_fetched_at'=>$icon['icon_fetched_at'],'created_at'=>date('c'),'updated_at'=>null];
     if (!save_passwords($passwords)) { header('Location: index.php?status=error&pane=add'); exit; }
-    log_security_event('VAULT_RECORD_CREATED', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown', ['entry_id'=>$entryId,'category'=>$category]);
+    log_security_event('VAULT_RECORD_CREATED', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown', ['entry_id'=>$entryId,'category'=>$category,'folder'=>$folder]);
     header('Location: index.php?status=saved&pane=view'); exit;
 }
 
 if ($action === 'edit') {
-    $entryId = trim((string)($_POST['entry_id'] ?? '')); $label = trim((string)($_POST['label'] ?? '')); $username = trim((string)($_POST['username'] ?? '')); $password = (string)($_POST['password'] ?? ''); $rawUrl = trim((string)($_POST['url'] ?? '')); $notes = trim((string)($_POST['notes'] ?? '')); $category = trim((string)($_POST['category'] ?? '')); $found = false;
+    $entryId = trim((string)($_POST['entry_id'] ?? '')); $label = trim((string)($_POST['label'] ?? '')); $username = trim((string)($_POST['username'] ?? '')); $password = (string)($_POST['password'] ?? ''); $rawUrl = trim((string)($_POST['url'] ?? '')); $notes = trim((string)($_POST['notes'] ?? '')); $category = trim((string)($_POST['category'] ?? '')); $folder = trim((string)($_POST['folder'] ?? '')); $found = false;
     if ($entryId !== '' && $label !== '' && $password !== '') {
         foreach ($passwords as $index => $item) {
             if (($item['id'] ?? '') !== $entryId) continue; $found = true; $oldUrl = (string)($item['url'] ?? ''); $newUrl = $rawUrl === '' ? $oldUrl : vault_validate_url($rawUrl); if ($newUrl === false) { header('Location: index.php?status=error&pane=view'); exit; }
             $validCategories=[]; foreach ($passwords as $entry) if (($entry['type'] ?? '') === 'system_config' && is_array($entry['categories'] ?? null)) $validCategories=array_values(array_filter(array_map('strval',$entry['categories']))); if ($category !== '' && !in_array($category,$validCategories,true)) $category='';
-            $passwords[$index]['label']=$label; $passwords[$index]['category']=$category; $passwords[$index]['username']=$username; $passwords[$index]['password']=$password; $passwords[$index]['url']=$newUrl; $passwords[$index]['notes']=$notes;
+            if ($category === '') $folder = ''; elseif ($folder !== '') { $folder = vault_action_folder_for_category($passwords, $category, $folder); if ($folder === '') $folder = ''; }
+            $passwords[$index]['label']=$label; $passwords[$index]['category']=$category; $passwords[$index]['folder']=$folder; $passwords[$index]['username']=$username; $passwords[$index]['password']=$password; $passwords[$index]['url']=$newUrl; $passwords[$index]['notes']=$notes;
             if ($newUrl !== $oldUrl) { $oldIcon=(string)($item['icon_path'] ?? ''); if ($oldIcon!=='' && is_file($oldIcon) && str_starts_with($oldIcon,SENTRYIQ_DATA_DIR.'/vault_icons/')) @unlink($oldIcon); $icon=['icon_type'=>null,'icon_path'=>null,'icon_source'=>null,'icon_fetched_at'=>null]; if ($newUrl!=='') $icon=cache_vault_icon($newUrl,$entryId); $passwords[$index]['icon_type']=$icon['icon_type']; $passwords[$index]['icon_path']=$icon['icon_path']; $passwords[$index]['icon_source']=$icon['icon_source']; $passwords[$index]['icon_fetched_at']=$icon['icon_fetched_at']; }
             $passwords[$index]['updated_at']=date('c'); break;
         }
@@ -127,7 +145,7 @@ if ($action === 'save_settings') {
     $updated=false; foreach($passwords as $index=>$entry){if(($entry['type'] ?? '')!=='system_config')continue;$passwords[$index]['app_username']=$username;$passwords[$index]['2fa_email']=$email;if($imapPassword!=='')$passwords[$index]['imap_password']=$imapPassword;$updated=true;break;} if(!$updated)$passwords[]=['id'=>'sys_config_node','type'=>'system_config','app_username'=>$username,'2fa_email'=>$email,'imap_password'=>$imapPassword]; if(!save_passwords($passwords)){header('Location: index.php?status=error&pane=settings');exit;}
     $_SESSION['app_username']=$username; $effectiveDirectory=SENTRYIQ_DATA_DIR; $movedDirectory=false;
     if($requestedDirectory!==''&&$requestedDirectory!==SENTRYIQ_DATA_DIR){try{$trustedRequestedDirectory=sentryiq_is_trusted_data_directory($requestedDirectory);}catch(Throwable $exception){$trustedRequestedDirectory=false;}if(!$trustedRequestedDirectory&&!is_dir($requestedDirectory)&&@mkdir($requestedDirectory,0700,true))@chmod($requestedDirectory,0700);try{$trustedRequestedDirectory=sentryiq_is_trusted_data_directory($requestedDirectory);}catch(Throwable $exception){$trustedRequestedDirectory=false;}if($trustedRequestedDirectory){$newDir=rtrim($requestedDirectory,'/');$ok=true;if(!@copy(DATA_FILE,$newDir.'/passwords.enc'))$ok=false;if(is_file(LOG_FILE)&&!@copy(LOG_FILE,$newDir.'/security_audit.log'))$ok=false;if(defined('DIAGNOSTIC_LOG_FILE')&&is_file(DIAGNOSTIC_LOG_FILE)&&!@copy(DIAGNOSTIC_LOG_FILE,$newDir.'/diagnostic.log'))$ok=false;@chmod($newDir.'/passwords.enc',0600);if(is_file($newDir.'/security_audit.log'))@chmod($newDir.'/security_audit.log',0600);if(is_file($newDir.'/diagnostic.log'))@chmod($newDir.'/diagnostic.log',0600);foreach(['vault_engine.php','email_template.php','vault_icon_cache.php'] as $runtimeFile){if(!@copy(SENTRYIQ_DATA_DIR.'/'.$runtimeFile,$newDir.'/'.$runtimeFile))$ok=false;@chmod($newDir.'/'.$runtimeFile,0600);}$oldIconDir=SENTRYIQ_DATA_DIR.'/vault_icons';$newIconDir=$newDir.'/vault_icons';if(is_dir($oldIconDir)){if(!is_dir($newIconDir)&&!@mkdir($newIconDir,0700,true))$ok=false;foreach(@scandir($oldIconDir)?:[] as $file){if($file==='.'||$file==='..')continue;$source=$oldIconDir.'/'.$file;$target=$newIconDir.'/'.$file;if(is_file($source)&&!@copy($source,$target))$ok=false;if(is_file($target))@chmod($target,0600);}}else{@mkdir($newIconDir,0700,true);}if($ok){$effectiveDirectory=$newDir;$movedDirectory=true;}}}
-    $privateConfig="<?php\nreturn [\n    'installed' => true,\n    'username' => ".var_export($username,true).",\n    'two_fa_email' => ".var_export((string)$email,true).",\n    'base_url' => ".var_export($requestedBaseUrl,true).",\n    'data_dir' => ".var_export($effectiveDirectory,true).",\n    'two_fa_token_expiry' => 300,\n];\n"; if(@file_put_contents($effectiveDirectory.'/sentryiq_config.php',$privateConfig,LOCK_EX)===false){header('Location: index.php?status=error&pane=settings');exit;}@chmod($effectiveDirectory.'/sentryiq_config.php',0600);$pointer="<?php\nreturn [\n    'data_dir' => ".var_export($effectiveDirectory,true).",\n    'base_url' => ".var_export($requestedBaseUrl,true).",\n];\n";$tmp=__DIR__.'/sentryiq_config.php.tmp-'.bin2hex(random_bytes(8));if(@file_put_contents($tmp,$pointer,LOCK_EX)===false||!@chmod($tmp,0600)||!@rename($tmp,$configFile)){@unlink($tmp);header('Location: index.php?status=error&pane=settings');exit;}if($movedDirectory)log_security_event('DATA_DIRECTORY_CHANGED',get_visitor_ip(),$username,['from'=>SENTRYIQ_DATA_DIR,'to'=>$effectiveDirectory]);log_security_event('SYSTEM_SETTINGS_CHANGED',get_visitor_ip(),$username,['base_url'=>$requestedBaseUrl]);header('Location: index.php?status=saved&pane=settings');exit;
+    $privateConfig="<?php\nreturn [\n    'installed' => true,\n    'username' => ".var_export($username,true).",\n    'two_fa_email' => ".var_export((string)$email,true).",\n    'base_url' => ".var_export($requestedBaseUrl,true).",\n    'data_dir' => ".var_export($effectiveDirectory,true).",\n    'two_fa_token_expiry' => 300,\n];\n"; if(@file_put_contents($effectiveDirectory.'/sentryiq_config.php',$privateConfig,LOCK_EX)===false){header('Location: index.php?status=error&pane=settings');exit;}@chmod($effectiveDirectory.'/sentryiq_config.php',0600);$pointer="<?php\nreturn [\n    'data_dir' => ".var_export($effectiveDirectory,true).",\n    'base_url' => ".var_export($requestedBaseUrl,true).",\n];\n";$tmp=__DIR__.'/sentryiq_config.php.tmp-'.bin2hex(random_bytes(8));if(@file_put_contents($tmp,$pointer,LOCK_EX)===false||!@chmod($tmp,0600)||!@rename($tmp,$configFile)){@unlink($tmp);header('Location: index.php?status=error&pane=settings');exit;}if($movedDirectory)log_security_event('DATA_DIRECTORY_CHANGED',get_visitor_ip(),$username,['from'=>SENTRYIQ_DATA_DIR,'to'=>$effectiveDirectory]);header('Location: index.php?status=saved&pane=settings');exit;
 }
 
 http_response_code(400); exit('Invalid vault action.');
