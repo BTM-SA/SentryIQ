@@ -31,7 +31,6 @@ function gallery_upload_log(string $message): void
 {
     $dataDir = function_exists('sentryiq_data_dir') ? sentryiq_data_dir() : '';
     if ($dataDir === '' || !is_dir($dataDir) || is_link($dataDir)) return;
-
     $path = $dataDir . '/gallery_upload.log';
     $line = '[' . date('c') . '] ' . $message . PHP_EOL;
     @file_put_contents($path, $line, FILE_APPEND | LOCK_EX);
@@ -45,44 +44,16 @@ $currentUploadStage = 'request';
 register_shutdown_function(static function () use (&$currentUploadName, &$currentUploadSize, &$currentUploadStage): void {
     $error = error_get_last();
     if ($error === null) return;
-
     $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR];
     if (!in_array((int)$error['type'], $fatalTypes, true)) return;
-
     $message = trim((string)($error['message'] ?? ''));
     $file = (string)($error['file'] ?? '-');
     $line = (int)($error['line'] ?? 0);
-
-    gallery_upload_log(sprintf(
-        'FATAL type=%d name=%s size=%s stage=%s message=%s at=%s:%d memory_limit=%s memory_usage=%d',
-        (int)$error['type'],
-        $currentUploadName ?? '-',
-        $currentUploadSize === null ? '-' : (string)$currentUploadSize,
-        $currentUploadStage,
-        $message,
-        $file,
-        $line,
-        (string)ini_get('memory_limit'),
-        memory_get_usage(true),
-    ));
-
-    while (ob_get_level() > 0) {
-        ob_end_clean();
-    }
-
+    gallery_upload_log(sprintf('FATAL type=%d name=%s size=%s stage=%s message=%s at=%s:%d memory_limit=%s memory_usage=%d', (int)$error['type'], $currentUploadName ?? '-', $currentUploadSize === null ? '-' : (string)$currentUploadSize, $currentUploadStage, $message, $file, $line, (string)ini_get('memory_limit'), memory_get_usage(true)));
+    while (ob_get_level() > 0) ob_end_clean();
     http_response_code(500);
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'Upload failed due to a server error: ' . ($message !== '' ? $message : 'Unknown fatal PHP error.'),
-        'error_type' => (int)$error['type'],
-        'error_file' => $file,
-        'error_line' => $line,
-        'upload_name' => $currentUploadName,
-        'upload_size' => $currentUploadSize,
-        'upload_stage' => $currentUploadStage,
-        'memory_limit' => (string)ini_get('memory_limit'),
-    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    echo json_encode(['status' => 'error', 'message' => 'Upload failed due to a server error: ' . ($message !== '' ? $message : 'Unknown fatal PHP error.'), 'error_type' => (int)$error['type'], 'error_file' => $file, 'error_line' => $line, 'upload_name' => $currentUploadName, 'upload_size' => $currentUploadSize, 'upload_stage' => $currentUploadStage, 'memory_limit' => (string)ini_get('memory_limit')], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 });
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -95,21 +66,10 @@ sentryiq_require_csrf();
 $postMaxSize = (string)ini_get('post_max_size');
 $postMaxBytes = gallery_ini_bytes($postMaxSize);
 $contentLength = isset($_SERVER['CONTENT_LENGTH']) ? (int)$_SERVER['CONTENT_LENGTH'] : 0;
-gallery_upload_log(sprintf(
-    'REQUEST content_length=%d post_max_size=%s upload_max_filesize=%s memory_limit=%s',
-    $contentLength,
-    $postMaxSize,
-    (string)ini_get('upload_max_filesize'),
-    (string)ini_get('memory_limit'),
-));
-
+gallery_upload_log(sprintf('REQUEST content_length=%d post_max_size=%s upload_max_filesize=%s memory_limit=%s', $contentLength, $postMaxSize, (string)ini_get('upload_max_filesize'), (string)ini_get('memory_limit')));
 if ($postMaxBytes > 0 && $contentLength > $postMaxBytes && empty($_FILES)) {
     gallery_upload_log(sprintf('REJECT reason=POST_TOO_LARGE content_length=%d post_max_bytes=%d', $contentLength, $postMaxBytes));
-    gallery_upload_json([
-        'status' => 'error',
-        'message' => 'The upload is too large for the server. The current PHP POST limit is ' . $postMaxSize . '.',
-        'error_code' => 'POST_TOO_LARGE',
-    ], 413);
+    gallery_upload_json(['status' => 'error', 'message' => 'The upload is too large for the server. The current PHP POST limit is ' . $postMaxSize . '.', 'error_code' => 'POST_TOO_LARGE'], 413);
 }
 
 $configFile = __DIR__ . '/sentryiq_config.php';
@@ -121,6 +81,7 @@ if ($dataDir === '' || !str_starts_with($dataDir, '/') || !is_dir($dataDir) || i
 
 require_once __DIR__ . '/cloud/Gallery/Image/GallerySettings.php';
 require_once __DIR__ . '/cloud/Gallery/Image/ImageProcessor.php';
+require_once __DIR__ . '/cloud/Gallery/Image/ImageDerivativeGenerator.php';
 require_once __DIR__ . '/cloud/Gallery/Image/ThumbnailGenerator.php';
 require_once __DIR__ . '/cloud/Gallery/Storage/DuplicateIndex.php';
 require_once __DIR__ . '/cloud/Gallery/Storage/PhotoMetadataStore.php';
@@ -130,6 +91,7 @@ require_once __DIR__ . '/cloud/Gallery/UploadService.php';
 
 use SentryIQCloud\Gallery\Image\GallerySettings;
 use SentryIQCloud\Gallery\Image\ImageProcessor;
+use SentryIQCloud\Gallery\Image\ImageDerivativeGenerator;
 use SentryIQCloud\Gallery\Image\ThumbnailGenerator;
 use SentryIQCloud\Gallery\Storage\DuplicateIndex;
 use SentryIQCloud\Gallery\Storage\PhotoMetadataStore;
@@ -147,16 +109,11 @@ gallery_upload_log('FILES entries=' . count($errors));
 try {
     $galleryRoot = $dataDir . '/gallery';
     $settings = GallerySettings::load($dataDir);
-    gallery_upload_log(sprintf(
-        'SETTINGS webp_quality=%d thumbnail_quality=%d thumbnail_max_dimension=%d preserve_transparency=%s',
-        (int)$settings['webp_quality'],
-        (int)$settings['thumbnail_quality'],
-        (int)$settings['thumbnail_max_dimension'],
-        $settings['preserve_transparency'] ? 'true' : 'false',
-    ));
+    gallery_upload_log(sprintf('SETTINGS saved_quality=%d saved_max_dimension=%d thumbnail_quality=%d thumbnail_max_dimension=%d preview_quality=%d preview_max_dimension=%d preserve_transparency=%s', (int)$settings['saved_quality'], (int)$settings['saved_max_dimension'], (int)$settings['thumbnail_quality'], (int)$settings['thumbnail_max_dimension'], (int)$settings['preview_quality'], (int)$settings['preview_max_dimension'], $settings['preserve_transparency'] ? 'true' : 'false'));
 
     $service = new UploadService(
-        new ImageProcessor($settings['webp_quality'], $settings['preserve_transparency']),
+        new ImageProcessor($settings['saved_quality'], $settings['preserve_transparency']),
+        new ImageDerivativeGenerator($settings['saved_max_dimension'], $settings['saved_quality'], $settings['preserve_transparency']),
         new ThumbnailGenerator($settings['thumbnail_max_dimension'], $settings['thumbnail_quality'], $settings['preserve_transparency']),
         new DuplicateIndex($galleryRoot . '/duplicate-index.json'),
         new PhotoStorage($galleryRoot),
@@ -169,7 +126,6 @@ try {
         $tmpPath = is_string($tmpNames[$index] ?? null) ? (string)$tmpNames[$index] : '';
         $currentUploadSize = ($tmpPath !== '' && is_file($tmpPath)) ? (int)@filesize($tmpPath) : null;
         $currentUploadStage = 'before_processing';
-
         $dimensions = null;
         $mime = null;
         if ($error === UPLOAD_ERR_OK && $tmpPath !== '' && is_file($tmpPath) && !is_link($tmpPath)) {
@@ -177,38 +133,15 @@ try {
             $mimeValue = $finfo->file($tmpPath);
             $mime = is_string($mimeValue) ? $mimeValue : null;
             $sizeInfo = @getimagesize($tmpPath);
-            if (is_array($sizeInfo) && isset($sizeInfo[0], $sizeInfo[1])) {
-                $dimensions = (string)(int)$sizeInfo[0] . 'x' . (string)(int)$sizeInfo[1];
-            }
+            if (is_array($sizeInfo) && isset($sizeInfo[0], $sizeInfo[1])) $dimensions = (string)(int)$sizeInfo[0] . 'x' . (string)(int)$sizeInfo[1];
         }
-
-        gallery_upload_log(sprintf(
-            'START index=%s name=%s upload_error=%s size=%s mime=%s dimensions=%s',
-            (string)$index,
-            $currentUploadName !== '' ? $currentUploadName : '-',
-            (string)$error,
-            $currentUploadSize === null ? '-' : (string)$currentUploadSize,
-            $mime ?? '-',
-            $dimensions ?? '-',
-        ));
-
+        gallery_upload_log(sprintf('START index=%s name=%s upload_error=%s size=%s mime=%s dimensions=%s', (string)$index, $currentUploadName !== '' ? $currentUploadName : '-', (string)$error, $currentUploadSize === null ? '-' : (string)$currentUploadSize, $mime ?? '-', $dimensions ?? '-'));
         $currentUploadStage = 'processing';
-        $result = $service->upload([
-            'name' => $currentUploadName,
-            'tmp_name' => $tmpPath,
-            'error' => $error,
-        ]);
+        $result = $service->upload(['name' => $currentUploadName, 'tmp_name' => $tmpPath, 'error' => $error]);
         $results[] = $result;
         $currentUploadStage = 'complete';
-
-        gallery_upload_log(sprintf(
-            'RESULT name=%s status=%s message=%s',
-            $currentUploadName !== '' ? $currentUploadName : '-',
-            (string)($result['status'] ?? '-'),
-            trim((string)($result['message'] ?? '')),
-        ));
+        gallery_upload_log(sprintf('RESULT name=%s status=%s message=%s', $currentUploadName !== '' ? $currentUploadName : '-', (string)($result['status'] ?? '-'), trim((string)($result['message'] ?? ''))));
     }
-
     if (function_exists('log_security_event') && function_exists('get_visitor_ip')) {
         try { log_security_event('GALLERY_UPLOAD', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown'); }
         catch (Throwable $exception) { error_log('SentryIQ Gallery audit logging failed: ' . $exception->getMessage()); }
@@ -218,20 +151,8 @@ try {
 } catch (Throwable $exception) {
     $exceptionClass = $exception::class;
     $exceptionMessage = trim($exception->getMessage());
-    gallery_upload_log(sprintf(
-        'EXCEPTION class=%s name=%s size=%s stage=%s message=%s',
-        $exceptionClass,
-        $currentUploadName ?? '-',
-        $currentUploadSize === null ? '-' : (string)$currentUploadSize,
-        $currentUploadStage,
-        $exceptionMessage,
-    ));
+    gallery_upload_log(sprintf('EXCEPTION class=%s name=%s size=%s stage=%s message=%s', $exceptionClass, $currentUploadName ?? '-', $currentUploadSize === null ? '-' : (string)$currentUploadSize, $currentUploadStage, $exceptionMessage));
     error_log('SentryIQ Gallery upload failed: ' . $exceptionClass . ': ' . $exceptionMessage);
-
     $safeMessage = $exceptionMessage !== '' ? $exceptionMessage : 'An unexpected upload processing error occurred.';
-    gallery_upload_json([
-        'status' => 'error',
-        'message' => 'Upload processing failed: ' . $safeMessage,
-        'error_class' => $exceptionClass,
-    ], 500);
+    gallery_upload_json(['status' => 'error', 'message' => 'Upload processing failed: ' . $safeMessage, 'error_class' => $exceptionClass], 500);
 }
