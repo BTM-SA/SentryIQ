@@ -13,6 +13,27 @@
         return new URLSearchParams(window.location.search).get('vault_view') || '';
     }
 
+    function csrfToken() {
+        var meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.getAttribute('content') : '';
+    }
+
+    function postAction(action, fields) {
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = 'vault_category_actions.php';
+        var values = Object.assign({ action: action, csrf_token: csrfToken() }, fields || {});
+        Object.keys(values).forEach(function (key) {
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = values[key] == null ? '' : values[key];
+            form.appendChild(input);
+        });
+        document.body.appendChild(form);
+        form.submit();
+    }
+
     function addFolderSelector(form, data) {
         if (!form || form.querySelector('[data-vault-folder-selector]')) return;
         var categorySelect = form.querySelector('select[name="category"]');
@@ -46,41 +67,97 @@
         categorySelect.addEventListener('change', refresh);
         refresh();
 
-        var initialCategory = new URLSearchParams(window.location.search).get('vault_view');
+        var params = new URLSearchParams(window.location.search);
+        var initialCategory = params.get('vault_view');
         if (initialCategory && data.folders[initialCategory]) {
             categorySelect.value = initialCategory;
             refresh();
-            var initialFolder = new URLSearchParams(window.location.search).get('vault_folder');
+            var initialFolder = params.get('vault_folder');
             if (initialFolder) select.value = initialFolder;
         }
     }
 
     function wireAddAndEditForms(data) {
-        var addForm = document.querySelector('#add-panel form');
-        addFolderSelector(addForm, data);
-        var editForm = document.querySelector('#edit-panel form');
-        addFolderSelector(editForm, data);
-        if (editForm) {
-            editForm.action = 'vault_actions.php';
-            var action = editForm.querySelector('input[name="action"]');
-            if (action) action.value = 'edit';
-        }
+        addFolderSelector(document.querySelector('#add-panel form'), data);
+        addFolderSelector(document.querySelector('#edit-panel form'), data);
+    }
+
+    function managementButton(label, handler) {
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = label;
+        button.className = 'btn';
+        button.style.cssText = 'padding:5px 8px;font-size:12px;background:#fff;color:#495057;border:1px solid #dee2e6;';
+        button.addEventListener('click', function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            handler();
+        });
+        return button;
     }
 
     function wireFolderCards() {
         var category = currentCategory();
         document.querySelectorAll('.vault-folder-card').forEach(function (card) {
+            if (card.getAttribute('data-folder-wired') === '1') return;
             var nameNode = card.querySelector('span:last-child');
             if (!nameNode) return;
             var folder = nameNode.textContent.trim();
-            var link = document.createElement('a');
-            link.href = 'index.php?pane=records&vault_view=' + encodeURIComponent(category) + '&vault_folder=' + encodeURIComponent(folder);
-            link.className = 'vault-folder-card';
-            link.style.cssText = card.getAttribute('style') || '';
-            link.style.textDecoration = 'none';
-            link.style.color = 'inherit';
-            link.innerHTML = card.innerHTML;
-            card.replaceWith(link);
+            card.setAttribute('data-folder-wired', '1');
+            card.style.cursor = 'pointer';
+            card.setAttribute('role', 'link');
+            card.setAttribute('tabindex', '0');
+            card.addEventListener('click', function () {
+                window.location.href = 'index.php?pane=records&vault_view=' + encodeURIComponent(category) + '&vault_folder=' + encodeURIComponent(folder);
+            });
+            card.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    window.location.href = 'index.php?pane=records&vault_view=' + encodeURIComponent(category) + '&vault_folder=' + encodeURIComponent(folder);
+                }
+            });
+
+            var controls = document.createElement('span');
+            controls.style.cssText = 'margin-left:auto;display:flex;gap:5px;flex:0 0 auto;';
+            controls.appendChild(managementButton('Rename', function () {
+                var newName = window.prompt('Rename folder:', folder);
+                if (newName === null) return;
+                newName = newName.trim();
+                if (!newName || newName === folder) return;
+                postAction('rename_folder', { category: category, folder: folder, new_folder: newName });
+            }));
+            controls.appendChild(managementButton('Delete', function () {
+                if (!window.confirm('Delete the folder "' + folder + '"? Records in it will remain in the category, but will no longer belong to a folder.')) return;
+                postAction('delete_folder', { category: category, folder: folder });
+            }));
+            card.appendChild(controls);
+        });
+    }
+
+    function wireCategoryCards() {
+        document.querySelectorAll('#view-panel a[href*="vault_view="]').forEach(function (card) {
+            if (card.getAttribute('data-category-wired') === '1') return;
+            var href = card.getAttribute('href') || '';
+            var match = href.match(/[?&]vault_view=([^&]+)/);
+            if (!match) return;
+            var category = decodeURIComponent(match[1]);
+            if (!category) return;
+            card.setAttribute('data-category-wired', '1');
+            card.style.position = 'relative';
+            var controls = document.createElement('span');
+            controls.style.cssText = 'display:flex;justify-content:center;gap:6px;margin-top:8px;';
+            controls.appendChild(managementButton('Rename', function () {
+                var newName = window.prompt('Rename category:', category);
+                if (newName === null) return;
+                newName = newName.trim();
+                if (!newName || newName === category) return;
+                postAction('rename_category', { category: category, new_category: newName });
+            }));
+            controls.appendChild(managementButton('Delete', function () {
+                if (!window.confirm('Delete the category "' + category + '"? Its folders will be removed and its records will be kept as uncategorised.')) return;
+                postAction('delete_category', { category: category });
+            }));
+            card.appendChild(controls);
         });
     }
 
@@ -128,6 +205,7 @@
         fetchFolderData().then(function (data) {
             wireAddAndEditForms(data);
             wireFolderCards();
+            wireCategoryCards();
             applyFolderView(data);
         }).catch(function (error) {
             console.error('SentryIQ folder UI initialization failed:', error);
