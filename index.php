@@ -54,6 +54,7 @@ $csrf = sentryiq_csrf_token();
 }
 </style>
 <script src="vault_folders.js?v=20260915-2"></script>
+<script src="records_view.js?v=20260916-1"></script>
 <script>
 const vaultTabLabels={view:'Vault',records:'Records',add:'Add Entry',settings:'System',details:'Entry Inspection'};
 function updateVaultSectionStatus(tabName){var status=document.querySelector('[data-vault-status]');if(status)status.textContent=vaultTabLabels[tabName]||'SentryIQ';}
