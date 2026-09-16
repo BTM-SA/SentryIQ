@@ -58,7 +58,7 @@
         if (activeVaultView() !== 'records') return;
         document.querySelectorAll('.vault-record-card').forEach(function (card) {
             var category = (card.getAttribute('data-vault-category') || '').trim();
-            card.style.display = category === '' ? '' : 'none';
+            if (category !== '') card.remove();
         });
     }
 
