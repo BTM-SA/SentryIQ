@@ -156,3 +156,8 @@ body { background:var(--neo-bg); color:var(--neo-text); }
 /* Blue hover states use white text for readable contrast. */
 .btn-primary:hover,.vault-category-options-button:hover { background:#0052a3 !important; color:#fff !important; }
 .btn-danger:hover { color:#fff !important; }
+
+/* Keep the Vault menu's form-based lock action identical in width to its other options. */
+#vault-mobile-menu .vault-menu-lock-form,
+#vault-mobile-menu .vault-menu-lock-form button,
+#vault-mobile-menu .vault-menu-lock-button { width:100% !important; min-width:0 !important; box-sizing:border-box !important; }
