@@ -144,3 +144,11 @@ body { background:var(--neo-bg); color:var(--neo-text); }
  .tab-btn.active { box-shadow:inset 4px 4px 9px var(--neo-shadow-dark),inset -4px -4px 9px var(--neo-shadow-light); }
  .btn { box-shadow:6px 6px 12px var(--neo-shadow-dark),-6px -6px 12px var(--neo-shadow-light); }
 }
+
+/* Vault menu/header cleanup. Keep the mobile menu flat while retaining neumorphic individual controls. */
+#records-panel > div:first-child > button[onclick="showCreateFolderForm()"],
+#records-panel > div:first-child > .vault-add-record-button { display:none !important; }
+.vault-category-options-button { display:block !important; }
+@media (max-width:700px) {
+    #vault-mobile-menu.vault-tabs { padding:0 !important; border:0 !important; border-radius:0 !important; background:transparent !important; box-shadow:none !important; }
+}
