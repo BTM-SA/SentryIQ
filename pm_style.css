@@ -161,3 +161,6 @@ body { background:var(--neo-bg); color:var(--neo-text); }
 #vault-mobile-menu .vault-menu-lock-form,
 #vault-mobile-menu .vault-menu-lock-form button,
 #vault-mobile-menu .vault-menu-lock-button { width:100% !important; min-width:0 !important; box-sizing:border-box !important; }
+
+/* Give category/folder section headings consistent breathing room. */
+#records-panel > div:first-child h3 { margin-top:1em !important; }
