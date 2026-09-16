@@ -286,7 +286,8 @@
     function wireCategoryHeaderOptions() {
         var category = currentCategory();
         var params = new URLSearchParams(window.location.search);
-        if (!category || category === 'records' || params.get('vault_folder')) return;
+        var folder = params.get('vault_folder') || '';
+        if (!category || category === 'records') return;
 
         var header = document.querySelector('#records-panel > div:first-child');
         var title = header ? header.querySelector('h3') : null;
@@ -312,7 +313,9 @@
         menu.appendChild(menuButton('＋ Add Record', function () {
             menu.style.display = 'none';
             optionsButton.setAttribute('aria-expanded', 'false');
-            window.location.href = 'index.php?pane=add&vault_view=' + encodeURIComponent(category);
+            var target = 'index.php?pane=add&vault_view=' + encodeURIComponent(category);
+            if (folder) target += '&vault_folder=' + encodeURIComponent(folder);
+            window.location.href = target;
         }, false));
 
         menu.appendChild(menuButton('📁 Create Folder', function () {
@@ -359,12 +362,25 @@
 
         wrapper.appendChild(optionsButton);
         wrapper.appendChild(menu);
-        title.appendChild(wrapper);
-        title.style.display = 'flex';
-        title.style.alignItems = 'center';
-        title.style.justifyContent = 'space-between';
-        title.style.gap = '10px';
-        title.style.width = '100%';
+
+        if (folder) {
+            var createFolderButton = header.querySelector('button[onclick="showCreateFolderForm()"]');
+            var addRecordButton = header.querySelector('.vault-add-record-button');
+            if (createFolderButton) {
+                createFolderButton.parentNode.insertBefore(wrapper, createFolderButton);
+                createFolderButton.remove();
+            } else {
+                header.appendChild(wrapper);
+            }
+            if (addRecordButton) addRecordButton.style.display = 'none';
+        } else {
+            title.appendChild(wrapper);
+            title.style.display = 'flex';
+            title.style.alignItems = 'center';
+            title.style.justifyContent = 'space-between';
+            title.style.gap = '10px';
+            title.style.width = '100%';
+        }
 
         document.addEventListener('click', function (event) {
             if (!wrapper.contains(event.target)) {
@@ -375,8 +391,8 @@
 
         function updateMode() {
             var mobile = window.matchMedia('(max-width: 700px)').matches;
-            optionsButton.style.display = mobile ? 'block' : 'none';
-            if (!mobile) {
+            optionsButton.style.display = folder ? 'block' : (mobile ? 'block' : 'none');
+            if (!mobile && !folder) {
                 menu.style.display = 'none';
                 optionsButton.setAttribute('aria-expanded', 'false');
             }
