@@ -76,12 +76,20 @@
             if (data && data.records_deleted) {
                 tile.style.display = 'none';
             } else {
-                tile.style.display = '';
-                tile.classList.remove('btn-primary');
-                tile.classList.add('btn');
+                tile.style.display = 'flex';
+                tile.style.alignItems = 'center';
+                tile.style.justifyContent = 'center';
+                tile.style.minHeight = '58px';
+                tile.style.width = '100%';
+                tile.style.boxSizing = 'border-box';
+                tile.style.textAlign = 'center';
+                tile.style.textDecoration = 'none';
+                tile.style.fontSize = '16px';
                 tile.style.background = '#f1f3f5';
                 tile.style.color = '#212529';
                 tile.style.border = '1px solid #dee2e6';
+                tile.classList.remove('btn-primary');
+                tile.classList.add('btn');
                 tile.textContent = '📁 ' + label;
             }
         }
