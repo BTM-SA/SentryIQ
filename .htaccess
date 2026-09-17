@@ -1,0 +1,28 @@
+RewriteEngine On
+
+# Keep existing deployed endpoint URLs working while the implementations live under app/.
+RewriteRule ^document_delete\.php$ app/Documents/Delete.php [L]
+RewriteRule ^document_download\.php$ app/Documents/Download.php [L]
+RewriteRule ^document_upload\.php$ app/Documents/Upload.php [L]
+
+RewriteRule ^gallery_album\.php$ app/Gallery/AlbumActions.php [L]
+RewriteRule ^gallery_bulk_delete\.php$ app/Gallery/BulkDelete.php [L]
+RewriteRule ^gallery_delete\.php$ app/Gallery/Delete.php [L]
+RewriteRule ^gallery_image\.php$ app/Gallery/Image.php [L]
+RewriteRule ^gallery_settings\.php$ app/Gallery/Settings.php [L]
+RewriteRule ^gallery_upload\.php$ app/Gallery/Upload.php [L]
+
+RewriteRule ^passkey_auth\.php$ app/Auth/PasskeyAuth.php [L]
+RewriteRule ^passkey_login\.php$ app/Auth/PasskeyLogin.php [L]
+RewriteRule ^passkey_setup\.php$ app/Auth/PasskeySetup.php [L]
+RewriteRule ^passkeys\.php$ app/Auth/Passkeys.php [L]
+
+RewriteRule ^record_actions\.php$ app/Vault/RecordActions.php [L]
+RewriteRule ^records_category_actions\.php$ app/Vault/RecordsCategoryActions.php [L]
+RewriteRule ^records_view_data\.php$ app/Vault/RecordsViewData.php [L]
+RewriteRule ^security-features\.php$ app/Security/SecurityFeatures.php [L]
+RewriteRule ^security_log\.php$ app/Security/SecurityLog.php [L]
+RewriteRule ^system_log\.php$ app/Security/SystemLog.php [L]
+RewriteRule ^vault_actions\.php$ app/Vault/Actions.php [L]
+RewriteRule ^vault_category_actions\.php$ app/Vault/CategoryActions.php [L]
+RewriteRule ^vault_folder_data\.php$ app/Vault/FolderData.php [L]
