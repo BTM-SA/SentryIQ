@@ -6,6 +6,14 @@ require_once dirname(__DIR__, 2) . '/security_bootstrap.php';
 sentryiq_security_bootstrap();
 sentryiq_require_auth();
 
+$dataDir = sentryiq_data_dir();
+if ($dataDir === '' || !is_file($dataDir . '/vault_engine.php') || is_link($dataDir . '/vault_engine.php')) {
+    http_response_code(503);
+    exit('SentryIQ security log storage is unavailable.');
+}
+
+require_once $dataDir . '/vault_engine.php';
+
 $events = read_security_log();
 $csrf = sentryiq_csrf_token();
 ?>
@@ -16,11 +24,11 @@ $csrf = sentryiq_csrf_token();
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="csrf-token" content="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
 <title>SentryIQ — System Log</title>
-<link rel="stylesheet" href="pm_style.css">
+<link rel="stylesheet" href="assets/css/pm_style.css">
 </head>
 <body>
 <div class="box">
-    <img class="sentryiq-brand-banner" src="sentryiq-logo-wide.webp" width="1952" height="588" alt="SentryIQ" fetchpriority="high">
+    <img class="sentryiq-brand-banner" src="assets/images/sentryiq-logo-wide.webp" width="1952" height="588" alt="SentryIQ" fetchpriority="high">
     <div style="max-width:1000px;margin:20px auto;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
             <div>
