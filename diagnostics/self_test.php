@@ -75,7 +75,7 @@ if ($installed && is_readable($configFile)) {
 add_check('Runtime configuration', 'Configuration array', !$installed || is_array($config));
 if (is_array($config)) {
     $dataDir = rtrim((string)($config['data_dir'] ?? ''), '/');
-    $baseUrl = trim((string)($config['base_url'] ?? ''));
+    $baseUrl = rtrim(trim((string)($config['base_url'] ?? '')), '/');
     add_check('Runtime configuration', 'Data directory configured', $dataDir !== '', $dataDir !== '' ? 'configured' : 'missing');
     add_check('Runtime configuration', 'HTTPS base URL configured', $baseUrl !== '' && str_starts_with($baseUrl, 'https://'), $baseUrl !== '' ? $baseUrl : 'missing');
     if ($dataDir !== '') {
@@ -89,7 +89,11 @@ if (is_array($config)) {
     }
 }
 
-add_check('Configuration URL', 'Base URL points to SentryIQ root', $baseUrl === '' || (bool)preg_match('#^https://[^/]+(?:/[^/?#]+)*/?$#i', $baseUrl), $baseUrl !== '' ? $baseUrl : 'not configured');
+$serverHost = trim((string)($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? ''));
+$scriptDir = rtrim(str_replace('\\', '/', dirname((string)($_SERVER['SCRIPT_NAME'] ?? ''))), '/');
+$runtimeExpectedBaseUrl = $serverHost !== '' && $httpsOk ? 'https://' . $serverHost . ($scriptDir === '/' ? '' : $scriptDir) : '';
+$baseUrlMatchesRuntime = $baseUrl === '' || ($runtimeExpectedBaseUrl !== '' && $baseUrl === rtrim($runtimeExpectedBaseUrl, '/'));
+add_check('Configuration URL', 'Base URL matches current application URL', $baseUrlMatchesRuntime, $runtimeExpectedBaseUrl !== '' ? ('configured=' . ($baseUrl !== '' ? $baseUrl : 'missing') . ', current=' . rtrim($runtimeExpectedBaseUrl, '/')) : 'current application URL could not be determined');
 
 $wideLogoPath = $root . '/assets/images/sentryiq-logo-wide.webp';
 $wideLogoState = safe_path_state($wideLogoPath);
@@ -175,28 +179,39 @@ $sourceRefs = [
 ];
 foreach ($sourceRefs as $ref) add_source_reference_check($ref[0], $ref[1], $ref[2]);
 
-$assetUrls = [
+$browserTests = [
     ['type' => 'asset', 'label' => 'CSS', 'url' => 'assets/css/pm_style.css', 'expectedStatus' => 200, 'expectedContentType' => 'text/css'],
     ['type' => 'asset', 'label' => 'Vault folders JS', 'url' => 'assets/js/vault_folders.js', 'expectedStatus' => 200, 'expectedContentType' => 'text/javascript'],
     ['type' => 'asset', 'label' => 'Records JS', 'url' => 'assets/js/records_view.js', 'expectedStatus' => 200, 'expectedContentType' => 'text/javascript'],
     ['type' => 'asset', 'label' => 'Safari JS', 'url' => 'assets/js/safari.js', 'expectedStatus' => 200, 'expectedContentType' => 'text/javascript'],
     ['type' => 'asset', 'label' => 'Wide logo', 'url' => 'assets/images/sentryiq-logo-wide.webp', 'expectedStatus' => 200, 'expectedContentType' => 'image/webp'],
     ['type' => 'asset', 'label' => 'Favicon/icon endpoint', 'url' => 'sentryiq-icon.php', 'expectedStatus' => 200, 'expectedContentType' => 'image/png'],
+    ['type' => 'endpoint', 'label' => 'index.php', 'url' => 'index.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'documents.php', 'url' => 'documents.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'gallery.php', 'url' => 'gallery.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'passkey_setup.php', 'url' => 'passkey_setup.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'passkey_login.php', 'url' => 'passkey_login.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html', 'expectedFinalPath' => 'index.php'],
+    ['type' => 'endpoint', 'label' => 'passkey_auth.php', 'url' => 'passkey_auth.php', 'expectedStatus' => 400, 'expectedContentType' => 'application/json'],
+    ['type' => 'endpoint', 'label' => 'passkeys.php', 'url' => 'passkeys.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'document_upload.php', 'url' => 'document_upload.php', 'expectedStatus' => 405, 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'document_download.php', 'url' => 'document_download.php', 'expectedStatus' => 404, 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'document_delete.php', 'url' => 'document_delete.php', 'expectedStatus' => 405, 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'gallery_album.php', 'url' => 'gallery_album.php', 'expectedStatus' => 405, 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'gallery_bulk_delete.php', 'url' => 'gallery_bulk_delete.php', 'expectedStatus' => 405, 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'gallery_delete.php', 'url' => 'gallery_delete.php', 'expectedStatus' => 405, 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'gallery_image.php', 'url' => 'gallery_image.php', 'expectedStatus' => 404, 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'gallery_settings.php', 'url' => 'gallery_settings.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'gallery_upload.php', 'url' => 'gallery_upload.php', 'expectedStatus' => 405, 'expectedContentType' => 'application/json'],
+    ['type' => 'endpoint', 'label' => 'record_actions.php', 'url' => 'record_actions.php', 'expectedStatus' => 405, 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'records_category_actions.php', 'url' => 'records_category_actions.php', 'expectedStatus' => 405, 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'records_view_data.php', 'url' => 'records_view_data.php', 'expectedStatus' => 200, 'expectedContentType' => 'application/json'],
+    ['type' => 'endpoint', 'label' => 'vault_actions.php', 'url' => 'vault_actions.php', 'expectedStatus' => 405, 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'vault_category_actions.php', 'url' => 'vault_category_actions.php', 'expectedStatus' => 405, 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'vault_folder_data.php', 'url' => 'vault_folder_data.php', 'expectedStatus' => 200, 'expectedContentType' => 'application/json'],
+    ['type' => 'endpoint', 'label' => 'security-features.php', 'url' => 'security-features.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'security_log.php', 'url' => 'security_log.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'system_log.php', 'url' => 'system_log.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html'],
 ];
-$endpointUrls = [
-    ['index.php', 200], ['documents.php', 200], ['gallery.php', 200], ['passkey_setup.php', 200], ['passkey_login.php', 200, 'index.php'],
-    ['passkey_auth.php', 400], ['passkeys.php', 200],
-    ['document_upload.php', 405], ['document_download.php', 404], ['document_delete.php', 405],
-    ['gallery_album.php', 405], ['gallery_bulk_delete.php', 405], ['gallery_delete.php', 405], ['gallery_image.php', 404], ['gallery_settings.php', 200], ['gallery_upload.php', 405],
-    ['record_actions.php', 405], ['records_category_actions.php', 405], ['records_view_data.php', 200],
-    ['vault_actions.php', 405], ['vault_category_actions.php', 405], ['vault_folder_data.php', 200],
-    ['security-features.php', 200], ['security_log.php', 200], ['system_log.php', 200],
-];
-foreach ($endpointUrls as $entry) {
-    $spec = ['type' => 'endpoint', 'label' => $entry[0], 'url' => $entry[0], 'expectedStatus' => $entry[1]];
-    if (isset($entry[2])) $spec['expectedFinalPath'] = $entry[2];
-    $assetUrls[] = $spec;
-}
 
 $csrf = function_exists('sentryiq_csrf_token') ? sentryiq_csrf_token() : '';
 
@@ -239,7 +254,7 @@ body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-seri
 <h1>SentryIQ Self-Test</h1>
 <div class="summary">This diagnostic checks the deployed filesystem/configuration, validates source URL references, and then tests the real browser URLs from this session.</div>
 <button id="run" type="button">Run browser checks</button><button id="copy" type="button">Copy report</button>
-<p class="note">HTTP tests use explicit expected responses. For POST-only routes, 405 is expected; for ID-required image/document routes, 404 without an ID is expected.</p>
+<p class="note">HTTP tests use explicit expected responses. For POST-only routes, 405 is expected; for ID-required image/document routes, 404 without an ID is expected. Redirects must end at the declared final URL.</p>
 </div>
 <div class="card">
 <h2>Server-side checks</h2>
@@ -260,12 +275,13 @@ body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-seri
 </div>
 </div>
 <script>
-const tests=<?= json_encode($assetUrls, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
+const tests=<?= json_encode($browserTests, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
 const csrf=<?= json_encode($csrf) ?>;
 let reportData={serverChecks:<?= json_encode($results, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>,browserChecks:[]};
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
 async function checkOne(test){
     const started=performance.now();
+    const expectedRequestedPath=new URL(test.url,location.href).pathname;
     try{
         const r=await fetch(test.url,{credentials:'same-origin',cache:'no-store',redirect:'follow',headers:{'Accept':'*/*'}});
         const ms=Math.round(performance.now()-started);
@@ -273,10 +289,11 @@ async function checkOne(test){
         const statusOk=Number.isInteger(test.expectedStatus)?r.status===test.expectedStatus:r.status!==404;
         const contentTypeOk=!test.expectedContentType||contentType.toLowerCase().startsWith(test.expectedContentType.toLowerCase());
         const finalUrl=new URL(r.url,location.href);
-        const finalPathOk=!test.expectedFinalPath||finalUrl.pathname.endsWith('/'+test.expectedFinalPath);
-        return {...test,ok:statusOk&&contentTypeOk&&finalPathOk,status:r.status,statusText:r.statusText,finalUrl:r.url,timeMs:ms,contentType,checks:{statusOk,contentTypeOk,finalPathOk}};
+        const expectedFinalPath=test.expectedFinalPath?new URL(test.expectedFinalPath,location.href).pathname:expectedRequestedPath;
+        const finalPathOk=finalUrl.pathname===expectedFinalPath;
+        return {...test,ok:statusOk&&contentTypeOk&&finalPathOk,status:r.status,statusText:r.statusText,finalUrl:r.url,timeMs:ms,contentType,checks:{statusOk,contentTypeOk,finalPathOk,expectedFinalPath}};
     }catch(e){
-        return {...test,ok:false,status:0,statusText:String(e&&e.message||e),finalUrl:'',timeMs:Math.round(performance.now()-started),contentType:'',checks:{statusOk:false,contentTypeOk:false,finalPathOk:false}};
+        return {...test,ok:false,status:0,statusText:String(e&&e.message||e),finalUrl:'',timeMs:Math.round(performance.now()-started),contentType:'',checks:{statusOk:false,contentTypeOk:false,finalPathOk:false,expectedFinalPath:expectedRequestedPath}};
     }
 }
 async function runChecks(){
