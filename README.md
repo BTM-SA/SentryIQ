@@ -6,25 +6,25 @@ SentryIQ is a self-hosted secure vault application for credential management, do
 
 ```text
 SentryIQ/
-├── app/          # Internal application code grouped by responsibility
+├── app/          # Application code grouped by responsibility
 ├── assets/       # Shared static assets
 ├── cloud/        # SentryIQ Cloud/domain services
 ├── diagnostics/  # Diagnostic and troubleshooting tools
 ├── docs/         # Architecture and project documentation
-└── *.php         # Stable public HTTP entry points
+└── *.php         # Public pages, bootstrap entry points, and asset endpoints
 ```
 
 ## Application code
 
-The internal application layer is organized into domain areas:
+The application layer is organized into domain areas:
 
-- `app/Auth/` — authentication and access-flow logic.
+- `app/Auth/` — authentication and access-flow implementation.
 - `app/Vault/` — vault records, categories, folders, and vault UI modules.
 - `app/Documents/` — document-related application services.
-- `app/Gallery/` — gallery-related application services.
-- `app/Security/` — security bootstrap, auditing, and shared security services.
+- `app/Gallery/` — gallery-related application endpoints and services.
+- `app/Security/` — security bootstrap, first-run installation, auditing, and security services.
 
-Public PHP filenames remain stable during the migration so existing deployment URLs do not need to change. Root endpoints delegate to the appropriate application module as each subsystem is migrated.
+The repository no longer keeps separate root PHP wrapper files for migrated action endpoints. Existing deployed endpoint URLs are preserved by the root `.htaccess`, which internally routes them to their corresponding `app/` implementation.
 
 ## Cloud layer
 
@@ -36,7 +36,7 @@ Runtime vault data, configuration, encryption material, tokens, throttling data,
 
 ## Diagnostics
 
-Operational and troubleshooting scripts live under `diagnostics/` and are kept separate from normal application code.
+Operational and troubleshooting scripts live under `diagnostics/` and are kept separate from normal application execution paths.
 
 ## Documentation
 
