@@ -1,6 +1,6 @@
 # SentryIQ Repository Architecture
 
-This document records the repository organization and the boundaries between public pages and endpoints, internal application code, the cloud layer, private runtime data, assets, diagnostics, and documentation.
+This document records the repository organization and the boundaries between public endpoints, internal application code, the cloud layer, private runtime data, assets, diagnostics, and documentation.
 
 ## Repository boundaries
 
@@ -13,17 +13,20 @@ SentryIQ/
 │   ├── Security/
 │   └── Vault/
 ├── assets/
+│   ├── css/
+│   ├── js/
+│   └── images/
 ├── cloud/
 ├── diagnostics/
 ├── docs/
-└── public pages, bootstrap entry points, and asset endpoints at repository root
+└── public PHP entry points and required bootstrap files at repository root
 ```
 
 ### Public HTTP entry points
 
-The repository root retains the small set of top-level pages and infrastructure entry points that are part of the deployed interface. Migrated action endpoints are no longer represented by duplicate root PHP wrapper files.
+The deployed application serves its public PHP pages and dynamic endpoints from the repository root. Existing endpoint URLs are preserved through `.htaccess` rewrite rules even when the implementation now lives under `app/`.
 
-The root `.htaccess` preserves the existing deployed action URLs by internally routing them to the corresponding implementation under `app/`. This separates the repository layout from the public URL surface without requiring an immediate URL migration.
+Root-level PHP files that are still required as shared bootstrap/includes remain until their remaining consumers can be migrated safely.
 
 ### Internal application code
 
@@ -31,9 +34,9 @@ Application implementation is grouped by responsibility rather than by individua
 
 - `app/Auth/` contains authentication and access-flow implementation.
 - `app/Vault/` contains vault records, category/folder handling, and vault-specific UI modules.
-- `app/Documents/` contains local document application endpoints and services.
-- `app/Gallery/` contains local gallery application endpoints and services.
-- `app/Security/` contains shared security bootstrap, auditing, first-run installation, and security services.
+- `app/Documents/` contains local document application services.
+- `app/Gallery/` contains local gallery application services that are not public HTTP routes.
+- `app/Security/` contains shared security bootstrap, auditing, and security services.
 
 ### Cloud layer
 
@@ -45,7 +48,7 @@ Vault encryption data, runtime configuration, authentication tokens, throttling 
 
 ### Assets
 
-Static CSS, JavaScript, images, and other browser assets belong under `assets/`. Existing root-level assets are migrated only after every consumer has been identified and updated.
+Static CSS, JavaScript, and images live under `assets/`. `.htaccess` preserves the established public URLs for these files while keeping the repository organized.
 
 ### Diagnostics
 
@@ -53,10 +56,10 @@ Static CSS, JavaScript, images, and other browser assets belong under `assets/`.
 
 ## Migration principles
 
-- Preserve deployed URLs when practical through routing rather than duplicate implementation files.
-- Keep public pages and deliberate infrastructure entry points at the root when they are part of the deployed interface.
-- Move implementation behind domain-oriented `app/` boundaries.
+- Keep public URLs stable unless a routing migration is explicitly planned.
+- Move implementation behind organized application paths while preserving compatibility where practical.
 - Map dependencies before moving a file.
+- Preserve existing file bytes when a move does not require content changes.
 - Make small, reversible changes and verify each migration before continuing.
 - Do not merge the local application layer with the cloud service layer.
 - Keep secrets and runtime data out of Git.
