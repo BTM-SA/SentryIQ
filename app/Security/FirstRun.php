@@ -13,7 +13,7 @@ if (is_file($pointerConfigFile)) {
 
 function first_run_data_dir(): string
 {
-    return rtrim(dirname(__DIR__, 4), '/') . '/private_data';
+    return rtrim(dirname(__DIR__, 2), '/') . '/private_data';
 }
 
 function first_run_base_url(): string
@@ -252,7 +252,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_first_run'])
             first_run_log('INSTALL_SUCCESS');
             @unlink($directory . '/install_debug.log');
             unset($_SESSION['csrf_token']);
-            @unlink(__FILE__);
             header('Location: index.php?setup=complete');
             exit;
         } catch (Throwable $exception) {
@@ -271,7 +270,7 @@ $csrf = sentryiq_csrf_token();
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SentryIQ First-Run Setup</title>
-<link rel="stylesheet" href="pm_style.css">
+<link rel="stylesheet" href="assets/css/pm_style.css">
 </head>
 <body>
 <div class="box">
