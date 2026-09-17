@@ -15,7 +15,7 @@
 .vault-add-record-button { display:inline-flex !important; align-items:center; justify-content:center; width:auto !important; text-decoration:none; }
 .vault-add-record-icon { color:#fff !important; }
 .box > h2:first-child { text-align:center; }
-.box > h2:first-child::before { content:""; display:block; width:200px; max-width:100%; aspect-ratio:1952 / 588; margin:0 auto 18px; background:url('sentryiq-logo-wide.webp') center / contain no-repeat; }
+.box > h2:first-child::before { content:""; display:block; width:200px; max-width:100%; aspect-ratio:1952 / 588; margin:0 auto 18px; background:url('../images/sentryiq-logo-wide.webp') center / contain no-repeat; }
 * { box-sizing:border-box; }
 body { font-family:Arial,sans-serif; margin:40px; background-color:#f4f6f9; color:#333; }
 .box { background:white; padding:30px; max-width:1000px; margin:auto; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,.05); }
