@@ -68,6 +68,32 @@ if (is_array($config)) {
     }
 }
 
+$wideLogoPath = $root . '/assets/images/sentryiq-logo-wide.webp';
+$wideLogoState = safe_path_state($wideLogoPath);
+add_check(
+    'Branding',
+    'Wide logo file',
+    $wideLogoState['file'] && !$wideLogoState['link'] && $wideLogoState['readable'],
+    $wideLogoState['file'] && !$wideLogoState['link']
+        ? 'file' . ($wideLogoState['size'] !== null ? ', ' . $wideLogoState['size'] . ' bytes' : '')
+        : ($wideLogoState['link'] ? 'SYMLINK' : 'missing')
+);
+if ($wideLogoState['file'] && !$wideLogoState['link']) {
+    $logoInfo = @getimagesize($wideLogoPath);
+    $logoDimensionsOk = is_array($logoInfo) && ($logoInfo[0] ?? 0) === 1952 && ($logoInfo[1] ?? 0) === 588 && strtolower((string)($logoInfo['mime'] ?? '')) === 'image/webp';
+    $logoDimensionDetail = is_array($logoInfo)
+        ? ((string)($logoInfo[0] ?? '?') . '×' . (string)($logoInfo[1] ?? '?') . ', ' . (string)($logoInfo['mime'] ?? 'unknown'))
+        : 'unreadable image';
+    add_check('Branding', 'Wide logo dimensions/type', $logoDimensionsOk, $logoDimensionDetail);
+    $logoHash = @hash_file('sha256', $wideLogoPath);
+    add_check('Branding', 'Wide logo SHA-256', is_string($logoHash) && preg_match('/^[a-f0-9]{64}$/', $logoHash) === 1, is_string($logoHash) ? $logoHash : 'hash unavailable');
+}
+$logoCssPath = $root . '/assets/css/pm_style.css';
+$logoCss = is_readable($logoCssPath) ? @file_get_contents($logoCssPath) : false;
+add_check('Branding', 'CSS logo reference', is_string($logoCss) && str_contains($logoCss, "../images/sentryiq-logo-wide.webp"), is_string($logoCss) && str_contains($logoCss, "../images/sentryiq-logo-wide.webp") ? 'assets/css/pm_style.css → ../images/sentryiq-logo-wide.webp' : 'expected reference missing');
+$legacyWideLogoPath = $root . '/sentryiq-logo-wide.webp';
+add_check('Branding', 'Legacy root logo absent', !is_file($legacyWideLogoPath) && !is_link($legacyWideLogoPath), (!is_file($legacyWideLogoPath) && !is_link($legacyWideLogoPath)) ? 'not present at root' : 'legacy root logo still present');
+
 $files = [
     'Public entry points' => [
         'index.php' => 'index.php',
@@ -147,17 +173,17 @@ foreach ($files as $group => $groupFiles) {
 }
 
 $assetUrls = [
-    'CSS' => 'assets/css/pm_style.css',
-    'Vault folders JS' => 'assets/js/vault_folders.js',
-    'Records JS' => 'assets/js/records_view.js',
-    'Safari JS' => 'assets/js/safari.js',
-    'Wide logo' => 'assets/images/sentryiq-logo-wide.webp',
-    'Favicon/icon endpoint' => 'sentryiq-icon.php',
+    'CSS' => ['url' => 'assets/css/pm_style.css', 'expectedStatus' => 200, 'expectedContentType' => 'text/css'],
+    'Vault folders JS' => ['url' => 'assets/js/vault_folders.js', 'expectedStatus' => 200, 'expectedContentType' => 'text/javascript'],
+    'Records JS' => ['url' => 'assets/js/records_view.js', 'expectedStatus' => 200, 'expectedContentType' => 'text/javascript'],
+    'Safari JS' => ['url' => 'assets/js/safari.js', 'expectedStatus' => 200, 'expectedContentType' => 'text/javascript'],
+    'Wide logo' => ['url' => 'assets/images/sentryiq-logo-wide.webp', 'expectedStatus' => 200, 'expectedContentType' => 'image/webp'],
+    'Favicon/icon endpoint' => ['url' => 'sentryiq-icon.php', 'expectedStatus' => 200, 'expectedContentType' => 'image/png'],
 ];
 
 $browserTests = [];
-foreach ($assetUrls as $label => $url) {
-    $browserTests[] = ['type' => 'asset', 'label' => $label, 'url' => $url];
+foreach ($assetUrls as $label => $spec) {
+    $browserTests[] = ['type' => 'asset', 'label' => $label, 'url' => $spec['url'], 'expectedStatus' => $spec['expectedStatus'], 'expectedContentType' => $spec['expectedContentType']];
 }
 $endpointTests = [
     'index.php', 'documents.php', 'gallery.php', 'passkey_setup.php', 'passkey_login.php', 'passkey_auth.php', 'passkeys.php',
@@ -221,7 +247,7 @@ body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-seri
 <div class="card">
 <h2>Browser URL checks</h2>
 <div id="browser-summary" class="muted">Not run yet.</div>
-<table id="browser-table"><thead><tr><th>Type</th><th>URL</th><th>Status</th><th>HTTP</th><th>Final URL</th></tr></thead><tbody></tbody></table>
+<table id="browser-table"><thead><tr><th>Type</th><th>URL</th><th>Status</th><th>HTTP</th><th>Content type</th><th>Final URL</th></tr></thead><tbody></tbody></table>
 </div>
 <div class="card danger">
 <h2>Report</h2>
@@ -234,8 +260,8 @@ const tests=<?= json_encode($browserTests, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED
 const csrf=<?= json_encode($csrf) ?>;
 let reportData={serverChecks:<?= json_encode($results, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>,browserChecks:[]};
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
-async function checkOne(test){const started=performance.now();try{const r=await fetch(test.url,{credentials:'same-origin',cache:'no-store',redirect:'follow',headers:{'Accept':'*/*'}});const ms=Math.round(performance.now()-started);return {...test,ok:r.status!==404,status:r.status,statusText:r.statusText,finalUrl:r.url,timeMs:ms,contentType:r.headers.get('content-type')||''};}catch(e){return {...test,ok:false,status:0,statusText:String(e&&e.message||e),finalUrl:'',timeMs:Math.round(performance.now()-started),contentType:''};}}
-async function runChecks(){const tbody=document.querySelector('#browser-table tbody');tbody.innerHTML='';document.querySelector('#browser-summary').textContent='Running checks…';const out=[];for(const test of tests){const item=await checkOne(test);out.push(item);const tr=document.createElement('tr');tr.innerHTML=`<td>${esc(item.type)}</td><td><code>${esc(item.url)}</code></td><td class="${item.ok?'ok':'bad'}">${item.ok?'PASS':'FAIL'}</td><td>${esc(item.status)} ${esc(item.statusText)}</td><td>${esc(item.finalUrl)}</td>`;tbody.appendChild(tr);}reportData.browserChecks=out;const failed=out.filter(x=>!x.ok);document.querySelector('#browser-summary').innerHTML=failed.length?`<span class="bad">${failed.length} browser check(s) failed.</span>`:`<span class="ok">All ${out.length} browser URL checks passed.</span>`;document.querySelector('#report').textContent=JSON.stringify(reportData,null,2);try{await fetch(location.pathname,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({diagnostic_log:JSON.stringify(reportData),csrf_token:csrf}).toString()});}catch(e){}}
+async function checkOne(test){const started=performance.now();try{const r=await fetch(test.url,{credentials:'same-origin',cache:'no-store',redirect:'follow',headers:{'Accept':'*/*'}});const ms=Math.round(performance.now()-started);const contentType=r.headers.get('content-type')||'';const statusOk=Number.isInteger(test.expectedStatus)?r.status===test.expectedStatus:r.status!==404;const contentTypeOk=!test.expectedContentType||contentType.toLowerCase().startsWith(test.expectedContentType.toLowerCase());return {...test,ok:statusOk&&contentTypeOk,status:r.status,statusText:r.statusText,finalUrl:r.url,timeMs:ms,contentType};}catch(e){return {...test,ok:false,status:0,statusText:String(e&&e.message||e),finalUrl:'',timeMs:Math.round(performance.now()-started),contentType:''};}}
+async function runChecks(){const tbody=document.querySelector('#browser-table tbody');tbody.innerHTML='';document.querySelector('#browser-summary').textContent='Running checks…';const out=[];for(const test of tests){const item=await checkOne(test);out.push(item);const tr=document.createElement('tr');tr.innerHTML=`<td>${esc(item.type)}</td><td><code>${esc(item.url)}</code></td><td class="${item.ok?'ok':'bad'}">${item.ok?'PASS':'FAIL'}</td><td>${esc(item.status)} ${esc(item.statusText)}</td><td>${esc(item.contentType)}</td><td>${esc(item.finalUrl)}</td>`;tbody.appendChild(tr);}reportData.browserChecks=out;const failed=out.filter(x=>!x.ok);document.querySelector('#browser-summary').innerHTML=failed.length?`<span class="bad">${failed.length} browser check(s) failed.</span>`:`<span class="ok">All ${out.length} browser URL checks passed.</span>`;document.querySelector('#report').textContent=JSON.stringify(reportData,null,2);try{await fetch(location.pathname,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({diagnostic_log:JSON.stringify(reportData),csrf_token:csrf}).toString()});}catch(e){}}
 
 document.querySelector('#run').addEventListener('click',runChecks);document.querySelector('#copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(document.querySelector('#report').textContent);document.querySelector('#copy').textContent='Copied';setTimeout(()=>document.querySelector('#copy').textContent='Copy report',1400);}catch(e){}});
 </script>
