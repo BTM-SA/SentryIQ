@@ -26,7 +26,7 @@ $csrf = sentryiq_csrf_token();
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="csrf-token" content="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
 <title>SentryIQ — Passkeys</title>
-<link rel="stylesheet" href="pm_style.css">
+<link rel="stylesheet" href="assets/css/pm_style.css">
 <style>
 .passkeys-content{font-family:Arial,sans-serif;font-size:14px;font-weight:400;line-height:1.5;max-width:900px;margin:20px auto}.passkeys-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.passkeys-heading h2{font-size:20px;line-height:1.25;margin:0 0 6px;font-weight:600}.passkeys-heading p{margin:0;color:#666;font-size:14px;font-weight:400}.passkey-list{margin-top:20px}.passkey-empty{padding:20px;text-align:center;color:#777}.passkey-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 15px;margin-bottom:8px;background:#fff;border:1px solid #e3e6f0;border-radius:6px}.passkey-identity{min-width:0}.passkey-identity strong{display:block;color:#2c3e50;font-size:14px;font-weight:600}.passkey-added{margin-top:2px;color:#666;font-size:13px;font-weight:400}.passkey-credential{margin-top:2px;color:#888;font-size:12px;font-weight:400;overflow-wrap:anywhere;word-break:break-word}.passkey-add-box{margin-top:20px;background:#f8f9fa;padding:20px;border-radius:6px;border:1px solid #e3e6f0}.passkey-add-box h3{font-size:16px;line-height:1.3;margin:0 0 6px;font-weight:600}.passkey-add-box p{margin:0 0 14px;color:#666;font-size:14px;font-weight:400}.passkey-note{margin-top:15px;color:#777;font-size:13px;font-weight:400}.passkeys-content .btn{font-size:14px}.passkeys-content .success,.passkeys-content .error{font-size:14px}
 </style>
@@ -34,7 +34,7 @@ $csrf = sentryiq_csrf_token();
 <body>
 <div class="box">
     <div class="sentryiq-page-header">
-        <div class="sentryiq-vault-brand-wrap"><img class="sentryiq-vault-banner" src="sentryiq-logo-wide.webp" width="1952" height="588" alt="SentryIQ"><span class="sentryiq-vault-status">Passkeys</span></div>
+        <div class="sentryiq-vault-brand-wrap"><img class="sentryiq-vault-banner" src="assets/images/sentryiq-logo-wide.webp" width="1952" height="588" alt="SentryIQ"><span class="sentryiq-vault-status">Passkeys</span></div>
         <div class="sentryiq-mobile-header-actions">
             <form method="POST" class="sentryiq-lock-form"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>"><input type="hidden" name="lock_vault" value="1"><button type="submit" class="btn btn-primary sentryiq-lock-button">Lock Vault</button></form>
             <div class="vault-mobile-menu-bar"><button type="button" class="vault-mobile-menu-toggle" aria-expanded="false" aria-controls="vault-mobile-menu"><span class="vault-mobile-menu-icon" aria-hidden="true">☰</span><span id="vault-mobile-menu-label">Menu</span></button></div>
