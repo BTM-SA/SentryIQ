@@ -7,7 +7,7 @@ sentryiq_security_bootstrap();
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SentryIQ — Security</title>
-<link rel="stylesheet" href="pm_style.css">
+<link rel="stylesheet" href="assets/css/pm_style.css">
 <style>.security-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.security-card{background:#fff;border:1px solid #e1e4e8;border-radius:10px;padding:22px;box-shadow:0 3px 8px rgba(0,0,0,.04)}.security-card.full{grid-column:1/-1}.security-card h2{margin:0 0 8px}.security-card p{color:#555}.security-card li{margin:6px 0}@media(max-width:700px){.security-grid{grid-template-columns:1fr}.security-card.full{grid-column:auto}}</style>
 </head>
 <body>
