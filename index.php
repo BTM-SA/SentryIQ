@@ -43,7 +43,7 @@ $csrf = sentryiq_csrf_token();
 <link rel="apple-touch-icon" href="sentryiq-icon.php">
 <meta property="og:type" content="website"><meta property="og:title" content="SentryIQ"><meta property="og:description" content="SentryIQ secure password vault and credential management."><meta property="og:image" content="sentryiq-icon.php"><meta property="og:image:type" content="image/png"><meta property="og:image:alt" content="SentryIQ">
 <meta name="twitter:card" content="summary"><meta name="twitter:title" content="SentryIQ"><meta name="twitter:description" content="SentryIQ secure password vault and credential management."><meta name="twitter:image" content="sentryiq-icon.php">
-<title>SentryIQ</title><link rel="stylesheet" href="pm_style.css">
+<title>SentryIQ</title><link rel="stylesheet" href="assets/css/pm_style.css">
 <style>
 #records-panel > div:first-child {
     margin: 2em 0 16px !important;
@@ -63,8 +63,8 @@ $csrf = sentryiq_csrf_token();
     text-decoration:none !important;
 }
 </style>
-<script src="vault_folders.js?v=20260915-2"></script>
-<script src="records_view.js?v=20260916-2"></script>
+<script src="assets/js/vault_folders.js?v=20260915-2"></script>
+<script src="assets/js/records_view.js?v=20260916-2"></script>
 <script>
 const vaultTabLabels={view:'Vault',records:'Records',add:'Add Entry',settings:'System',details:'Entry Inspection'};
 function updateVaultSectionStatus(tabName){var status=document.querySelector('[data-vault-status]');if(status)status.textContent=vaultTabLabels[tabName]||'SentryIQ';}
@@ -77,7 +77,7 @@ function viewRecordDetails(label,username,password,url,notes,id,category){if(Arr
 <body>
 <div class="box">
 <?php if (!$vault_authenticated): ?>
-<img class="sentryiq-brand-banner" src="sentryiq-logo-wide.webp" width="1952" height="588" alt="SentryIQ" fetchpriority="high">
+<img class="sentryiq-brand-banner" src="assets/images/sentryiq-logo-wide.webp" width="1952" height="588" alt="SentryIQ" fetchpriority="high">
 <?php if ($vault_error): ?><p class="error">The secure vault could not be opened. No changes have been made.</p>
 <?php elseif (!isset($_SESSION['pending_key'])): ?>
 <?php if ($decryption_failed): ?><p class="error">Unable to verify the master vault password.</p><?php endif; ?><form method="POST" autocomplete="off"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>"><div class="form-group"><label>Master Vault Password:</label><input type="password" name="master_password" class="input-field" autocomplete="current-password" required autofocus></div><button type="submit" name="login_step_1" class="btn btn-primary">Unlock</button></form>
