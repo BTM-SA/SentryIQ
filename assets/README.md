@@ -1,3 +1,9 @@
 # Assets
 
-Static application assets belong here. Keep runtime PHP endpoints at the repository root until routing is migrated deliberately.
+Static browser assets live under this directory.
+
+- `css/` — application stylesheets.
+- `js/` — browser-side JavaScript.
+- `images/` — static application images.
+
+The repository `.htaccess` preserves the existing public asset URLs while serving these files from their organized locations.
