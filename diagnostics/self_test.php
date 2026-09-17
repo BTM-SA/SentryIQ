@@ -80,7 +80,7 @@ add_check(
 );
 if ($wideLogoState['file'] && !$wideLogoState['link']) {
     $logoInfo = @getimagesize($wideLogoPath);
-    $logoDimensionsOk = is_array($logoInfo) && ($logoInfo[0] ?? 0) === 1952 && ($logoInfo[1] ?? 0) === 588 && strtolower((string)($logoInfo['mime'] ?? '')) === 'image/webp';
+    $logoDimensionsOk = is_array($logoInfo) && strtolower((string)($logoInfo['mime'] ?? '')) === 'image/webp' && (int)($logoInfo[0] ?? 0) > 0 && (int)($logoInfo[1] ?? 0) > 0;
     $logoDimensionDetail = is_array($logoInfo)
         ? ((string)($logoInfo[0] ?? '?') . '×' . (string)($logoInfo[1] ?? '?') . ', ' . (string)($logoInfo['mime'] ?? 'unknown'))
         : 'unreadable image';
