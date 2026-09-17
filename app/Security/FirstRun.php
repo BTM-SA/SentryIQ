@@ -13,7 +13,7 @@ if (is_file($pointerConfigFile)) {
 
 function first_run_data_dir(): string
 {
-    return rtrim(dirname(__DIR__, 2), '/') . '/private_data';
+    return rtrim(dirname(__DIR__, 4), '/') . '/private_data';
 }
 
 function first_run_base_url(): string
