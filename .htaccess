@@ -1,6 +1,6 @@
 RewriteEngine On
 
-# Keep existing deployed endpoint URLs working while the implementations live under app/.
+# Keep existing deployed endpoint URLs working while implementations live under app/.
 RewriteRule ^document_delete\.php$ app/Documents/Delete.php [L]
 RewriteRule ^document_download\.php$ app/Documents/Download.php [L]
 RewriteRule ^document_upload\.php$ app/Documents/Upload.php [L]
@@ -26,3 +26,11 @@ RewriteRule ^system_log\.php$ app/Security/SystemLog.php [L]
 RewriteRule ^vault_actions\.php$ app/Vault/Actions.php [L]
 RewriteRule ^vault_category_actions\.php$ app/Vault/CategoryActions.php [L]
 RewriteRule ^vault_folder_data\.php$ app/Vault/FolderData.php [L]
+
+# Preserve existing browser asset URLs after moving static files under assets/.
+RewriteRule ^pm_style\.css$ assets/css/pm_style.css [L]
+RewriteRule ^vault_folders\.js$ assets/js/vault_folders.js [L]
+RewriteRule ^records_view\.js$ assets/js/records_view.js [L]
+RewriteRule ^safari\.js$ assets/js/safari.js [L]
+RewriteRule ^sentryiq-logo-wide\.webp$ assets/images/sentryiq-logo-wide.webp [L]
+RewriteRule ^assets/css/sentryiq-logo-wide\.webp$ assets/images/sentryiq-logo-wide.webp [L]
