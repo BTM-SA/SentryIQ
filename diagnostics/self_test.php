@@ -48,20 +48,20 @@ function add_required_file_check(string $group, string $label, string $relativeP
     add_check($group, $label, $ok, $detail);
 }
 
-function add_source_reference_check(string $relativePath, string $needle, string $label): void
+function add_source_reference_check(string $relativePath, string $pattern, string $label): void
 {
     $path = dirname(__DIR__) . '/' . $relativePath;
     $source = is_readable($path) ? @file_get_contents($path) : false;
-    $ok = is_string($source) && str_contains($source, $needle);
-    add_check('URL/source references', $label, $ok, $ok ? $needle : ($relativePath . ': expected reference missing: ' . $needle));
+    $ok = is_string($source) && preg_match($pattern, $source) === 1;
+    add_check('URL/source references', $label, $ok, $ok ? 'exact HTML reference found' : ($relativePath . ': expected HTML reference not found'));
 }
 
-function add_source_absence_check(string $relativePath, string $needle, string $label): void
+function add_source_absence_check(string $relativePath, string $pattern, string $label): void
 {
     $path = dirname(__DIR__) . '/' . $relativePath;
     $source = is_readable($path) ? @file_get_contents($path) : false;
-    $ok = is_string($source) && !str_contains($source, $needle);
-    add_check('URL/source references', $label, $ok, $ok ? 'not referenced' : ($relativePath . ': stale reference found: ' . $needle));
+    $ok = is_string($source) && preg_match($pattern, $source) !== 1;
+    add_check('URL/source references', $label, $ok, $ok ? 'not referenced as an HTML asset URL' : ($relativePath . ': stale HTML asset URL found'));
 }
 
 add_check('Diagnostic', 'Diagnostic build', true, SENTRYIQ_DIAGNOSTIC_BUILD);
@@ -165,35 +165,35 @@ foreach ($requiredFiles as $group => $paths) {
 }
 
 $sourceRefs = [
-    ['index.php', 'assets/css/pm_style.css', 'index stylesheet URL'],
-    ['index.php', 'assets/images/sentryiq-logo-wide.webp', 'index wide-logo URL'],
-    ['index.php', 'sentryiq-icon.php', 'index favicon/icon URL'],
-    ['index.php', 'assets/js/vault_folders.js', 'index Vault JS URL'],
-    ['index.php', 'assets/js/records_view.js', 'index Records JS URL'],
-    ['gallery.php', 'assets/css/pm_style.css', 'gallery stylesheet URL'],
-    ['gallery.php', 'assets/images/sentryiq-logo-wide.webp', 'gallery wide-logo URL'],
-    ['gallery.php', 'gallery_image.php?id=', 'gallery image endpoint URL'],
-    ['documents.php', 'assets/css/pm_style.css', 'documents stylesheet URL'],
-    ['documents.php', 'assets/images/sentryiq-logo-wide.webp', 'documents wide-logo URL'],
-    ['documents.php', 'document_download.php?id=', 'documents download endpoint URL'],
-    ['app/Auth/PasskeySetup.php', 'assets/css/pm_style.css', 'Passkey setup stylesheet URL'],
-    ['app/Auth/PasskeySetup.php', 'assets/images/sentryiq-logo-wide.webp', 'Passkey setup wide-logo URL'],
-    ['app/Auth/PasskeyLogin.php', 'assets/css/pm_style.css', 'Passkey login stylesheet URL'],
-    ['app/Auth/Passkeys.php', 'assets/css/pm_style.css', 'Passkeys stylesheet URL'],
-    ['app/Auth/Passkeys.php', 'assets/images/sentryiq-logo-wide.webp', 'Passkeys wide-logo URL'],
-    ['app/Security/FirstRun.php', 'assets/css/pm_style.css', 'First-run stylesheet URL'],
-    ['app/Security/SecurityFeatures.php', 'assets/css/pm_style.css', 'Security features stylesheet URL'],
-    ['app/Security/SecurityLog.php', 'assets/css/pm_style.css', 'Security log stylesheet URL'],
-    ['app/Security/SecurityLog.php', 'assets/images/sentryiq-logo-wide.webp', 'Security log wide-logo URL'],
-    ['app/Security/SystemLog.php', 'assets/css/pm_style.css', 'System log stylesheet URL'],
-    ['app/Security/SystemLog.php', 'assets/images/sentryiq-logo-wide.webp', 'System log wide-logo URL'],
+    ['index.php', '~<link[^>]+rel=["\\\']stylesheet["\\\'][^>]+href=["\\\']assets/css/pm_style\\.css(?:\\?[^"\\\']*)?["\\\']~i', 'index stylesheet URL'],
+    ['index.php', '~<img[^>]+src=["\\\']assets/images/sentryiq-logo-wide\\.webp(?:\\?[^"\\\']*)?["\\\']~i', 'index wide-logo URL'],
+    ['index.php', '~<(?:link|meta)[^>]+(?:href|content)=["\\\'](?:[^"\\\']*/)?sentryiq-icon\\.php(?:\\?[^"\\\']*)?["\\\']~i', 'index favicon/icon URL'],
+    ['index.php', '~<script[^>]+src=["\\\']assets/js/vault_folders\\.js(?:\\?[^"\\\']*)?["\\\']~i', 'index Vault JS URL'],
+    ['index.php', '~<script[^>]+src=["\\\']assets/js/records_view\\.js(?:\\?[^"\\\']*)?["\\\']~i', 'index Records JS URL'],
+    ['gallery.php', '~<link[^>]+rel=["\\\']stylesheet["\\\'][^>]+href=["\\\']assets/css/pm_style\\.css(?:\\?[^"\\\']*)?["\\\']~i', 'gallery stylesheet URL'],
+    ['gallery.php', '~<img[^>]+src=["\\\']assets/images/sentryiq-logo-wide\\.webp(?:\\?[^"\\\']*)?["\\\']~i', 'gallery wide-logo URL'],
+    ['gallery.php', '~gallery_image\\.php\\?id=~i', 'gallery image endpoint URL'],
+    ['documents.php', '~<link[^>]+rel=["\\\']stylesheet["\\\'][^>]+href=["\\\']assets/css/pm_style\\.css(?:\\?[^"\\\']*)?["\\\']~i', 'documents stylesheet URL'],
+    ['documents.php', '~<img[^>]+src=["\\\']assets/images/sentryiq-logo-wide\\.webp(?:\\?[^"\\\']*)?["\\\']~i', 'documents wide-logo URL'],
+    ['documents.php', '~document_download\\.php\\?id=~i', 'documents download endpoint URL'],
+    ['app/Auth/PasskeySetup.php', '~<link[^>]+rel=["\\\']stylesheet["\\\'][^>]+href=["\\\']assets/css/pm_style\\.css(?:\\?[^"\\\']*)?["\\\']~i', 'Passkey setup stylesheet URL'],
+    ['app/Auth/PasskeySetup.php', '~<img[^>]+src=["\\\']assets/images/sentryiq-logo-wide\\.webp(?:\\?[^"\\\']*)?["\\\']~i', 'Passkey setup wide-logo URL'],
+    ['app/Auth/PasskeyLogin.php', '~<link[^>]+rel=["\\\']stylesheet["\\\'][^>]+href=["\\\']assets/css/pm_style\\.css(?:\\?[^"\\\']*)?["\\\']~i', 'Passkey login stylesheet URL'],
+    ['app/Auth/Passkeys.php', '~<link[^>]+rel=["\\\']stylesheet["\\\'][^>]+href=["\\\']assets/css/pm_style\\.css(?:\\?[^"\\\']*)?["\\\']~i', 'Passkeys stylesheet URL'],
+    ['app/Auth/Passkeys.php', '~<img[^>]+src=["\\\']assets/images/sentryiq-logo-wide\\.webp(?:\\?[^"\\\']*)?["\\\']~i', 'Passkeys wide-logo URL'],
+    ['app/Security/FirstRun.php', '~<link[^>]+rel=["\\\']stylesheet["\\\'][^>]+href=["\\\']assets/css/pm_style\\.css(?:\\?[^"\\\']*)?["\\\']~i', 'First-run stylesheet URL'],
+    ['app/Security/SecurityFeatures.php', '~<link[^>]+rel=["\\\']stylesheet["\\\'][^>]+href=["\\\']assets/css/pm_style\\.css(?:\\?[^"\\\']*)?["\\\']~i', 'Security features stylesheet URL'],
+    ['app/Security/SecurityLog.php', '~<link[^>]+rel=["\\\']stylesheet["\\\'][^>]+href=["\\\']assets/css/pm_style\\.css(?:\\?[^"\\\']*)?["\\\']~i', 'Security log stylesheet URL'],
+    ['app/Security/SecurityLog.php', '~<img[^>]+src=["\\\']assets/images/sentryiq-logo-wide\\.webp(?:\\?[^"\\\']*)?["\\\']~i', 'Security log wide-logo URL'],
+    ['app/Security/SystemLog.php', '~<link[^>]+rel=["\\\']stylesheet["\\\'][^>]+href=["\\\']assets/css/pm_style\\.css(?:\\?[^"\\\']*)?["\\\']~i', 'System log stylesheet URL'],
+    ['app/Security/SystemLog.php', '~<img[^>]+src=["\\\']assets/images/sentryiq-logo-wide\\.webp(?:\\?[^"\\\']*)?["\\\']~i', 'System log wide-logo URL'],
 ];
 foreach ($sourceRefs as $ref) add_source_reference_check($ref[0], $ref[1], $ref[2]);
 
 $sourcePageFiles = ['index.php', 'gallery.php', 'documents.php', 'app/Auth/PasskeySetup.php', 'app/Auth/PasskeyLogin.php', 'app/Auth/Passkeys.php', 'app/Security/FirstRun.php', 'app/Security/SecurityFeatures.php', 'app/Security/SecurityLog.php', 'app/Security/SystemLog.php'];
 foreach ($sourcePageFiles as $page) {
-    add_source_absence_check($page, 'pm_style.css', $page . ' has no legacy stylesheet URL');
-    add_source_absence_check($page, 'sentryiq-logo-wide.webp"', $page . ' has no legacy root logo URL');
+    add_source_absence_check($page, '~(?:href|src)=["\\\'](?:\\./)?pm_style\\.css(?:[?"\\\'])~i', $page . ' has no legacy stylesheet URL');
+    add_source_absence_check($page, '~(?:href|src)=["\\\'](?:\\./)?sentryiq-logo-wide\\.webp(?:[?"\\\'])~i', $page . ' has no legacy root logo URL');
 }
 
 $browserTests = [
@@ -316,6 +316,19 @@ async function checkOne(test){
         }else if(test.type!=='asset'){
             const textBody=await r.text();
             bodySignatureOk=textBody.length>0;
+            if(bodySignatureOk && Array.isArray(test.requiredHtmlRefs)){
+                const doc=new DOMParser().parseFromString(textBody,'text/html');
+                const referenceResults=[];
+                for(const ref of test.requiredHtmlRefs){
+                    let found=false;
+                    if(ref.tag==='link') found=Array.from(doc.querySelectorAll('link')).some(el=>el.getAttribute('href')===ref.value || (ref.prefix && (el.getAttribute('href')||'').startsWith(ref.prefix)));
+                    else if(ref.tag==='script') found=Array.from(doc.querySelectorAll('script[src]')).some(el=>el.getAttribute('src')===ref.value || (ref.prefix && (el.getAttribute('src')||'').startsWith(ref.prefix)));
+                    else if(ref.tag==='img') found=Array.from(doc.querySelectorAll('img[src]')).some(el=>el.getAttribute('src')===ref.value || (ref.prefix && (el.getAttribute('src')||'').startsWith(ref.prefix)));
+                    referenceResults.push({...ref,found});
+                    if(!found) bodySignatureOk=false;
+                }
+                if(referenceResults.length) test.htmlReferenceResults=referenceResults;
+            }
         }
         return {...test,ok:statusOk&&contentTypeOk&&finalPathOk&&bodySignatureOk,status:r.status,statusText:r.statusText,finalUrl:r.url,timeMs:ms,contentType,checks:{tested:true,statusOk,contentTypeOk,finalPathOk,bodySignatureOk,expectedFinalPath},responseBytes:bodyBytes?bodyBytes.length:null};
     }catch(e){
