@@ -225,11 +225,12 @@ function stylesheet_rule_body(string $css, string $selector): string
 {
     if ($css === '' || $selector === '') return '';
     if (!preg_match_all('/(?:^|})\s*([^{}]+)\{([^{}]*)\}/s', $css, $matches, PREG_SET_ORDER)) return '';
+    $bodies = [];
     foreach ($matches as $match) {
         $selectors = preg_split('/\s*,\s*/', trim((string)$match[1])) ?: [];
-        if (in_array(trim($selector), array_map('trim', $selectors), true)) return (string)$match[2];
+        if (in_array(trim($selector), array_map('trim', $selectors), true)) $bodies[] = (string)$match[2];
     }
-    return '';
+    return implode(';', $bodies);
 }
 
 function stylesheet_has_declaration(string $body, string $property, ?string $value = null): bool
@@ -278,7 +279,7 @@ function add_stylesheet_contract_checks(string $relativePath): void
 add_stylesheet_contract_checks('assets/css/pm_style.css');
 
 $browserTests = [
-    ['type' => 'asset', 'label' => 'CSS', 'url' => 'assets/css/pm_style.css', 'expectedContentType' => 'text/css'],
+    ['type' => 'asset', 'label' => 'CSS', 'url' => 'assets/css/pm_style.css', 'expectedContentType' => 'text/css', 'parseCss' => true],
     ['type' => 'asset', 'label' => 'Vault folders JS', 'url' => 'assets/js/vault_folders.js?v=20260915-2', 'expectedContentType' => 'text/javascript'],
     ['type' => 'asset', 'label' => 'Records JS', 'url' => 'assets/js/records_view.js?v=20260916-2', 'expectedContentType' => 'text/javascript'],
     ['type' => 'asset', 'label' => 'Safari JS', 'url' => 'assets/js/safari.js', 'expectedContentType' => 'text/javascript'],
@@ -431,9 +432,10 @@ async function checkOne(test){
 
         let stylesheetOk=true;
         let stylesheetDetail=null;
-        if(statusOk&&test.expectedStylesheet){
+        if(statusOk&&(test.expectedStylesheet||test.parseCss)){
             try{
-                const sr=await fetch(test.expectedStylesheet,{credentials:'same-origin',cache:'no-store',redirect:'follow',headers:{'Accept':'text/css,*/*'}});
+                const stylesheetUrl=test.expectedStylesheet||test.url;
+                const sr=await fetch(stylesheetUrl,{credentials:'same-origin',cache:'no-store',redirect:'follow',headers:{'Accept':'text/css,*/*'}});
                 const st=sr.headers.get('content-type')||'';
                 const styleText=await sr.text();
                 stylesheetDetail={status:sr.status,statusOk:sr.status>=200&&sr.status<300,contentType:st,contentTypeOk:st.toLowerCase().startsWith('text/css'),url:sr.url,bytes:styleText.length,parseOk:false,ruleCount:0,contracts:[]};
@@ -448,12 +450,14 @@ async function checkOne(test){
                     stylesheetOk=stylesheetOk&&rules.length>0;
 
                     for(const contract of (test.expectedCssContracts||[])){
+                        const declarationProperty=contract.property.replace(/[A-Z]/g,m=>'-'+m.toLowerCase());
                         let actual='';
+                        let found=false;
                         for(const rule of rules){
                             if(rule.type!==CSSRule.STYLE_RULE||typeof rule.selectorText!=='string')continue;
                             if(!rule.selectorText.split(',').map(v=>v.trim()).includes(contract.selector))continue;
-                            actual=rule.style.getPropertyValue(contract.property.replace(/[A-Z]/g,m=>'-'+m.toLowerCase())).trim();
-                            if(actual)break;
+                            const value=rule.style.getPropertyValue(declarationProperty).trim();
+                            if(value){actual=value;found=true;}
                         }
                         const ok=contract.value!==undefined?actual===contract.value:(contract.not!==undefined?actual!==contract.not:actual!=='');
                         stylesheetDetail.contracts.push({...contract,actual,ok});
