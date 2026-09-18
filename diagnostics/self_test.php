@@ -19,7 +19,7 @@ if ($installed && !$authenticated) {
 header('Content-Type: text/html; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
-const SENTRYIQ_DIAGNOSTIC_BUILD = 'strict-2xx-html-url-contracts-2026-09-18';
+const SENTRYIQ_DIAGNOSTIC_BUILD = 'strict-2xx-url-source-contracts-2026-09-19';
 
 $results = [];
 function add_check(string $group, string $name, bool $ok, string $detail = ''): void
@@ -220,6 +220,52 @@ foreach ($sourcePageFiles as $page) {
     add_source_no_exact_asset_check($page, 'sentryiq-logo-wide.webp', $page . ' has no exact legacy root logo URL');
 }
 
+function add_legacy_attribute_reference_scan(): void
+{
+    $scanFiles = [];
+    foreach (glob(dirname(__DIR__) . '/*.php') ?: [] as $path) {
+        $scanFiles[] = $path;
+    }
+
+    $appRoot = dirname(__DIR__) . '/app';
+    if (is_dir($appRoot)) {
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($appRoot, FilesystemIterator::SKIP_DOTS)
+        );
+        foreach ($iterator as $fileInfo) {
+            if (!$fileInfo->isFile() || strtolower($fileInfo->getExtension()) !== 'php') continue;
+            $scanFiles[] = $fileInfo->getPathname();
+        }
+    }
+
+    $legacyMap = [
+        'pm_style.css' => 'legacy stylesheet URL',
+        'sentryiq-logo-wide.webp' => 'legacy wide-logo URL',
+        'safari.js' => 'legacy Safari JS URL',
+        'vault_folders.js' => 'legacy Vault JS URL',
+        'records_view.js' => 'legacy Records JS URL',
+    ];
+
+    foreach (array_values(array_unique($scanFiles)) as $path) {
+        $source = @file_get_contents($path);
+        if (!is_string($source)) continue;
+        $relative = ltrim(str_replace(dirname(__DIR__) . '/', '', str_replace('\\', '/', $path)), '/');
+        $urls = extract_html_asset_urls($source);
+
+        foreach ($legacyMap as $legacyUrl => $description) {
+            if (!in_array($legacyUrl, $urls, true)) continue;
+            add_check(
+                'URL/source references',
+                'No ' . $description . ' in ' . $relative,
+                false,
+                $relative . ': legacy URL still referenced: ' . $legacyUrl
+            );
+        }
+    }
+}
+
+add_legacy_attribute_reference_scan();
+
 
 function stylesheet_rule_body(string $css, string $selector): string
 {
@@ -390,7 +436,6 @@ body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-seri
 <div class="card">
 <h1>SentryIQ Self-Test</h1><div class="note"><strong>Diagnostic build:</strong> <?= htmlspecialchars(SENTRYIQ_DIAGNOSTIC_BUILD, ENT_QUOTES, 'UTF-8') ?></div>
 <div class="summary">This diagnostic checks the deployed filesystem/configuration, validates source URL references, and then tests the real browser URLs from this session.</div>
-<div class="note"><strong>Diagnostic build:</strong> <code><?= htmlspecialchars(SENTRYIQ_DIAGNOSTIC_BUILD, ENT_QUOTES, 'UTF-8') ?></code></div>
 <button id="run" type="button">Run browser checks</button><button id="copy" type="button">Copy report</button>
 <p class="note">Browser health checks PASS only on a real 2xx response with the correct content type, response signature where applicable, and final URL. Any 3xx, 4xx, 5xx, or other non-2xx response is FAIL. POST-only or ID-dependent routes are NOT TESTED rather than treated as healthy.</p>
 </div>
@@ -424,7 +469,7 @@ async function checkOne(test){
         const r=await fetch(test.url,{credentials:'same-origin',cache:'no-store',redirect:'follow',headers:{'Accept':'*/*'}});
         const ms=Math.round(performance.now()-started);
         const contentType=r.headers.get('content-type')||'';
-        const statusOk=r.status>=200&&r.status<300;
+        const statusOk=Number.isInteger(r.status)&&r.status>=200&&r.status<300;
         const finalUrl=new URL(r.url,location.href);
         const expectedFinalPath=test.expectedFinalPath?new URL(test.expectedFinalPath,location.href).pathname:expectedRequestedPath;
         const finalPathOk=finalUrl.pathname===expectedFinalPath;
@@ -484,12 +529,30 @@ async function checkOne(test){
             if(bodySignatureOk&&Array.isArray(test.requiredHtmlRefs)){
                 const doc=new DOMParser().parseFromString(textBody,'text/html');
                 for(const ref of test.requiredHtmlRefs){
-                    let found=false;
-                    if(ref.tag==='link')found=Array.from(doc.querySelectorAll('link')).some(el=>{const v=el.getAttribute('href')||'';return ref.value?v===ref.value:(ref.prefix&&v.startsWith(ref.prefix));});
-                    else if(ref.tag==='script')found=Array.from(doc.querySelectorAll('script[src]')).some(el=>{const v=el.getAttribute('src')||'';return ref.value?v===ref.value:(ref.prefix&&v.startsWith(ref.prefix));});
-                    else if(ref.tag==='img')found=Array.from(doc.querySelectorAll('img[src]')).some(el=>{const v=el.getAttribute('src')||'';return ref.value?v===ref.value:(ref.prefix&&v.startsWith(ref.prefix));});
-                    htmlReferenceResults.push({...ref,found});
-                    if(!found)bodySignatureOk=false;
+                    let match=null;
+                    if(ref.tag==='link')match=Array.from(doc.querySelectorAll('link')).find(el=>{const v=el.getAttribute('href')||'';return ref.value?v===ref.value:(ref.prefix&&v.startsWith(ref.prefix));})||null;
+                    else if(ref.tag==='script')match=Array.from(doc.querySelectorAll('script[src]')).find(el=>{const v=el.getAttribute('src')||'';return ref.value?v===ref.value:(ref.prefix&&v.startsWith(ref.prefix));})||null;
+                    else if(ref.tag==='img')match=Array.from(doc.querySelectorAll('img[src]')).find(el=>{const v=el.getAttribute('src')||'';return ref.value?v===ref.value:(ref.prefix&&v.startsWith(ref.prefix));})||null;
+                    const found=!!match;
+                    const actualUrl=match?(match.getAttribute(ref.tag==='link'?'href':'src')||''):'';
+                    const resolvedUrl=actualUrl?new URL(actualUrl,location.href).href:'';
+                    let urlCheck=null;
+                    if(found){
+                        try{
+                            const ar=await fetch(resolvedUrl,{credentials:'same-origin',cache:'no-store',redirect:'follow',headers:{'Accept':'*/*'}});
+                            const at=ar.headers.get('content-type')||'';
+                            const expectedType=ref.tag==='link'?'text/css':(ref.tag==='script'?'text/javascript':'image/');
+                            const typeOk=ref.tag==='img'?at.toLowerCase().startsWith('image/'):at.toLowerCase().startsWith(expectedType);
+                            urlCheck={status:ar.status,statusOk:ar.status>=200&&ar.status<300,contentType:at,contentTypeOk:typeOk,finalUrl:ar.url};
+                            if(!(urlCheck.statusOk&&urlCheck.contentTypeOk))bodySignatureOk=false;
+                        }catch(error){
+                            urlCheck={status:0,statusOk:false,contentType:'',contentTypeOk:false,finalUrl:'',error:String(error&&error.message||error)};
+                            bodySignatureOk=false;
+                        }
+                    }else{
+                        bodySignatureOk=false;
+                    }
+                    htmlReferenceResults.push({...ref,found,actualUrl,resolvedUrl,urlCheck});
                 }
             }
         }
