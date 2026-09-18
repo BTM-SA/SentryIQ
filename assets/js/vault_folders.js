@@ -299,9 +299,14 @@
         if (!header || !title || title.getAttribute('data-category-options-wired') === '1') return;
         title.setAttribute('data-category-options-wired', '1');
 
+        header.style.setProperty('position', 'relative', 'important');
+        title.style.setProperty('order', '0', 'important');
+        title.style.setProperty('flex-basis', 'auto', 'important');
+        title.style.setProperty('margin', '0', 'important');
+
         var wrapper = document.createElement('span');
         wrapper.className = 'vault-category-header-options';
-        wrapper.style.cssText = 'position:relative;display:flex;align-items:center;gap:8px;flex:0 0 auto;';
+        wrapper.style.cssText = 'position:absolute;top:0;right:0;display:flex;align-items:center;gap:8px;z-index:20;';
 
         var optionsButton = document.createElement('button');
         optionsButton.type = 'button';
