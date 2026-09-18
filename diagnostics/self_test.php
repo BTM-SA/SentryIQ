@@ -54,6 +54,14 @@ function add_source_reference_check(string $relativePath, string $needle, string
     add_check('URL/source references', $label, $ok, $ok ? $needle : ($relativePath . ': expected reference missing: ' . $needle));
 }
 
+function add_source_absence_check(string $relativePath, string $needle, string $label): void
+{
+    $path = dirname(__DIR__) . '/' . $relativePath;
+    $source = is_readable($path) ? @file_get_contents($path) : false;
+    $ok = is_string($source) && !str_contains($source, $needle);
+    add_check('URL/source references', $label, $ok, $ok ? 'not referenced' : ($relativePath . ': stale reference found: ' . $needle));
+}
+
 add_check('Environment', 'PHP version', PHP_VERSION_ID >= 80300, PHP_VERSION);
 $httpsOk = PHP_SAPI === 'cli' || (($_SERVER['HTTPS'] ?? '') === 'on') || (string)($_SERVER['SERVER_PORT'] ?? '') === '443';
 add_check('Environment', 'HTTPS request', $httpsOk, $httpsOk ? 'HTTPS' : 'HTTP');
@@ -179,13 +187,19 @@ $sourceRefs = [
 ];
 foreach ($sourceRefs as $ref) add_source_reference_check($ref[0], $ref[1], $ref[2]);
 
+$sourcePageFiles = ['index.php', 'gallery.php', 'documents.php', 'app/Auth/PasskeySetup.php', 'app/Auth/PasskeyLogin.php', 'app/Auth/Passkeys.php', 'app/Security/FirstRun.php', 'app/Security/SecurityFeatures.php', 'app/Security/SecurityLog.php', 'app/Security/SystemLog.php'];
+foreach ($sourcePageFiles as $page) {
+    add_source_absence_check($page, 'pm_style.css', $page . ' has no legacy stylesheet URL');
+    add_source_absence_check($page, 'sentryiq-logo-wide.webp"', $page . ' has no legacy root logo URL');
+}
+
 $browserTests = [
     ['type' => 'asset', 'label' => 'CSS', 'url' => 'assets/css/pm_style.css', 'expectedContentType' => 'text/css'],
     ['type' => 'asset', 'label' => 'Vault folders JS', 'url' => 'assets/js/vault_folders.js?v=20260915-2', 'expectedContentType' => 'text/javascript'],
     ['type' => 'asset', 'label' => 'Records JS', 'url' => 'assets/js/records_view.js?v=20260916-2', 'expectedContentType' => 'text/javascript'],
     ['type' => 'asset', 'label' => 'Safari JS', 'url' => 'assets/js/safari.js', 'expectedContentType' => 'text/javascript'],
     ['type' => 'asset', 'label' => 'Wide logo', 'url' => 'assets/images/sentryiq-logo-wide.webp', 'expectedContentType' => 'image/webp'],
-    ['type' => 'asset', 'label' => 'Favicon/icon endpoint', 'url' => 'sentryiq-icon.php', 'expectedContentType' => 'image/png'],
+    ['type' => 'asset', 'label' => 'Favicon/icon endpoint', 'url' => 'sentryiq-icon.php', 'expectedContentType' => 'image/png', 'expectedMagic' => [137,80,78,71,13,10,26,10]],
     ['type' => 'page', 'label' => 'index.php', 'url' => 'index.php', 'expectedContentType' => 'text/html'],
     ['type' => 'page', 'label' => 'documents.php', 'url' => 'documents.php', 'expectedContentType' => 'text/html'],
     ['type' => 'page', 'label' => 'gallery.php', 'url' => 'gallery.php', 'expectedContentType' => 'text/html'],
@@ -198,18 +212,18 @@ $browserTests = [
     ['type' => 'page', 'label' => 'security-features.php', 'url' => 'security-features.php', 'expectedContentType' => 'text/html'],
     ['type' => 'page', 'label' => 'security_log.php', 'url' => 'security_log.php', 'expectedContentType' => 'text/html'],
     ['type' => 'page', 'label' => 'system_log.php', 'url' => 'system_log.php', 'expectedContentType' => 'text/html'],
-    ['type' => 'not-tested', 'label' => 'document_upload.php', 'url' => 'document_upload.php', 'reason' => 'POST-only endpoint; not safely health-tested with GET'],
-    ['type' => 'not-tested', 'label' => 'document_delete.php', 'url' => 'document_delete.php', 'reason' => 'POST-only endpoint; not safely health-tested with GET'],
-    ['type' => 'not-tested', 'label' => 'gallery_album.php', 'url' => 'gallery_album.php', 'reason' => 'POST-only endpoint; not safely health-tested with GET'],
-    ['type' => 'not-tested', 'label' => 'gallery_bulk_delete.php', 'url' => 'gallery_bulk_delete.php', 'reason' => 'POST-only endpoint; not safely health-tested with GET'],
-    ['type' => 'not-tested', 'label' => 'gallery_delete.php', 'url' => 'gallery_delete.php', 'reason' => 'POST-only endpoint; not safely health-tested with GET'],
-    ['type' => 'not-tested', 'label' => 'gallery_upload.php', 'url' => 'gallery_upload.php', 'reason' => 'POST-only endpoint; not safely health-tested with GET'],
-    ['type' => 'not-tested', 'label' => 'record_actions.php', 'url' => 'record_actions.php', 'reason' => 'POST-only endpoint; not safely health-tested with GET'],
-    ['type' => 'not-tested', 'label' => 'records_category_actions.php', 'url' => 'records_category_actions.php', 'reason' => 'POST-only endpoint; not safely health-tested with GET'],
-    ['type' => 'not-tested', 'label' => 'vault_actions.php', 'url' => 'vault_actions.php', 'reason' => 'POST-only endpoint; not safely health-tested with GET'],
-    ['type' => 'not-tested', 'label' => 'vault_category_actions.php', 'url' => 'vault_category_actions.php', 'reason' => 'POST-only endpoint; not safely health-tested with GET'],
-    ['type' => 'data-contract', 'label' => 'document_download.php without id', 'url' => 'document_download.php', 'reason' => 'Requires a real document id; use a non-destructive fixture for a full content test'],
-    ['type' => 'data-contract', 'label' => 'gallery_image.php without id', 'url' => 'gallery_image.php', 'reason' => 'Requires a real photo id; use a non-destructive fixture for a full content test'],
+    ['type' => 'not-tested', 'label' => 'document_upload.php', 'url' => 'document_upload.php', 'reason' => 'POST-only endpoint; browser GET is not a health test'],
+    ['type' => 'not-tested', 'label' => 'document_delete.php', 'url' => 'document_delete.php', 'reason' => 'POST-only endpoint; browser GET is not a health test'],
+    ['type' => 'not-tested', 'label' => 'gallery_album.php', 'url' => 'gallery_album.php', 'reason' => 'POST-only endpoint; browser GET is not a health test'],
+    ['type' => 'not-tested', 'label' => 'gallery_bulk_delete.php', 'url' => 'gallery_bulk_delete.php', 'reason' => 'POST-only endpoint; browser GET is not a health test'],
+    ['type' => 'not-tested', 'label' => 'gallery_delete.php', 'url' => 'gallery_delete.php', 'reason' => 'POST-only endpoint; browser GET is not a health test'],
+    ['type' => 'not-tested', 'label' => 'gallery_upload.php', 'url' => 'gallery_upload.php', 'reason' => 'POST-only endpoint; browser GET is not a health test'],
+    ['type' => 'not-tested', 'label' => 'record_actions.php', 'url' => 'record_actions.php', 'reason' => 'POST-only endpoint; browser GET is not a health test'],
+    ['type' => 'not-tested', 'label' => 'records_category_actions.php', 'url' => 'records_category_actions.php', 'reason' => 'POST-only endpoint; browser GET is not a health test'],
+    ['type' => 'not-tested', 'label' => 'vault_actions.php', 'url' => 'vault_actions.php', 'reason' => 'POST-only endpoint; browser GET is not a health test'],
+    ['type' => 'not-tested', 'label' => 'vault_category_actions.php', 'url' => 'vault_category_actions.php', 'reason' => 'POST-only endpoint; browser GET is not a health test'],
+    ['type' => 'not-tested', 'label' => 'document_download.php', 'url' => 'document_download.php', 'reason' => 'Requires a real document id; no-id GET is intentionally not a health test'],
+    ['type' => 'not-tested', 'label' => 'gallery_image.php', 'url' => 'gallery_image.php', 'reason' => 'Requires a real photo id; no-id GET is intentionally not a health test'],
 ];
 
 $csrf = function_exists('sentryiq_csrf_token') ? sentryiq_csrf_token() : '';
@@ -253,7 +267,7 @@ body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-seri
 <h1>SentryIQ Self-Test</h1>
 <div class="summary">This diagnostic checks the deployed filesystem/configuration, validates source URL references, and then tests the real browser URLs from this session.</div>
 <button id="run" type="button">Run browser checks</button><button id="copy" type="button">Copy report</button>
-<p class="note">Browser URL checks PASS only when the requested URL returns a successful 2xx HTTP response, the content type is correct, and the final URL is correct. A 400, 404, 405, 500, or other non-2xx response is never a PASS.</p>
+<p class="note">Browser health checks PASS only on a real 2xx response with the correct content type, response signature where applicable, and final URL. Any 3xx, 4xx, 5xx, or other non-2xx response is FAIL. POST-only or ID-dependent routes are NOT TESTED rather than treated as healthy.</p>
 </div>
 <div class="card">
 <h2>Server-side checks</h2>
@@ -290,9 +304,19 @@ async function checkOne(test){
         const finalUrl=new URL(r.url,location.href);
         const expectedFinalPath=test.expectedFinalPath?new URL(test.expectedFinalPath,location.href).pathname:expectedRequestedPath;
         const finalPathOk=finalUrl.pathname===expectedFinalPath;
-        return {...test,ok:statusOk&&contentTypeOk&&finalPathOk,status:r.status,statusText:r.statusText,finalUrl:r.url,timeMs:ms,contentType,checks:{statusOk,contentTypeOk,finalPathOk,expectedFinalPath}};
+        let bodySignatureOk=true;
+        let bodyBytes=null;
+        if(Array.isArray(test.expectedMagic)){
+            const buffer=await r.arrayBuffer();
+            bodyBytes=new Uint8Array(buffer);
+            bodySignatureOk=test.expectedMagic.every((value,index)=>bodyBytes[index]===value);
+        }else if(test.type!=='asset'){
+            const textBody=await r.text();
+            bodySignatureOk=textBody.length>0;
+        }
+        return {...test,ok:statusOk&&contentTypeOk&&finalPathOk&&bodySignatureOk,status:r.status,statusText:r.statusText,finalUrl:r.url,timeMs:ms,contentType,checks:{tested:true,statusOk,contentTypeOk,finalPathOk,bodySignatureOk,expectedFinalPath},responseBytes:bodyBytes?bodyBytes.length:null};
     }catch(e){
-        return {...test,ok:false,status:0,statusText:String(e&&e.message||e),finalUrl:'',timeMs:Math.round(performance.now()-started),contentType:'',checks:{statusOk:false,contentTypeOk:false,finalPathOk:false,expectedFinalPath:expectedRequestedPath}};
+        return {...test,ok:false,status:0,statusText:String(e&&e.message||e),finalUrl:'',timeMs:Math.round(performance.now()-started),contentType:'',checks:{tested:true,statusOk:false,contentTypeOk:false,finalPathOk:false,bodySignatureOk:false,expectedFinalPath:expectedRequestedPath}};
     }
 }
 async function runChecks(){
@@ -301,7 +325,7 @@ async function runChecks(){
     document.querySelector('#browser-summary').textContent='Running checks…';
     const out=[];
     for(const test of tests){
-        if(test.type==='not-tested'||test.type==='data-contract'){
+        if(test.type==='not-tested'){
             const item={...test,ok:null,status:null,statusText:'NOT TESTED',finalUrl:'',timeMs:0,contentType:'',checks:{tested:false},};
             out.push(item);
             const tr=document.createElement('tr');
@@ -318,9 +342,11 @@ async function runChecks(){
     reportData.browserChecks=out;
     const failed=out.filter(x=>x.ok===false);
     const notTested=out.filter(x=>x.ok===null);
-    document.querySelector('#browser-summary').innerHTML=failed.length?`<span class="bad">${failed.length} browser check(s) failed.</span>`:`<span class="ok">All ${out.length} browser URL checks passed.</span>`;
+    document.querySelector('#browser-summary').innerHTML=failed.length
+        ? `<span class="bad">${failed.length} browser health check(s) failed.</span>${notTested.length?` <span class="warn">${notTested.length} not tested.</span>`:''}`
+        : `<span class="ok">All ${out.filter(x=>x.ok!==null).length} browser health checks passed.</span>${notTested.length?` <span class="warn">${notTested.length} not tested.</span>`:''}`;
     document.querySelector('#report').textContent=JSON.stringify(reportData,null,2);
-    try{await fetch(location.pathname,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({diagnostic_log:JSON.stringify(reportData),csrf_token:csrf}).toString()});}catch(_){ }
+    try{await fetch(location.pathname,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({diagnostic_log:JSON.stringify(reportData),csrf_token:csrf}).toString()});}catch(_){}
 }
 
 document.querySelector('#run').addEventListener('click',runChecks);
