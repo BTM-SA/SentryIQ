@@ -191,22 +191,22 @@ $browserTests = [
     ['type' => 'endpoint', 'label' => 'gallery.php', 'url' => 'gallery.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html'],
     ['type' => 'endpoint', 'label' => 'passkey_setup.php', 'url' => 'passkey_setup.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html'],
     ['type' => 'endpoint', 'label' => 'passkey_login.php', 'url' => 'passkey_login.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html', 'expectedFinalPath' => 'index.php'],
-    ['type' => 'endpoint', 'label' => 'passkey_auth.php', 'url' => 'passkey_auth.php', 'expectedStatus' => 400, 'expectedContentType' => 'application/json'],
+    ['type' => 'endpoint', 'label' => 'passkey_auth.php', 'url' => 'passkey_auth.php', 'expectedContentType' => 'application/json'],
     ['type' => 'endpoint', 'label' => 'passkeys.php', 'url' => 'passkeys.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'document_upload.php', 'url' => 'document_upload.php', 'expectedStatus' => 405, 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'document_download.php', 'url' => 'document_download.php', 'expectedStatus' => 404, 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'document_delete.php', 'url' => 'document_delete.php', 'expectedStatus' => 405, 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'gallery_album.php', 'url' => 'gallery_album.php', 'expectedStatus' => 405, 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'gallery_bulk_delete.php', 'url' => 'gallery_bulk_delete.php', 'expectedStatus' => 405, 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'gallery_delete.php', 'url' => 'gallery_delete.php', 'expectedStatus' => 405, 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'gallery_image.php', 'url' => 'gallery_image.php', 'expectedStatus' => 404, 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'document_upload.php', 'url' => 'document_upload.php', 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'document_download.php', 'url' => 'document_download.php', 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'document_delete.php', 'url' => 'document_delete.php', 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'gallery_album.php', 'url' => 'gallery_album.php', 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'gallery_bulk_delete.php', 'url' => 'gallery_bulk_delete.php', 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'gallery_delete.php', 'url' => 'gallery_delete.php', 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'gallery_image.php', 'url' => 'gallery_image.php', 'expectedContentType' => 'text/html'],
     ['type' => 'endpoint', 'label' => 'gallery_settings.php', 'url' => 'gallery_settings.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'gallery_upload.php', 'url' => 'gallery_upload.php', 'expectedStatus' => 405, 'expectedContentType' => 'application/json'],
-    ['type' => 'endpoint', 'label' => 'record_actions.php', 'url' => 'record_actions.php', 'expectedStatus' => 405, 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'records_category_actions.php', 'url' => 'records_category_actions.php', 'expectedStatus' => 405, 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'gallery_upload.php', 'url' => 'gallery_upload.php', 'expectedContentType' => 'application/json'],
+    ['type' => 'endpoint', 'label' => 'record_actions.php', 'url' => 'record_actions.php', 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'records_category_actions.php', 'url' => 'records_category_actions.php', 'expectedContentType' => 'text/html'],
     ['type' => 'endpoint', 'label' => 'records_view_data.php', 'url' => 'records_view_data.php', 'expectedStatus' => 200, 'expectedContentType' => 'application/json'],
-    ['type' => 'endpoint', 'label' => 'vault_actions.php', 'url' => 'vault_actions.php', 'expectedStatus' => 405, 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'vault_category_actions.php', 'url' => 'vault_category_actions.php', 'expectedStatus' => 405, 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'vault_actions.php', 'url' => 'vault_actions.php', 'expectedContentType' => 'text/html'],
+    ['type' => 'endpoint', 'label' => 'vault_category_actions.php', 'url' => 'vault_category_actions.php', 'expectedContentType' => 'text/html'],
     ['type' => 'endpoint', 'label' => 'vault_folder_data.php', 'url' => 'vault_folder_data.php', 'expectedStatus' => 200, 'expectedContentType' => 'application/json'],
     ['type' => 'endpoint', 'label' => 'security-features.php', 'url' => 'security-features.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html'],
     ['type' => 'endpoint', 'label' => 'security_log.php', 'url' => 'security_log.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html'],
@@ -254,7 +254,7 @@ body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-seri
 <h1>SentryIQ Self-Test</h1>
 <div class="summary">This diagnostic checks the deployed filesystem/configuration, validates source URL references, and then tests the real browser URLs from this session.</div>
 <button id="run" type="button">Run browser checks</button><button id="copy" type="button">Copy report</button>
-<p class="note">HTTP tests use explicit expected responses. For POST-only routes, 405 is expected; for ID-required image/document routes, 404 without an ID is expected. Redirects must end at the declared final URL.</p>
+<p class="note">Browser URL checks PASS only when the requested URL returns a successful 2xx HTTP response, the content type is correct, and the final URL is correct. A 400, 404, 405, 500, or other non-2xx response is never a PASS.</p>
 </div>
 <div class="card">
 <h2>Server-side checks</h2>
@@ -286,7 +286,7 @@ async function checkOne(test){
         const r=await fetch(test.url,{credentials:'same-origin',cache:'no-store',redirect:'follow',headers:{'Accept':'*/*'}});
         const ms=Math.round(performance.now()-started);
         const contentType=r.headers.get('content-type')||'';
-        const statusOk=Number.isInteger(test.expectedStatus)?r.status===test.expectedStatus:r.status!==404;
+        const statusOk=r.status>=200&&r.status<300;
         const contentTypeOk=!test.expectedContentType||contentType.toLowerCase().startsWith(test.expectedContentType.toLowerCase());
         const finalUrl=new URL(r.url,location.href);
         const expectedFinalPath=test.expectedFinalPath?new URL(test.expectedFinalPath,location.href).pathname:expectedRequestedPath;
