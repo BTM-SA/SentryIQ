@@ -49,8 +49,46 @@ $csrf = sentryiq_csrf_token();
     margin: 2em 0 16px !important;
 }
 #records-panel > div:first-child h3 {
-    order: 10;
-    flex-basis: 100%;
+    order: 0 !important;
+    flex: 1 1 auto !important;
+    flex-basis: auto !important;
+    margin: 0 !important;
+    min-width: 0;
+}
+@media (max-width: 700px) {
+    #records-panel > div:first-child {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 10px !important;
+    }
+    #records-panel > div:first-child > a:first-child {
+        flex: 0 0 auto !important;
+    }
+    #records-panel > div:first-child > h3 {
+        flex: 1 1 auto !important;
+        order: 0 !important;
+        flex-basis: auto !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    #records-panel > div:first-child > button[onclick="showCreateFolderForm()"],
+    #records-panel > div:first-child > .vault-add-record-button {
+        display: none !important;
+    }
+    #records-panel > div:first-child > .vault-category-header-options {
+        display: flex !important;
+        position: relative !important;
+        top: auto !important;
+        right: auto !important;
+        margin-left: 0 !important;
+        flex: 0 0 auto !important;
+    }
+    #records-panel > div:first-child > .vault-category-header-options .vault-category-options-button {
+        display: inline-flex !important;
+    }
 }
 #view-panel a[href="index.php?pane=records"] {
     display:flex !important;
@@ -63,7 +101,7 @@ $csrf = sentryiq_csrf_token();
     text-decoration:none !important;
 }
 </style>
-<script src="assets/js/vault_folders.js?v=20260915-2"></script>
+<script src="assets/js/vault_folders.js?v=20260919-1"></script>
 <script src="assets/js/records_view.js?v=20260916-2"></script>
 <script>
 const vaultTabLabels={view:'Vault',records:'Records',add:'Add Entry',settings:'System',details:'Entry Inspection'};
