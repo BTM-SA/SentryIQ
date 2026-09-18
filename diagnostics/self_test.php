@@ -19,7 +19,7 @@ if ($installed && !$authenticated) {
 header('Content-Type: text/html; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
-const SENTRYIQ_DIAGNOSTIC_BUILD = 'strict-2xx-source-url-checks-2026-09-18';
+const SENTRYIQ_DIAGNOSTIC_BUILD = 'strict-2xx-html-url-contracts-2026-09-18';
 
 $results = [];
 function add_check(string $group, string $name, bool $ok, string $detail = ''): void
@@ -203,18 +203,44 @@ $browserTests = [
     ['type' => 'asset', 'label' => 'Safari JS', 'url' => 'assets/js/safari.js', 'expectedContentType' => 'text/javascript'],
     ['type' => 'asset', 'label' => 'Wide logo', 'url' => 'assets/images/sentryiq-logo-wide.webp', 'expectedContentType' => 'image/webp'],
     ['type' => 'asset', 'label' => 'Favicon/icon endpoint', 'url' => 'sentryiq-icon.php', 'expectedContentType' => 'image/png', 'expectedMagic' => [137,80,78,71,13,10,26,10]],
-    ['type' => 'page', 'label' => 'index.php', 'url' => 'index.php', 'expectedContentType' => 'text/html'],
-    ['type' => 'page', 'label' => 'documents.php', 'url' => 'documents.php', 'expectedContentType' => 'text/html'],
-    ['type' => 'page', 'label' => 'gallery.php', 'url' => 'gallery.php', 'expectedContentType' => 'text/html'],
-    ['type' => 'page', 'label' => 'passkey_setup.php', 'url' => 'passkey_setup.php', 'expectedContentType' => 'text/html'],
+    ['type' => 'page', 'label' => 'index.php', 'url' => 'index.php', 'expectedContentType' => 'text/html', 'requiredHtmlRefs' => [
+        ['tag'=>'link','value'=>'assets/css/pm_style.css'],
+        ['tag'=>'script','prefix'=>'assets/js/vault_folders.js'],
+        ['tag'=>'script','prefix'=>'assets/js/records_view.js'],
+        ['tag'=>'img','value'=>'assets/images/sentryiq-logo-wide.webp'],
+        ['tag'=>'link','value'=>'sentryiq-icon.php'],
+    ]],
+    ['type' => 'page', 'label' => 'documents.php', 'url' => 'documents.php', 'expectedContentType' => 'text/html', 'requiredHtmlRefs' => [
+        ['tag'=>'link','value'=>'assets/css/pm_style.css'],
+        ['tag'=>'img','value'=>'assets/images/sentryiq-logo-wide.webp'],
+    ]],
+    ['type' => 'page', 'label' => 'gallery.php', 'url' => 'gallery.php', 'expectedContentType' => 'text/html', 'requiredHtmlRefs' => [
+        ['tag'=>'link','value'=>'assets/css/pm_style.css'],
+        ['tag'=>'img','value'=>'assets/images/sentryiq-logo-wide.webp'],
+    ]],
+    ['type' => 'page', 'label' => 'passkey_setup.php', 'url' => 'passkey_setup.php', 'expectedContentType' => 'text/html', 'requiredHtmlRefs' => [
+        ['tag'=>'link','value'=>'assets/css/pm_style.css'],
+        ['tag'=>'img','value'=>'assets/images/sentryiq-logo-wide.webp'],
+    ]],
     ['type' => 'page', 'label' => 'passkey_login.php', 'url' => 'passkey_login.php', 'expectedFinalPath' => 'index.php', 'expectedContentType' => 'text/html'],
-    ['type' => 'page', 'label' => 'passkeys.php', 'url' => 'passkeys.php', 'expectedContentType' => 'text/html'],
+    ['type' => 'page', 'label' => 'passkeys.php', 'url' => 'passkeys.php', 'expectedContentType' => 'text/html', 'requiredHtmlRefs' => [
+        ['tag'=>'link','value'=>'assets/css/pm_style.css'],
+        ['tag'=>'img','value'=>'assets/images/sentryiq-logo-wide.webp'],
+    ]],
     ['type' => 'page', 'label' => 'gallery_settings.php', 'url' => 'gallery_settings.php', 'expectedContentType' => 'text/html'],
     ['type' => 'data', 'label' => 'records_view_data.php', 'url' => 'records_view_data.php', 'expectedContentType' => 'application/json'],
     ['type' => 'data', 'label' => 'vault_folder_data.php', 'url' => 'vault_folder_data.php', 'expectedContentType' => 'application/json'],
-    ['type' => 'page', 'label' => 'security-features.php', 'url' => 'security-features.php', 'expectedContentType' => 'text/html'],
-    ['type' => 'page', 'label' => 'security_log.php', 'url' => 'security_log.php', 'expectedContentType' => 'text/html'],
-    ['type' => 'page', 'label' => 'system_log.php', 'url' => 'system_log.php', 'expectedContentType' => 'text/html'],
+    ['type' => 'page', 'label' => 'security-features.php', 'url' => 'security-features.php', 'expectedContentType' => 'text/html', 'requiredHtmlRefs' => [
+        ['tag'=>'link','value'=>'assets/css/pm_style.css'],
+    ]],
+    ['type' => 'page', 'label' => 'security_log.php', 'url' => 'security_log.php', 'expectedContentType' => 'text/html', 'requiredHtmlRefs' => [
+        ['tag'=>'link','value'=>'assets/css/pm_style.css'],
+        ['tag'=>'img','value'=>'assets/images/sentryiq-logo-wide.webp'],
+    ]],
+    ['type' => 'page', 'label' => 'system_log.php', 'url' => 'system_log.php', 'expectedContentType' => 'text/html', 'requiredHtmlRefs' => [
+        ['tag'=>'link','value'=>'assets/css/pm_style.css'],
+        ['tag'=>'img','value'=>'assets/images/sentryiq-logo-wide.webp'],
+    ]],
     ['type' => 'not-tested', 'label' => 'document_upload.php', 'url' => 'document_upload.php', 'reason' => 'POST-only endpoint; browser GET is not a health test'],
     ['type' => 'not-tested', 'label' => 'document_delete.php', 'url' => 'document_delete.php', 'reason' => 'POST-only endpoint; browser GET is not a health test'],
     ['type' => 'not-tested', 'label' => 'gallery_album.php', 'url' => 'gallery_album.php', 'reason' => 'POST-only endpoint; browser GET is not a health test'],
