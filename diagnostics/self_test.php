@@ -204,14 +204,16 @@ $sourceRefs = [
     ['app/Security/SecurityFeatures.php', 'assets/css/pm_style.css', 'Security features stylesheet URL'],
     ['app/Security/SecurityLog.php', 'assets/css/pm_style.css', 'Security log stylesheet URL'],
     ['app/Security/SecurityLog.php', 'assets/images/sentryiq-logo-wide.webp', 'Security log wide-logo URL'],
+    ['app/Gallery/Settings.php', 'assets/css/pm_style.css', 'Gallery Settings stylesheet URL'],
+    ['app/Gallery/Settings.php', 'assets/images/sentryiq-logo-wide.webp', 'Gallery Settings wide-logo URL'],
     ['app/Security/SystemLog.php', 'assets/css/pm_style.css', 'System log stylesheet URL'],
     ['app/Security/SystemLog.php', 'assets/images/sentryiq-logo-wide.webp', 'System log wide-logo URL'],
 ];
 foreach ($sourceRefs as $ref) add_source_asset_check($ref[0], $ref[1], $ref[2]);
 
 $sourcePageFiles = [
-    'index.php', 'gallery.php', 'documents.php',
-    'app/Auth/PasskeySetup.php', 'app/Auth/PasskeyLogin.php', 'app/Auth/Passkeys.php',
+    'index.php', 'gallery.php', 'documents.php', 'app/Gallery/Settings.php',
+    'app/Auth/PasskeySetup.php', 'app/Auth/PasskeyLogin.php', 'app/Auth/Passkeys.php', 'app/Gallery/Settings.php',
     'app/Security/FirstRun.php', 'app/Security/SecurityFeatures.php',
     'app/Security/SecurityLog.php', 'app/Security/SystemLog.php'
 ];
@@ -251,7 +253,10 @@ $browserTests = [
         ['tag'=>'link','value'=>'assets/css/pm_style.css'],
         ['tag'=>'img','value'=>'assets/images/sentryiq-logo-wide.webp'],
     ]],
-    ['type' => 'page', 'label' => 'gallery_settings.php', 'url' => 'gallery_settings.php', 'expectedContentType' => 'text/html'],
+    ['type' => 'page', 'label' => 'gallery_settings.php', 'url' => 'gallery_settings.php', 'expectedContentType' => 'text/html', 'requiredHtmlRefs' => [
+        ['tag'=>'link','value'=>'assets/css/pm_style.css'],
+        ['tag'=>'img','value'=>'assets/images/sentryiq-logo-wide.webp'],
+    ]],
     ['type' => 'data', 'label' => 'records_view_data.php', 'url' => 'records_view_data.php', 'expectedContentType' => 'application/json'],
     ['type' => 'data', 'label' => 'vault_folder_data.php', 'url' => 'vault_folder_data.php', 'expectedContentType' => 'application/json'],
     ['type' => 'page', 'label' => 'security-features.php', 'url' => 'security-features.php', 'expectedContentType' => 'text/html', 'requiredHtmlRefs' => [
