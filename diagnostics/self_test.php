@@ -19,6 +19,8 @@ if ($installed && !$authenticated) {
 header('Content-Type: text/html; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
+const SENTRYIQ_DIAGNOSTIC_BUILD = 'strict-2xx-resource-crawl-2026-09-18';
+
 $results = [];
 function add_check(string $group, string $name, bool $ok, string $detail = ''): void
 {
@@ -62,6 +64,7 @@ function add_source_absence_check(string $relativePath, string $needle, string $
     add_check('URL/source references', $label, $ok, $ok ? 'not referenced' : ($relativePath . ': stale reference found: ' . $needle));
 }
 
+add_check('Diagnostic', 'Diagnostic build', true, SENTRYIQ_DIAGNOSTIC_BUILD);
 add_check('Environment', 'PHP version', PHP_VERSION_ID >= 80300, PHP_VERSION);
 $httpsOk = PHP_SAPI === 'cli' || (($_SERVER['HTTPS'] ?? '') === 'on') || (string)($_SERVER['SERVER_PORT'] ?? '') === '443';
 add_check('Environment', 'HTTPS request', $httpsOk, $httpsOk ? 'HTTPS' : 'HTTP');
@@ -264,7 +267,7 @@ body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-seri
 <body>
 <div class="wrap">
 <div class="card">
-<h1>SentryIQ Self-Test</h1>
+<h1>SentryIQ Self-Test</h1><div class="note"><strong>Diagnostic build:</strong> <?= htmlspecialchars(SENTRYIQ_DIAGNOSTIC_BUILD, ENT_QUOTES, 'UTF-8') ?></div>
 <div class="summary">This diagnostic checks the deployed filesystem/configuration, validates source URL references, and then tests the real browser URLs from this session.</div>
 <button id="run" type="button">Run browser checks</button><button id="copy" type="button">Copy report</button>
 <p class="note">Browser health checks PASS only on a real 2xx response with the correct content type, response signature where applicable, and final URL. Any 3xx, 4xx, 5xx, or other non-2xx response is FAIL. POST-only or ID-dependent routes are NOT TESTED rather than treated as healthy.</p>
@@ -290,7 +293,7 @@ body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-seri
 <script>
 const tests=<?= json_encode($browserTests, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>;
 const csrf=<?= json_encode($csrf) ?>;
-let reportData={serverChecks:<?= json_encode($results, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>,browserChecks:[]};
+let reportData={diagnosticBuild:<?= json_encode(SENTRYIQ_DIAGNOSTIC_BUILD) ?>,serverChecks:<?= json_encode($results, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) ?>,browserChecks:[]};
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
 async function checkOne(test){
     const started=performance.now();
