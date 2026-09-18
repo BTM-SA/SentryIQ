@@ -74,6 +74,9 @@ $csrf = sentryiq_csrf_token();
         overflow: hidden;
         text-overflow: ellipsis;
     }
+    #records-panel > div:first-child > .vault-category-header-options {
+        margin-left: auto !important;
+    }
     #records-panel > div:first-child > button[onclick="showCreateFolderForm()"],
     #records-panel > div:first-child > .vault-add-record-button {
         display: none !important;
