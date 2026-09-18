@@ -47,7 +47,7 @@ if ($activeVaultView !== 'records') {
 ?>
 <!-- Location: /home/bicheveb/public_html/pm/dashboard_list.php -->
 <div class="sentryiq-page-header">
-    <div class="sentryiq-vault-brand-wrap"><img class="sentryiq-vault-banner" src="sentryiq-logo-wide.webp" width="1952" height="588" alt="SentryIQ"><span class="sentryiq-vault-status" data-vault-status><?php echo htmlspecialchars($activeVaultView === 'records' ? 'Records' : $activeVaultView, ENT_QUOTES, 'UTF-8'); ?></span></div>
+    <div class="sentryiq-vault-brand-wrap"><img class="sentryiq-vault-banner" src="assets/images/sentryiq-logo-wide.webp" width="1952" height="588" alt="SentryIQ"><span class="sentryiq-vault-status" data-vault-status><?php echo htmlspecialchars($activeVaultView === 'records' ? 'Records' : $activeVaultView, ENT_QUOTES, 'UTF-8'); ?></span></div>
     <div class="sentryiq-mobile-header-actions">
         <form method="POST" class="sentryiq-lock-form"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf ?? '', ENT_QUOTES, 'UTF-8'); ?>"><input type="hidden" name="lock_vault" value="1"><button type="submit" class="btn btn-primary sentryiq-lock-button">Lock Vault</button></form>
         <div class="vault-mobile-menu-bar"><button type="button" class="vault-mobile-menu-toggle" aria-expanded="false" aria-controls="vault-mobile-menu"><span class="vault-mobile-menu-icon" aria-hidden="true">☰</span><span id="vault-mobile-menu-label" class="visually-hidden">Menu</span></button></div>
