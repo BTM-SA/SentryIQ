@@ -300,13 +300,17 @@
         title.setAttribute('data-category-options-wired', '1');
 
         header.style.setProperty('position', 'relative', 'important');
+        header.style.setProperty('flex-wrap', 'nowrap', 'important');
         title.style.setProperty('order', '0', 'important');
         title.style.setProperty('flex-basis', 'auto', 'important');
         title.style.setProperty('margin', '0', 'important');
 
+        var createFolderButton = header.querySelector('button[onclick="showCreateFolderForm()"]');
+        var addRecordButton = header.querySelector('.vault-add-record-button');
+
         var wrapper = document.createElement('span');
         wrapper.className = 'vault-category-header-options';
-        wrapper.style.cssText = 'position:absolute;top:0;right:0;display:flex;align-items:center;gap:8px;z-index:20;';
+        wrapper.style.cssText = 'display:flex;align-items:center;gap:8px;flex:0 0 auto;margin-left:auto;position:relative;z-index:20;';
 
         var optionsButton = document.createElement('button');
         optionsButton.type = 'button';
@@ -377,6 +381,8 @@
         function applyOptionsVisibility() {
             var mobile = window.matchMedia('(max-width: 700px)').matches;
             optionsButton.style.display = mobile ? 'inline-flex' : 'none';
+            if (createFolderButton) createFolderButton.style.display = mobile ? 'none' : '';
+            if (addRecordButton) addRecordButton.style.display = mobile ? 'none' : '';
         }
         applyOptionsVisibility();
         window.addEventListener('resize', applyOptionsVisibility);
