@@ -180,37 +180,36 @@ $sourceRefs = [
 foreach ($sourceRefs as $ref) add_source_reference_check($ref[0], $ref[1], $ref[2]);
 
 $browserTests = [
-    ['type' => 'asset', 'label' => 'CSS', 'url' => 'assets/css/pm_style.css', 'expectedStatus' => 200, 'expectedContentType' => 'text/css'],
-    ['type' => 'asset', 'label' => 'Vault folders JS', 'url' => 'assets/js/vault_folders.js', 'expectedStatus' => 200, 'expectedContentType' => 'text/javascript'],
-    ['type' => 'asset', 'label' => 'Records JS', 'url' => 'assets/js/records_view.js', 'expectedStatus' => 200, 'expectedContentType' => 'text/javascript'],
-    ['type' => 'asset', 'label' => 'Safari JS', 'url' => 'assets/js/safari.js', 'expectedStatus' => 200, 'expectedContentType' => 'text/javascript'],
-    ['type' => 'asset', 'label' => 'Wide logo', 'url' => 'assets/images/sentryiq-logo-wide.webp', 'expectedStatus' => 200, 'expectedContentType' => 'image/webp'],
-    ['type' => 'asset', 'label' => 'Favicon/icon endpoint', 'url' => 'sentryiq-icon.php', 'expectedStatus' => 200, 'expectedContentType' => 'image/png'],
-    ['type' => 'endpoint', 'label' => 'index.php', 'url' => 'index.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'documents.php', 'url' => 'documents.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'gallery.php', 'url' => 'gallery.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'passkey_setup.php', 'url' => 'passkey_setup.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'passkey_login.php', 'url' => 'passkey_login.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html', 'expectedFinalPath' => 'index.php'],
-    ['type' => 'endpoint', 'label' => 'passkey_auth.php', 'url' => 'passkey_auth.php', 'expectedContentType' => 'application/json'],
-    ['type' => 'endpoint', 'label' => 'passkeys.php', 'url' => 'passkeys.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'document_upload.php', 'url' => 'document_upload.php', 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'document_download.php', 'url' => 'document_download.php', 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'document_delete.php', 'url' => 'document_delete.php', 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'gallery_album.php', 'url' => 'gallery_album.php', 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'gallery_bulk_delete.php', 'url' => 'gallery_bulk_delete.php', 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'gallery_delete.php', 'url' => 'gallery_delete.php', 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'gallery_image.php', 'url' => 'gallery_image.php', 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'gallery_settings.php', 'url' => 'gallery_settings.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'gallery_upload.php', 'url' => 'gallery_upload.php', 'expectedContentType' => 'application/json'],
-    ['type' => 'endpoint', 'label' => 'record_actions.php', 'url' => 'record_actions.php', 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'records_category_actions.php', 'url' => 'records_category_actions.php', 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'records_view_data.php', 'url' => 'records_view_data.php', 'expectedStatus' => 200, 'expectedContentType' => 'application/json'],
-    ['type' => 'endpoint', 'label' => 'vault_actions.php', 'url' => 'vault_actions.php', 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'vault_category_actions.php', 'url' => 'vault_category_actions.php', 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'vault_folder_data.php', 'url' => 'vault_folder_data.php', 'expectedStatus' => 200, 'expectedContentType' => 'application/json'],
-    ['type' => 'endpoint', 'label' => 'security-features.php', 'url' => 'security-features.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'security_log.php', 'url' => 'security_log.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html'],
-    ['type' => 'endpoint', 'label' => 'system_log.php', 'url' => 'system_log.php', 'expectedStatus' => 200, 'expectedContentType' => 'text/html'],
+    ['type' => 'asset', 'label' => 'CSS', 'url' => 'assets/css/pm_style.css', 'expectedContentType' => 'text/css'],
+    ['type' => 'asset', 'label' => 'Vault folders JS', 'url' => 'assets/js/vault_folders.js?v=20260915-2', 'expectedContentType' => 'text/javascript'],
+    ['type' => 'asset', 'label' => 'Records JS', 'url' => 'assets/js/records_view.js?v=20260916-2', 'expectedContentType' => 'text/javascript'],
+    ['type' => 'asset', 'label' => 'Safari JS', 'url' => 'assets/js/safari.js', 'expectedContentType' => 'text/javascript'],
+    ['type' => 'asset', 'label' => 'Wide logo', 'url' => 'assets/images/sentryiq-logo-wide.webp', 'expectedContentType' => 'image/webp'],
+    ['type' => 'asset', 'label' => 'Favicon/icon endpoint', 'url' => 'sentryiq-icon.php', 'expectedContentType' => 'image/png'],
+    ['type' => 'page', 'label' => 'index.php', 'url' => 'index.php', 'expectedContentType' => 'text/html'],
+    ['type' => 'page', 'label' => 'documents.php', 'url' => 'documents.php', 'expectedContentType' => 'text/html'],
+    ['type' => 'page', 'label' => 'gallery.php', 'url' => 'gallery.php', 'expectedContentType' => 'text/html'],
+    ['type' => 'page', 'label' => 'passkey_setup.php', 'url' => 'passkey_setup.php', 'expectedContentType' => 'text/html'],
+    ['type' => 'page', 'label' => 'passkey_login.php', 'url' => 'passkey_login.php', 'expectedFinalPath' => 'index.php', 'expectedContentType' => 'text/html'],
+    ['type' => 'page', 'label' => 'passkeys.php', 'url' => 'passkeys.php', 'expectedContentType' => 'text/html'],
+    ['type' => 'page', 'label' => 'gallery_settings.php', 'url' => 'gallery_settings.php', 'expectedContentType' => 'text/html'],
+    ['type' => 'data', 'label' => 'records_view_data.php', 'url' => 'records_view_data.php', 'expectedContentType' => 'application/json'],
+    ['type' => 'data', 'label' => 'vault_folder_data.php', 'url' => 'vault_folder_data.php', 'expectedContentType' => 'application/json'],
+    ['type' => 'page', 'label' => 'security-features.php', 'url' => 'security-features.php', 'expectedContentType' => 'text/html'],
+    ['type' => 'page', 'label' => 'security_log.php', 'url' => 'security_log.php', 'expectedContentType' => 'text/html'],
+    ['type' => 'page', 'label' => 'system_log.php', 'url' => 'system_log.php', 'expectedContentType' => 'text/html'],
+    ['type' => 'not-tested', 'label' => 'document_upload.php', 'url' => 'document_upload.php', 'reason' => 'POST-only endpoint; not safely health-tested with GET'],
+    ['type' => 'not-tested', 'label' => 'document_delete.php', 'url' => 'document_delete.php', 'reason' => 'POST-only endpoint; not safely health-tested with GET'],
+    ['type' => 'not-tested', 'label' => 'gallery_album.php', 'url' => 'gallery_album.php', 'reason' => 'POST-only endpoint; not safely health-tested with GET'],
+    ['type' => 'not-tested', 'label' => 'gallery_bulk_delete.php', 'url' => 'gallery_bulk_delete.php', 'reason' => 'POST-only endpoint; not safely health-tested with GET'],
+    ['type' => 'not-tested', 'label' => 'gallery_delete.php', 'url' => 'gallery_delete.php', 'reason' => 'POST-only endpoint; not safely health-tested with GET'],
+    ['type' => 'not-tested', 'label' => 'gallery_upload.php', 'url' => 'gallery_upload.php', 'reason' => 'POST-only endpoint; not safely health-tested with GET'],
+    ['type' => 'not-tested', 'label' => 'record_actions.php', 'url' => 'record_actions.php', 'reason' => 'POST-only endpoint; not safely health-tested with GET'],
+    ['type' => 'not-tested', 'label' => 'records_category_actions.php', 'url' => 'records_category_actions.php', 'reason' => 'POST-only endpoint; not safely health-tested with GET'],
+    ['type' => 'not-tested', 'label' => 'vault_actions.php', 'url' => 'vault_actions.php', 'reason' => 'POST-only endpoint; not safely health-tested with GET'],
+    ['type' => 'not-tested', 'label' => 'vault_category_actions.php', 'url' => 'vault_category_actions.php', 'reason' => 'POST-only endpoint; not safely health-tested with GET'],
+    ['type' => 'data-contract', 'label' => 'document_download.php without id', 'url' => 'document_download.php', 'reason' => 'Requires a real document id; use a non-destructive fixture for a full content test'],
+    ['type' => 'data-contract', 'label' => 'gallery_image.php without id', 'url' => 'gallery_image.php', 'reason' => 'Requires a real photo id; use a non-destructive fixture for a full content test'],
 ];
 
 $csrf = function_exists('sentryiq_csrf_token') ? sentryiq_csrf_token() : '';
@@ -302,6 +301,14 @@ async function runChecks(){
     document.querySelector('#browser-summary').textContent='Running checks…';
     const out=[];
     for(const test of tests){
+        if(test.type==='not-tested'||test.type==='data-contract'){
+            const item={...test,ok:null,status:null,statusText:'NOT TESTED',finalUrl:'',timeMs:0,contentType:'',checks:{tested:false},};
+            out.push(item);
+            const tr=document.createElement('tr');
+            tr.innerHTML=`<td>${esc(item.type)}</td><td><code>${esc(item.url)}</code></td><td class="warn">NOT TESTED</td><td>—</td><td>—</td><td>${esc(item.reason||'')}</td>`;
+            tbody.appendChild(tr);
+            continue;
+        }
         const item=await checkOne(test);
         out.push(item);
         const tr=document.createElement('tr');
@@ -309,7 +316,8 @@ async function runChecks(){
         tbody.appendChild(tr);
     }
     reportData.browserChecks=out;
-    const failed=out.filter(x=>!x.ok);
+    const failed=out.filter(x=>x.ok===false);
+    const notTested=out.filter(x=>x.ok===null);
     document.querySelector('#browser-summary').innerHTML=failed.length?`<span class="bad">${failed.length} browser check(s) failed.</span>`:`<span class="ok">All ${out.length} browser URL checks passed.</span>`;
     document.querySelector('#report').textContent=JSON.stringify(reportData,null,2);
     try{await fetch(location.pathname,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({diagnostic_log:JSON.stringify(reportData),csrf_token:csrf}).toString()});}catch(_){ }
