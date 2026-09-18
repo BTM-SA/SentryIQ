@@ -81,7 +81,7 @@ function sentryiq_brand_head_inject(string $buffer): string
         '<meta name="twitter:image" content="' . htmlspecialchars($assetUrl, ENT_QUOTES, 'UTF-8') . '">' . "\n";
 
     if (stripos($buffer, 'id="gallery-upload-form"') !== false && stripos($buffer, 'safari.js') === false) {
-        $tags .= '<script src="safari.js"></script>' . "\n";
+        $tags .= '<script src="assets/js/safari.js"></script>' . "\n";
     }
 
     return str_ireplace('</head>', $tags . '</head>', $buffer);
