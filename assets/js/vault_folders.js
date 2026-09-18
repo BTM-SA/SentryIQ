@@ -367,7 +367,7 @@
 
         wrapper.appendChild(optionsButton);
         wrapper.appendChild(menu);
-        title.appendChild(wrapper);
+        header.appendChild(wrapper);
 
         function applyOptionsVisibility() {
             var mobile = window.matchMedia('(max-width: 700px)').matches;
