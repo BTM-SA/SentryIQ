@@ -212,15 +212,70 @@ $sourceRefs = [
 foreach ($sourceRefs as $ref) add_source_asset_check($ref[0], $ref[1], $ref[2]);
 
 $sourcePageFiles = [
-    'index.php', 'gallery.php', 'documents.php', 'app/Gallery/Settings.php',
-    'app/Auth/PasskeySetup.php', 'app/Auth/PasskeyLogin.php', 'app/Auth/Passkeys.php', 'app/Gallery/Settings.php',
-    'app/Security/FirstRun.php', 'app/Security/SecurityFeatures.php',
+    'index.php', 'gallery.php', 'documents.php', 'app/Gallery/Settings.php', 'app/Auth/PasskeySetup.php', 'app/Auth/PasskeyLogin.php', 'app/Auth/Passkeys.php', 'app/Security/FirstRun.php', 'app/Security/SecurityFeatures.php',
     'app/Security/SecurityLog.php', 'app/Security/SystemLog.php'
 ];
 foreach ($sourcePageFiles as $page) {
     add_source_no_exact_asset_check($page, 'pm_style.css', $page . ' has no exact legacy stylesheet URL');
     add_source_no_exact_asset_check($page, 'sentryiq-logo-wide.webp', $page . ' has no exact legacy root logo URL');
 }
+
+
+function stylesheet_rule_body(string $css, string $selector): string
+{
+    if ($css === '' || $selector === '') return '';
+    if (!preg_match_all('/(?:^|})\s*([^{}]+)\{([^{}]*)\}/s', $css, $matches, PREG_SET_ORDER)) return '';
+    foreach ($matches as $match) {
+        $selectors = preg_split('/\s*,\s*/', trim((string)$match[1])) ?: [];
+        if (in_array(trim($selector), array_map('trim', $selectors), true)) return (string)$match[2];
+    }
+    return '';
+}
+
+function stylesheet_has_declaration(string $body, string $property, ?string $value = null): bool
+{
+    if ($body === '') return false;
+    if (preg_match('/(?:^|;)\s*' . preg_quote($property, '/') . '\s*:\s*([^;]+)\s*(?:;|$)/i', $body, $match) !== 1) return false;
+    return $value === null || trim((string)$match[1]) === $value;
+}
+
+function add_stylesheet_contract_checks(string $relativePath): void
+{
+    $path = dirname(__DIR__) . '/' . $relativePath;
+    $css = is_readable($path) ? @file_get_contents($path) : false;
+    if (!is_string($css) || trim($css) === '') {
+        add_check('Stylesheet', 'Stylesheet source', false, $relativePath . ' is missing, unreadable, or empty');
+        return;
+    }
+
+    add_check('Stylesheet', 'Stylesheet source', true, $relativePath . ', ' . strlen($css) . ' bytes');
+
+    $contracts = [
+        ['.box', 'background', null, 'Main container styling'],
+        ['.box', 'box-shadow', null, 'Main container depth'],
+        ['.form-box', 'border-radius', null, 'Gallery Settings panel shape'],
+        ['.form-box', 'box-shadow', null, 'Gallery Settings panel depth'],
+        ['.sentryiq-page-header', 'display', 'grid', 'Header layout'],
+        ['.sentryiq-vault-banner', 'height', 'auto', 'Wide logo sizing'],
+        ['.vault-tabs', 'display', 'flex', 'Navigation layout'],
+        ['.btn', 'border-radius', null, 'Button shape'],
+        ['.btn', 'box-shadow', null, 'Button depth'],
+    ];
+
+    foreach ($contracts as [$selector, $property, $value, $description]) {
+        $body = stylesheet_rule_body($css, $selector);
+        $ok = stylesheet_has_declaration($body, $property, $value);
+        add_check('Stylesheet', $description, $ok, $ok ? ($selector . ' {' . $property . ($value !== null ? ': ' . $value : '') . '} present') : ('missing ' . $selector . ' {' . $property . ($value !== null ? ': ' . $value : '') . '}'));
+    }
+
+    $mobileOk = preg_match('/@media\s*\(\s*max-width\s*:\s*700px\s*\)\s*\{/i', $css) === 1;
+    add_check('Stylesheet', 'Mobile CSS contract', $mobileOk, $mobileOk ? 'max-width:700px rules present' : 'missing max-width:700px rules');
+
+    $logoOk = str_contains($css, "../images/sentryiq-logo-wide.webp");
+    add_check('Stylesheet', 'Stylesheet logo URL', $logoOk, $logoOk ? '../images/sentryiq-logo-wide.webp' : 'expected relative logo URL missing');
+}
+
+add_stylesheet_contract_checks('assets/css/pm_style.css');
 
 $browserTests = [
     ['type' => 'asset', 'label' => 'CSS', 'url' => 'assets/css/pm_style.css', 'expectedContentType' => 'text/css'],
@@ -256,6 +311,16 @@ $browserTests = [
     ['type' => 'page', 'label' => 'gallery_settings.php', 'url' => 'gallery_settings.php', 'expectedContentType' => 'text/html', 'requiredHtmlRefs' => [
         ['tag'=>'link','value'=>'assets/css/pm_style.css'],
         ['tag'=>'img','value'=>'assets/images/sentryiq-logo-wide.webp'],
+    ], 'expectedStylesheet' => 'assets/css/pm_style.css', 'expectedCssContracts' => [
+        ['selector'=>'.box','property'=>'boxShadow','not'=>'none'],
+        ['selector'=>'.form-box','property'=>'borderRadius','not'=>'0px'],
+        ['selector'=>'.form-box','property'=>'boxShadow','not'=>'none'],
+        ['selector'=>'.sentryiq-page-header','property'=>'display','value'=>'grid'],
+        ['selector'=>'.sentryiq-vault-banner','property'=>'width','not'=>'0px'],
+        ['selector'=>'.sentryiq-vault-banner','property'=>'height','value'=>'auto'],
+        ['selector'=>'.vault-tabs','property'=>'display','value'=>'flex'],
+        ['selector'=>'.btn','property'=>'borderRadius','not'=>'0px'],
+        ['selector'=>'.btn','property'=>'boxShadow','not'=>'none'],
     ]],
     ['type' => 'data', 'label' => 'records_view_data.php', 'url' => 'records_view_data.php', 'expectedContentType' => 'application/json'],
     ['type' => 'data', 'label' => 'vault_folder_data.php', 'url' => 'vault_folder_data.php', 'expectedContentType' => 'application/json'],
@@ -324,6 +389,7 @@ body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-seri
 <div class="card">
 <h1>SentryIQ Self-Test</h1><div class="note"><strong>Diagnostic build:</strong> <?= htmlspecialchars(SENTRYIQ_DIAGNOSTIC_BUILD, ENT_QUOTES, 'UTF-8') ?></div>
 <div class="summary">This diagnostic checks the deployed filesystem/configuration, validates source URL references, and then tests the real browser URLs from this session.</div>
+<div class="note"><strong>Diagnostic build:</strong> <code><?= htmlspecialchars(SENTRYIQ_DIAGNOSTIC_BUILD, ENT_QUOTES, 'UTF-8') ?></code></div>
 <button id="run" type="button">Run browser checks</button><button id="copy" type="button">Copy report</button>
 <p class="note">Browser health checks PASS only on a real 2xx response with the correct content type, response signature where applicable, and final URL. Any 3xx, 4xx, 5xx, or other non-2xx response is FAIL. POST-only or ID-dependent routes are NOT TESTED rather than treated as healthy.</p>
 </div>
@@ -358,12 +424,52 @@ async function checkOne(test){
         const ms=Math.round(performance.now()-started);
         const contentType=r.headers.get('content-type')||'';
         const statusOk=r.status>=200&&r.status<300;
-        const contentTypeOk=!test.expectedContentType||contentType.toLowerCase().startsWith(test.expectedContentType.toLowerCase());
         const finalUrl=new URL(r.url,location.href);
         const expectedFinalPath=test.expectedFinalPath?new URL(test.expectedFinalPath,location.href).pathname:expectedRequestedPath;
         const finalPathOk=finalUrl.pathname===expectedFinalPath;
+        const contentTypeOk=!test.expectedContentType||contentType.toLowerCase().startsWith(test.expectedContentType.toLowerCase());
+
+        let stylesheetOk=true;
+        let stylesheetDetail=null;
+        if(statusOk&&test.expectedStylesheet){
+            try{
+                const sr=await fetch(test.expectedStylesheet,{credentials:'same-origin',cache:'no-store',redirect:'follow',headers:{'Accept':'text/css,*/*'}});
+                const st=sr.headers.get('content-type')||'';
+                const styleText=await sr.text();
+                stylesheetDetail={status:sr.status,statusOk:sr.status>=200&&sr.status<300,contentType:st,contentTypeOk:st.toLowerCase().startsWith('text/css'),url:sr.url,bytes:styleText.length,parseOk:false,ruleCount:0,contracts:[]};
+                stylesheetOk=stylesheetOk&&stylesheetDetail.statusOk&&stylesheetDetail.contentTypeOk&&styleText.trim().length>0;
+                if(stylesheetOk){
+                    const probe=document.createElement('style');
+                    probe.textContent=styleText;
+                    document.head.appendChild(probe);
+                    const rules=probe.sheet&&probe.sheet.cssRules?Array.from(probe.sheet.cssRules):[];
+                    stylesheetDetail.ruleCount=rules.length;
+                    stylesheetDetail.parseOk=rules.length>0;
+                    stylesheetOk=stylesheetOk&&rules.length>0;
+
+                    for(const contract of (test.expectedCssContracts||[])){
+                        let actual='';
+                        for(const rule of rules){
+                            if(rule.type!==CSSRule.STYLE_RULE||typeof rule.selectorText!=='string')continue;
+                            if(!rule.selectorText.split(',').map(v=>v.trim()).includes(contract.selector))continue;
+                            actual=rule.style.getPropertyValue(contract.property.replace(/[A-Z]/g,m=>'-'+m.toLowerCase())).trim();
+                            if(actual)break;
+                        }
+                        const ok=contract.value!==undefined?actual===contract.value:(contract.not!==undefined?actual!==contract.not:actual!=='');
+                        stylesheetDetail.contracts.push({...contract,actual,ok});
+                        if(!ok)stylesheetOk=false;
+                    }
+                    probe.remove();
+                }
+            }catch(error){
+                stylesheetOk=false;
+                stylesheetDetail={error:String(error&&error.message||error)};
+            }
+        }
+
         let bodySignatureOk=true;
         let bodyBytes=null;
+        const htmlReferenceResults=[];
         if(Array.isArray(test.expectedMagic)){
             const buffer=await r.arrayBuffer();
             bodyBytes=new Uint8Array(buffer);
@@ -371,23 +477,26 @@ async function checkOne(test){
         }else if(test.type!=='asset'){
             const textBody=await r.text();
             bodySignatureOk=textBody.length>0;
-            if(bodySignatureOk && Array.isArray(test.requiredHtmlRefs)){
+            if(bodySignatureOk&&Array.isArray(test.requiredHtmlRefs)){
                 const doc=new DOMParser().parseFromString(textBody,'text/html');
-                const referenceResults=[];
                 for(const ref of test.requiredHtmlRefs){
                     let found=false;
-                    if(ref.tag==='link') found=Array.from(doc.querySelectorAll('link')).some(el=>{const v=el.getAttribute('href')||'';return ref.value? v===ref.value : (ref.prefix&&v.startsWith(ref.prefix));});
-                    else if(ref.tag==='script') found=Array.from(doc.querySelectorAll('script[src]')).some(el=>{const v=el.getAttribute('src')||'';return ref.value? v===ref.value : (ref.prefix&&v.startsWith(ref.prefix));});
-                    else if(ref.tag==='img') found=Array.from(doc.querySelectorAll('img[src]')).some(el=>{const v=el.getAttribute('src')||'';return ref.value? v===ref.value : (ref.prefix&&v.startsWith(ref.prefix));});
-                    referenceResults.push({...ref,found});
-                    if(!found) bodySignatureOk=false;
+                    if(ref.tag==='link')found=Array.from(doc.querySelectorAll('link')).some(el=>{const v=el.getAttribute('href')||'';return ref.value?v===ref.value:(ref.prefix&&v.startsWith(ref.prefix));});
+                    else if(ref.tag==='script')found=Array.from(doc.querySelectorAll('script[src]')).some(el=>{const v=el.getAttribute('src')||'';return ref.value?v===ref.value:(ref.prefix&&v.startsWith(ref.prefix));});
+                    else if(ref.tag==='img')found=Array.from(doc.querySelectorAll('img[src]')).some(el=>{const v=el.getAttribute('src')||'';return ref.value?v===ref.value:(ref.prefix&&v.startsWith(ref.prefix));});
+                    htmlReferenceResults.push({...ref,found});
+                    if(!found)bodySignatureOk=false;
                 }
-                if(referenceResults.length) test.htmlReferenceResults=referenceResults;
             }
         }
-        return {...test,ok:statusOk&&contentTypeOk&&finalPathOk&&bodySignatureOk,status:r.status,statusText:r.statusText,finalUrl:r.url,timeMs:ms,contentType,checks:{tested:true,statusOk,contentTypeOk,finalPathOk,bodySignatureOk,expectedFinalPath},responseBytes:bodyBytes?bodyBytes.length:null};
+
+        const allOk=statusOk&&contentTypeOk&&finalPathOk&&stylesheetOk&&bodySignatureOk;
+        return {...test,ok:allOk,status:r.status,statusText:r.statusText,finalUrl:r.url,timeMs:ms,contentType,stylesheetDetail,htmlReferenceResults,
+            checks:{tested:true,statusOk,contentTypeOk,finalPathOk,stylesheetOk,bodySignatureOk,expectedFinalPath}};
     }catch(e){
-        return {...test,ok:false,status:0,statusText:String(e&&e.message||e),finalUrl:'',timeMs:Math.round(performance.now()-started),contentType:'',checks:{tested:true,statusOk:false,contentTypeOk:false,finalPathOk:false,bodySignatureOk:false,expectedFinalPath:expectedRequestedPath}};
+        return {...test,ok:false,status:0,statusText:String(e&&e.message||e),finalUrl:'',timeMs:Math.round(performance.now()-started),contentType:'',
+            stylesheetDetail:null,htmlReferenceResults:[],
+            checks:{tested:true,statusOk:false,contentTypeOk:false,finalPathOk:false,stylesheetOk:false,bodySignatureOk:false,expectedFinalPath:expectedRequestedPath}};
     }
 }
 async function runChecks(){
@@ -397,28 +506,32 @@ async function runChecks(){
     const out=[];
     for(const test of tests){
         if(test.type==='not-tested'){
-            const item={...test,ok:null,status:null,statusText:'NOT TESTED',finalUrl:'',timeMs:0,contentType:'',checks:{tested:false},};
+            const item={...test,ok:null,status:null,statusText:'NOT TESTED',finalUrl:'',timeMs:0,contentType:'',checks:{tested:false}};
             out.push(item);
             const tr=document.createElement('tr');
-            tr.innerHTML=`<td>${esc(item.type)}</td><td><code>${esc(item.url)}</code></td><td class="warn">NOT TESTED</td><td>—</td><td>—</td><td>${esc(item.reason||'')}</td>`;
+            tr.innerHTML='<td>'+esc(item.type)+'</td><td><code>'+esc(item.url)+'</code></td><td class="warn">NOT TESTED</td><td>—</td><td>—</td><td>'+esc(item.reason||'')+'</td>';
             tbody.appendChild(tr);
             continue;
         }
         const item=await checkOne(test);
         out.push(item);
         const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${esc(item.type)}</td><td><code>${esc(item.url)}</code></td><td class="${item.ok?'ok':'bad'}">${item.ok?'PASS':'FAIL'}</td><td>${esc(item.status)} ${esc(item.statusText)}</td><td>${esc(item.contentType)}</td><td>${esc(item.finalUrl)}</td>`;
+        const statusLabel=item.ok===true?'PASS':'FAIL';
+        const statusClass=item.ok===true?'ok':'bad';
+        const detail=item.stylesheetDetail?'<br><small>'+esc(JSON.stringify(item.stylesheetDetail))+'</small>':'';
+        tr.innerHTML='<td>'+esc(item.type)+'</td><td><code>'+esc(item.url)+'</code></td><td class="'+statusClass+'">'+statusLabel+'</td><td>'+esc(item.status)+' '+esc(item.statusText)+'</td><td>'+esc(item.contentType)+'</td><td>'+esc(item.finalUrl)+detail+'</td>';
         tbody.appendChild(tr);
     }
     reportData.browserChecks=out;
     const failed=out.filter(x=>x.ok===false);
     const notTested=out.filter(x=>x.ok===null);
     document.querySelector('#browser-summary').innerHTML=failed.length
-        ? `<span class="bad">${failed.length} browser health check(s) failed.</span>${notTested.length?` <span class="warn">${notTested.length} not tested.</span>`:''}`
-        : `<span class="ok">All ${out.filter(x=>x.ok!==null).length} browser health checks passed.</span>${notTested.length?` <span class="warn">${notTested.length} not tested.</span>`:''}`;
+        ? '<span class="bad">'+failed.length+' browser health check(s) failed.</span>'+(notTested.length?' <span class="warn">'+notTested.length+' not tested.</span>':'')
+        : '<span class="ok">All '+out.filter(x=>x.ok!==null).length+' browser health checks passed.</span>'+(notTested.length?' <span class="warn">'+notTested.length+' not tested.</span>':'');
     document.querySelector('#report').textContent=JSON.stringify(reportData,null,2);
     try{await fetch(location.pathname,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({diagnostic_log:JSON.stringify(reportData),csrf_token:csrf}).toString()});}catch(_){}
 }
+
 
 document.querySelector('#run').addEventListener('click',runChecks);
 document.querySelector('#copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(document.querySelector('#report').textContent);document.querySelector('#copy').textContent='Copied';setTimeout(()=>document.querySelector('#copy').textContent='Copy report',1400);}catch(_){}});
