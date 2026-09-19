@@ -58,13 +58,14 @@ $csrf = sentryiq_csrf_token();
 @media (max-width: 700px) {
     #records-panel > div:first-child {
         display: flex !important;
-        flex-wrap: nowrap !important;
+        flex-wrap: wrap !important;
         align-items: center !important;
         justify-content: flex-start !important;
         gap: 10px !important;
     }
     #records-panel > div:first-child > a:first-child {
-        flex: 0 0 auto !important;
+        flex: 0 0 100% !important;
+        width: 100% !important;
     }
     #records-panel > div:first-child > h3 {
         flex: 1 1 auto !important;
@@ -86,7 +87,7 @@ $csrf = sentryiq_csrf_token();
         position: relative !important;
         top: auto !important;
         right: auto !important;
-        margin-left: 0 !important;
+        margin-left: auto !important;
         flex: 0 0 auto !important;
     }
     #records-panel > div:first-child > .vault-category-header-options .vault-category-options-button {
