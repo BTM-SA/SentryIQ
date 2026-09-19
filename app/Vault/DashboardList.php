@@ -32,6 +32,7 @@ if ($vaultFolders === [] && is_array($systemConfig ?? null) && is_array($systemC
 $passwords = normalize_vault_records($rawVaultRecords);
 $passwords = array_values(array_filter($passwords, static fn(array $row): bool => ($row['type'] ?? '') !== 'system_config'));
 $activeVaultView = trim((string)($_GET['vault_view'] ?? 'records'));
+$activeVaultFolder = trim((string)($_GET['vault_folder'] ?? ''));
 if ($activeVaultView !== 'records' && !in_array($activeVaultView, $vaultCategories, true)) $activeVaultView = 'records';
 $activeCategoryFolders = [];
 if ($activeVaultView !== 'records') {
@@ -104,7 +105,7 @@ if ($activeVaultView !== 'records') {
         <?php endif; ?>
         <a href="index.php?pane=add&amp;vault_view=<?php echo rawurlencode($activeVaultView); ?>" class="btn btn-primary vault-add-record-button" style="text-decoration:none;"><span class="vault-add-record-icon" aria-hidden="true">+</span> Add Vault Record</a>
     </div>
-    <?php if ($activeVaultView !== 'records'): ?>
+    <?php if ($activeVaultView !== 'records' && $activeVaultFolder === ''): ?>
         <form id="create-folder-form" method="POST" action="vault_category_actions.php" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 16px;padding:12px;background:#f8f9fa;border:1px solid #e3e6f0;border-radius:8px;">
             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf ?? '', ENT_QUOTES, 'UTF-8'); ?>">
             <input type="hidden" name="action" value="create_folder">
@@ -113,7 +114,7 @@ if ($activeVaultView !== 'records') {
             <button type="submit" class="btn btn-primary" style="white-space:nowrap;">Create Folder</button>
             <button type="button" class="btn" onclick="hideCreateFolderForm()" style="background:#fff;color:#495057;border:1px solid #dee2e6;white-space:nowrap;">Cancel</button>
         </form>
-        <?php if ($activeCategoryFolders !== []): ?>
+        <?php if ($activeVaultFolder === '' && $activeCategoryFolders !== []): ?>
             <div class="vault-folder-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin:0 0 18px;">
                 <?php foreach ($activeCategoryFolders as $folder): ?>
                     <div class="vault-folder-card" style="display:flex;align-items:center;gap:10px;padding:14px 16px;background:#fff;border:1px solid #e3e6f0;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.03);"><span aria-hidden="true" style="font-size:22px;">📁</span><span style="font-weight:600;color:#212529;overflow-wrap:anywhere;"> <?php echo htmlspecialchars($folder, ENT_QUOTES, 'UTF-8'); ?></span></div>
@@ -121,7 +122,11 @@ if ($activeVaultView !== 'records') {
             </div>
         <?php endif; ?>
     <?php endif; ?>
-    <?php $visiblePasswords = $activeVaultView === 'records' ? $passwords : array_values(array_filter($passwords, static fn(array $row): bool => trim((string)($row['category'] ?? '')) === $activeVaultView)); ?>
+    <?php $visiblePasswords = $activeVaultView === 'records' ? $passwords : array_values(array_filter($passwords, static function (array $row) use ($activeVaultView, $activeVaultFolder): bool {
+        if (trim((string)($row['category'] ?? '')) !== $activeVaultView) return false;
+        if ($activeVaultFolder !== '' && trim((string)($row['folder'] ?? '')) !== $activeVaultFolder) return false;
+        return true;
+    })); ?>
     <?php if (empty($visiblePasswords)): ?>
         <p id="vault-empty-message" style="text-align:center;padding:20px;color:#777;"><?php echo $activeVaultView === 'records' ? 'Secure vault database is currently empty.' : 'No records in this category yet.'; ?></p>
     <?php else: ?>
