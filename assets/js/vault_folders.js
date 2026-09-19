@@ -292,7 +292,7 @@
         var category = currentCategory();
         var params = new URLSearchParams(window.location.search);
         var folder = params.get('vault_folder') || '';
-        if (!category || category === 'records') return;
+        if (!category) return;
 
         var header = document.querySelector('#records-panel > div:first-child');
         var title = header ? header.querySelector('h3') : null;
@@ -317,7 +317,7 @@
         optionsButton.textContent = 'Options';
         optionsButton.setAttribute('aria-expanded', 'false');
         optionsButton.setAttribute('aria-label', 'Options for ' + category);
-        optionsButton.style.cssText = 'display:none;min-height:38px;padding:7px 12px;border:1px solid #dee2e6;border-radius:10px;background:#fff;color:#212529;font-weight:600;box-shadow:0 3px 8px rgba(0,0,0,.10);cursor:pointer;';
+        optionsButton.style.cssText = 'display:none;min-height:38px;padding:7px 12px;border:1px solid #dee2e6;border-radius:10px;background:#fff;color:#212529;font-weight:600;line-height:1.2;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.10);cursor:pointer;';
 
         var menu = document.createElement('div');
         menu.className = 'vault-category-options-menu';
@@ -357,13 +357,16 @@
             postAction('rename_category', { category: category, new_category: newName });
         }, false));
 
+        if (category !== 'records') {
         menu.appendChild(menuButton('🗑 Delete', function () {
-            menu.style.display = 'none';
-            optionsButton.setAttribute('aria-expanded', 'false');
-            confirmDelete('Delete the category "' + category + '"? Its records will become uncategorised.', function () {
-                postAction('delete_category', { category: category });
-            });
-        }, true));
+                menu.style.display = 'none';
+                optionsButton.setAttribute('aria-expanded', 'false');
+                confirmDelete('Delete the category "' + category + '"? Its records will become uncategorised.', function () {
+                    postAction('delete_category', { category: category });
+                });
+            }, true));
+    }
+
 
         optionsButton.addEventListener('click', function (event) {
             event.preventDefault();
