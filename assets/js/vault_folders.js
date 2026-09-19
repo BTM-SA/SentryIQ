@@ -299,7 +299,7 @@
         if (!header || !title) return;
         var existingWrappers = header.querySelectorAll('.vault-category-header-options');
         if (existingWrappers.length > 0) {
-            for (var i = 1; i < existingWrappers.length; i++) {
+            for (var i = 0; i < existingWrappers.length - 1; i++) {
                 existingWrappers[i].remove();
             }
             title.setAttribute('data-category-options-wired', '1');
