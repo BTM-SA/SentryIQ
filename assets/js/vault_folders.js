@@ -359,21 +359,23 @@
             window.location.href = target;
         }, false));
 
-        menu.appendChild(menuButton('📁 Create Folder', function () {
-            menu.style.display = 'none';
-            optionsButton.setAttribute('aria-expanded', 'false');
-            var form = document.getElementById('create-folder-form');
-            if (typeof window.showCreateFolderForm === 'function') {
-                window.showCreateFolderForm();
-            } else if (form) {
-                form.style.display = 'flex';
-            }
-            if (form) {
-                form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                var input = form.querySelector('input[name="folder"]');
-                if (input) input.focus();
-            }
-        }, false));
+        if (category !== 'records') {
+            menu.appendChild(menuButton('📁 Create Folder', function () {
+                menu.style.display = 'none';
+                optionsButton.setAttribute('aria-expanded', 'false');
+                var form = document.getElementById('create-folder-form');
+                if (typeof window.showCreateFolderForm === 'function') {
+                    window.showCreateFolderForm();
+                } else if (form) {
+                    form.style.display = 'flex';
+                }
+                if (form) {
+                    form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    var input = form.querySelector('input[name="folder"]');
+                    if (input) input.focus();
+                }
+            }, false));
+        }
 
         if (category !== 'records') {
             menu.appendChild(menuButton('✏ Rename', function () {
