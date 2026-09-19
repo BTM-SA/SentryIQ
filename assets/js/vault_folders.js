@@ -299,9 +299,28 @@
         if (!header || !title) return;
         var existingWrappers = header.querySelectorAll('.vault-category-header-options');
         if (existingWrappers.length > 0) {
+            var keepWrapper = existingWrappers[existingWrappers.length - 1];
+
             for (var i = 0; i < existingWrappers.length - 1; i++) {
                 existingWrappers[i].remove();
             }
+
+            var strayButtons = header.querySelectorAll('.vault-category-options-button');
+            strayButtons.forEach(function (button) {
+                if (!keepWrapper.contains(button)) {
+                    button.closest('.vault-category-header-options')?.remove();
+                    if (button.isConnected) button.remove();
+                }
+            });
+
+            keepWrapper.style.cssText = 'display:flex;align-items:center;gap:8px;flex:0 0 auto;margin-left:auto;position:relative;z-index:20;';
+            var keepButton = keepWrapper.querySelector('.vault-category-options-button');
+            if (keepButton) {
+                keepButton.style.cssText = 'display:none;min-height:38px;padding:7px 12px;border:1px solid #dee2e6;border-radius:10px;background:#fff;color:#212529;font-weight:600;line-height:1.2;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.10);cursor:pointer;';
+                keepButton.setAttribute('aria-label', 'Options for ' + category);
+                keepButton.style.display = window.matchMedia('(max-width: 700px)').matches ? 'inline-flex' : 'none';
+            }
+
             title.setAttribute('data-category-options-wired', '1');
             return;
         }
