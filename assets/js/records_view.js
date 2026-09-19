@@ -95,87 +95,6 @@
         }
     }
 
-    function addRecordsOptions() {
-        if (activeVaultView() !== 'records' || !data || data.records_deleted) return;
-        var header = document.querySelector('#records-panel > div:first-child');
-        var title = header ? header.querySelector('h3') : null;
-        if (!header || !title || title.getAttribute('data-records-options-wired') === '1') return;
-        title.setAttribute('data-records-options-wired', '1');
-
-        var wrapper = document.createElement('span');
-        wrapper.className = 'vault-category-header-options records-category-header-options';
-        wrapper.style.cssText = 'position:relative;display:flex;align-items:center;gap:8px;flex:0 0 auto;';
-
-        var button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'vault-category-options-button';
-        button.textContent = 'Options';
-        button.setAttribute('aria-expanded', 'false');
-        button.setAttribute('aria-label', 'Options for ' + data.records_label);
-        button.style.cssText = 'min-height:38px;padding:7px 12px;border:1px solid #dee2e6;border-radius:10px;background:#fff;color:#212529;font-weight:600;box-shadow:0 3px 8px rgba(0,0,0,.10);cursor:pointer;';
-
-        var menu = document.createElement('div');
-        menu.className = 'vault-category-options-menu';
-        menu.style.cssText = 'display:none;position:absolute;right:0;top:calc(100% + 8px);z-index:100;min-width:210px;padding:7px;border:1px solid #dee2e6;border-radius:12px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.16);';
-
-        function menuButton(label, handler, destructive) {
-            var item = document.createElement('button');
-            item.type = 'button';
-            item.textContent = label;
-            item.style.cssText = 'display:block;width:100%;padding:11px 12px;text-align:left;border:0;border-radius:10px;background:transparent;color:' + (destructive ? '#b02a37' : '#212529') + ';font-size:15px;cursor:pointer;';
-            item.addEventListener('mouseenter', function () { item.style.background = 'rgba(0,0,0,.05)'; });
-            item.addEventListener('mouseleave', function () { item.style.background = 'transparent'; });
-            item.addEventListener('click', function (event) {
-                event.preventDefault();
-                event.stopPropagation();
-                handler();
-            });
-            return item;
-        }
-
-        menu.appendChild(menuButton('＋ Add Record', function () {
-            menu.style.display = 'none';
-            button.setAttribute('aria-expanded', 'false');
-            window.location.href = 'index.php?pane=add';
-        }, false));
-
-        menu.appendChild(menuButton('✏ Rename', function () {
-            menu.style.display = 'none';
-            button.setAttribute('aria-expanded', 'false');
-            var newName = window.prompt('Rename category:', data.records_label);
-            if (newName === null) return;
-            newName = newName.trim();
-            if (!newName || newName === data.records_label) return;
-            postAction('rename_records', { new_label: newName });
-        }, false));
-
-        menu.appendChild(menuButton('🗑 Delete', function () {
-            menu.style.display = 'none';
-            button.setAttribute('aria-expanded', 'false');
-            if (!window.confirm('Delete the ' + data.records_label + ' category? Its records will be kept as uncategorised records.')) return;
-            postAction('delete_records');
-        }, true));
-
-        button.addEventListener('click', function (event) {
-            event.preventDefault();
-            event.stopPropagation();
-            var open = menu.style.display === 'block';
-            menu.style.display = open ? 'none' : 'block';
-            button.setAttribute('aria-expanded', open ? 'false' : 'true');
-        });
-
-        wrapper.appendChild(button);
-        wrapper.appendChild(menu);
-        title.appendChild(wrapper);
-
-        document.addEventListener('click', function (event) {
-            if (!wrapper.contains(event.target)) {
-                menu.style.display = 'none';
-                button.setAttribute('aria-expanded', 'false');
-            }
-        });
-    }
-
     function updateStatusMessages() {
         var params = new URLSearchParams(window.location.search);
         var status = params.get('status');
@@ -196,7 +115,6 @@
             updateRecordsLabels();
             filterRecordsBucket();
             filterFolderRecords();
-            addRecordsOptions();
             updateStatusMessages();
 
             if (window.viewRecordDetails && !window.__recordsViewWrapped) {
