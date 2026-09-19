@@ -98,9 +98,8 @@ if ($action === 'add') {
     $folder = trim((string)($_POST['folder'] ?? ''));
     $validCategories = [];
     foreach ($passwords as $entry) if (($entry['type'] ?? '') === 'system_config' && is_array($entry['categories'] ?? null)) $validCategories = array_values(array_filter(array_map('strval', $entry['categories'])));
-    if ($category !== '' && !in_array($category, $validCategories, true)) $category = '';
-    if ($category === '') $folder = '';
-    elseif ($folder !== '') { $folder = vault_action_folder_for_category($passwords, $category, $folder); if ($folder === '') { header('Location: index.php?status=error&pane=add'); exit; } }
+    if ($category === '' || !in_array($category, $validCategories, true)) { header('Location: index.php?status=error&pane=add'); exit; }
+    if ($folder !== '') { $folder = vault_action_folder_for_category($passwords, $category, $folder); if ($folder === '') { header('Location: index.php?status=error&pane=add'); exit; } }
 
     $url = $rawUrl === '' ? '' : vault_validate_url($rawUrl);
     if ($label === '' || $password === '' || $url === false) { header('Location: index.php?status=error&pane=add'); exit; }
