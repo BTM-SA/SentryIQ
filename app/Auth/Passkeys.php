@@ -48,7 +48,7 @@ $csrf = sentryiq_csrf_token();
         <form method="POST" class="vault-menu-lock-form"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>"><input type="hidden" name="lock_vault" value="1"><button type="submit" class="tab-btn vault-menu-lock-button">🔒 Lock Vault</button></form>
     </div>
     <div class="passkeys-content">
-        <div class="passkeys-heading"><div><h2>🔑 Passkeys</h2><p>Manage the devices that can unlock your SentryIQ vault with Face ID, Touch ID, or passkey authentication.</p></div><a href="index.php?pane=settings" class="btn passkeys-back">← Back to System</a></div>
+        <div class="passkeys-heading"><div><h2>🔑 Passkeys</h2><p>Manage the devices that can unlock your SentryIQ vault with Face ID, Touch ID, or passkey authentication.</p></div><a href="index.php?pane=settings" class="btn passkeys-back">← System Settings</a></div>
         <div id="passkey-message" style="display:none;"></div>
         <div class="passkey-list">
             <?php if (empty($credentials)): ?><div class="passkey-empty">No passkeys are registered yet.</div>
