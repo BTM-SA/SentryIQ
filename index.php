@@ -105,7 +105,7 @@ $csrf = sentryiq_csrf_token();
     text-decoration:none !important;
 }
 </style>
-<script src="assets/js/vault_folders.js?v=20260919-3"></script>
+<script src="assets/js/vault_folders.js?v=20260919-4"></script>
 <script src="assets/js/records_view.js?v=20260916-2"></script>
 <script>
 const vaultTabLabels={view:'Vault',records:'Records',add:'Add Entry',settings:'System',details:'Entry Inspection'};
