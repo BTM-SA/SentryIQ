@@ -74,7 +74,7 @@ if ($activeVaultView !== 'records') {
 
 <?php if ($active_pane === 'view'): ?>
 <div id="view-panel" class="vault-panel active">
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:8px;">
+    <div class="vault-category-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:8px;">
         <a href="index.php?pane=records" class="btn btn-primary" style="display:flex;align-items:center;justify-content:center;min-height:58px;text-decoration:none;font-size:16px;">📋 Records</a>
         <?php foreach ($vaultCategories as $category): ?>
             <a href="index.php?pane=records&amp;vault_view=<?php echo rawurlencode($category); ?>" class="btn" style="display:flex;align-items:center;justify-content:center;min-height:58px;text-decoration:none;background:#f1f3f5;color:#212529;border:1px solid #dee2e6;font-size:16px;">📁 <?php echo htmlspecialchars($category, ENT_QUOTES, 'UTF-8'); ?></a>
