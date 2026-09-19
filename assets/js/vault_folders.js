@@ -248,24 +248,8 @@
                     openFolder();
                 }
             });
-            var controls = document.createElement('span');
-            controls.style.cssText = 'margin-left:auto;display:flex;gap:5px;flex:0 0 auto;';
-            controls.appendChild(managementButton('Rename', function () {
-                var newName = window.prompt('Rename folder:', folder);
-                if (newName === null) return;
-                newName = newName.trim();
-                if (!newName || newName === folder) return;
-                postAction('rename_folder', { category: category, folder: folder, new_folder: newName });
-            }));
-            controls.appendChild(managementButton('Delete', function () {
-                confirmDelete('Delete the folder "' + folder + '"? Records in it will remain in the category, but will no longer belong to a folder.', function () {
-                    postAction('delete_folder', { category: category, folder: folder });
-                });
-            }));
-            card.appendChild(controls);
-            addSwipeDelete(card, 'Delete the folder "' + folder + '"? Records in it will remain in the category, but will no longer belong to a folder.', function () {
-                postAction('delete_folder', { category: category, folder: folder });
-            });
+            // Folder cards are navigation-only. Management is available in the Options menu
+            // after the folder is opened.
         });
     }
 
@@ -293,10 +277,21 @@
         var params = new URLSearchParams(window.location.search);
         var folder = params.get('vault_folder') || '';
         if (!category) return;
+        var browsingFolder = !!folder;
 
         var header = document.querySelector('#records-panel > div:first-child');
         var title = header ? header.querySelector('h3') : null;
         if (!header || !title) return;
+
+        if (browsingFolder) {
+            title.textContent = '📁 ' + folder;
+            var backLink = header.querySelector('a:first-child');
+            if (backLink) {
+                backLink.href = 'index.php?pane=records&vault_view=' + encodeURIComponent(category);
+                backLink.textContent = '← ' + category;
+            }
+        }
+
         var existingWrappers = header.querySelectorAll('.vault-category-header-options');
         if (existingWrappers.length > 0) {
             var keepWrapper = existingWrappers[existingWrappers.length - 1];
@@ -317,8 +312,8 @@
             var keepButton = keepWrapper.querySelector('.vault-category-options-button');
             if (keepButton) {
                 keepButton.style.cssText = 'display:none;min-height:38px;padding:7px 12px;border:1px solid #dee2e6;border-radius:10px;background:#fff;color:#212529;font-weight:600;line-height:1.2;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.10);cursor:pointer;';
-                keepButton.setAttribute('aria-label', 'Options for ' + category);
-                keepButton.style.display = window.matchMedia('(max-width: 700px)').matches ? 'inline-flex' : 'none';
+                keepButton.setAttribute('aria-label', 'Options for ' + (browsingFolder ? folder : category));
+                keepButton.style.display = (browsingFolder || window.matchMedia('(max-width: 700px)').matches) ? 'inline-flex' : 'none';
             }
 
             title.setAttribute('data-category-options-wired', '1');
@@ -344,7 +339,7 @@
         optionsButton.className = 'vault-category-options-button';
         optionsButton.textContent = 'Options';
         optionsButton.setAttribute('aria-expanded', 'false');
-        optionsButton.setAttribute('aria-label', 'Options for ' + category);
+        optionsButton.setAttribute('aria-label', 'Options for ' + (browsingFolder ? folder : category));
         optionsButton.style.cssText = 'display:none;min-height:38px;padding:7px 12px;border:1px solid #dee2e6;border-radius:10px;background:#fff;color:#212529;font-weight:600;line-height:1.2;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.10);cursor:pointer;';
 
         var menu = document.createElement('div');
@@ -359,7 +354,25 @@
             window.location.href = target;
         }, false));
 
-        if (category !== 'records') {
+        if (browsingFolder) {
+            menu.appendChild(menuButton('✏ Rename Folder', function () {
+                menu.style.display = 'none';
+                optionsButton.setAttribute('aria-expanded', 'false');
+                var newName = window.prompt('Rename folder:', folder);
+                if (newName === null) return;
+                newName = newName.trim();
+                if (!newName || newName === folder) return;
+                postAction('rename_folder', { category: category, folder: folder, new_folder: newName });
+            }, false));
+
+            menu.appendChild(menuButton('🗑 Delete Folder', function () {
+                menu.style.display = 'none';
+                optionsButton.setAttribute('aria-expanded', 'false');
+                confirmDelete('Delete the folder "' + folder + '"? Records in it will remain in the category, but will no longer belong to a folder.', function () {
+                    postAction('delete_folder', { category: category, folder: folder });
+                });
+            }, true));
+        } else if (category !== 'records') {
             menu.appendChild(menuButton('📁 Create Folder', function () {
                 menu.style.display = 'none';
                 optionsButton.setAttribute('aria-expanded', 'false');
@@ -375,9 +388,7 @@
                     if (input) input.focus();
                 }
             }, false));
-        }
 
-        if (category !== 'records') {
             menu.appendChild(menuButton('✏ Rename', function () {
                 menu.style.display = 'none';
                 optionsButton.setAttribute('aria-expanded', 'false');
@@ -397,7 +408,6 @@
             }, true));
         }
 
-
         optionsButton.addEventListener('click', function (event) {
             event.preventDefault();
             event.stopPropagation();
@@ -412,8 +422,8 @@
 
         function applyOptionsVisibility() {
             var mobile = window.matchMedia('(max-width: 700px)').matches;
-            optionsButton.style.display = mobile ? 'inline-flex' : 'none';
-            if (createFolderButton) createFolderButton.style.display = mobile ? 'none' : '';
+            optionsButton.style.display = (browsingFolder || mobile) ? 'inline-flex' : 'none';
+            if (createFolderButton) createFolderButton.style.display = (mobile || browsingFolder) ? 'none' : '';
             if (addRecordButton) addRecordButton.style.display = mobile ? 'none' : '';
         }
         applyOptionsVisibility();
