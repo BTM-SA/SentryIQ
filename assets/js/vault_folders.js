@@ -296,7 +296,11 @@
 
         var header = document.querySelector('#records-panel > div:first-child');
         var title = header ? header.querySelector('h3') : null;
-        if (!header || !title || title.getAttribute('data-category-options-wired') === '1') return;
+        if (!header || !title) return;
+        if (title.getAttribute('data-category-options-wired') === '1') return;
+        header.querySelectorAll('.vault-category-header-options').forEach(function (node) {
+            node.remove();
+        });
         title.setAttribute('data-category-options-wired', '1');
 
         header.style.setProperty('position', 'relative', 'important');
