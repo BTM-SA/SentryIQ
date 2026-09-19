@@ -289,7 +289,7 @@
     }
 
     function wireCategoryHeaderOptions() {
-        var category = currentCategory();
+        var category = currentCategory() || 'records';
         var params = new URLSearchParams(window.location.search);
         var folder = params.get('vault_folder') || '';
         if (!category) return;
@@ -348,25 +348,23 @@
         }, false));
 
         if (category !== 'records') {
-        menu.appendChild(menuButton('✏ Rename', function () {
-            menu.style.display = 'none';
-            optionsButton.setAttribute('aria-expanded', 'false');
-            var newName = window.prompt('Rename category:', category);
-            if (newName === null) return;
-            newName = newName.trim();
-            if (!newName || newName === category) return;
-            postAction('rename_category', { category: category, new_category: newName });
-        }, false));
+            menu.appendChild(menuButton('✏ Rename', function () {
+                menu.style.display = 'none';
+                optionsButton.setAttribute('aria-expanded', 'false');
+                var newName = window.prompt('Rename category:', category);
+                if (newName === null) return;
+                newName = newName.trim();
+                if (!newName || newName === category) return;
+                postAction('rename_category', { category: category, new_category: newName });
+            }, false));
 
-        if (category !== 'records') {
-        menu.appendChild(menuButton('🗑 Delete', function () {
+            menu.appendChild(menuButton('🗑 Delete', function () {
                 menu.style.display = 'none';
                 optionsButton.setAttribute('aria-expanded', 'false');
                 confirmDelete('Delete the category "' + category + '"? Its records will become uncategorised.', function () {
                     postAction('delete_category', { category: category });
                 });
             }, true));
-    }
         }
 
 
