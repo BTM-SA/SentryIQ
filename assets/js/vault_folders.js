@@ -347,6 +347,7 @@
             }
         }, false));
 
+        if (category !== 'records') {
         menu.appendChild(menuButton('✏ Rename', function () {
             menu.style.display = 'none';
             optionsButton.setAttribute('aria-expanded', 'false');
@@ -366,6 +367,7 @@
                 });
             }, true));
     }
+        }
 
 
         optionsButton.addEventListener('click', function (event) {
