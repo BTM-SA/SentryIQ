@@ -94,7 +94,11 @@ $csrf = sentryiq_csrf_token();
         display: inline-flex !important;
     }
 }
-.vault-category-grid{margin-top:8px !important;}\n@media (max-width:700px){\n    #view-panel{padding-top:24px !important;}\n    .vault-category-grid{margin-top:0 !important;}\n}\n#view-panel a[href="index.php?pane=records"] {
+.vault-category-grid{margin-top:8px !important;}
+@media (max-width:700px){
+    .vault-category-grid{margin-top:8px !important;}
+}
+#view-panel a[href="index.php?pane=records"] {
     display:flex !important;
     align-items:center !important;
     justify-content:center !important;
