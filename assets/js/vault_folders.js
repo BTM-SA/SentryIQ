@@ -300,7 +300,6 @@
         title.setAttribute('data-category-options-wired', '1');
 
         header.style.setProperty('position', 'relative', 'important');
-        header.style.setProperty('flex-wrap', 'nowrap', 'important');
         title.style.setProperty('order', '0', 'important');
         title.style.setProperty('flex-basis', 'auto', 'important');
         title.style.setProperty('margin', '0', 'important');
