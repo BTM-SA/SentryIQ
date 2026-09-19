@@ -122,13 +122,13 @@ if ($activeVaultView !== 'records') {
             </div>
         <?php endif; ?>
     <?php endif; ?>
-    <?php $visiblePasswords = $activeVaultView === 'records' ? $passwords : array_values(array_filter($passwords, static function (array $row) use ($activeVaultView, $activeVaultFolder): bool {
+    <?php $visiblePasswords = $activeVaultView === 'records' ? [] : array_values(array_filter($passwords, static function (array $row) use ($activeVaultView, $activeVaultFolder): bool {
         if (trim((string)($row['category'] ?? '')) !== $activeVaultView) return false;
         if ($activeVaultFolder !== '' && trim((string)($row['folder'] ?? '')) !== $activeVaultFolder) return false;
         return true;
     })); ?>
     <?php if (empty($visiblePasswords)): ?>
-        <p id="vault-empty-message" style="text-align:center;padding:20px;color:#777;"><?php echo $activeVaultView === 'records' ? 'Secure vault database is currently empty.' : 'No records in this category yet.'; ?></p>
+        <p id="vault-empty-message" style="text-align:center;padding:20px;color:#777;"><?php echo $activeVaultView === 'records' ? 'Select a category from the Vault.' : 'No records in this category yet.'; ?></p>
     <?php else: ?>
         <div id="vault-record-grid" class="vault-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px;margin-top:15px;">
             <?php foreach ($visiblePasswords as $row):
