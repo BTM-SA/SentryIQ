@@ -273,11 +273,11 @@
     }
 
     function wireCategoryHeaderOptions(data) {
+        var category = currentCategory() || 'records';
         var storedCategories = Array.isArray(data && data.categories) ? data.categories : [];
         var isStoredCategory = storedCategories.some(function (storedCategory) {
             return String(storedCategory).trim().toLowerCase() === category.toLowerCase();
         });
-        var category = currentCategory() || 'records';
         var params = new URLSearchParams(window.location.search);
         var folder = params.get('vault_folder') || '';
         if (!category) return;
