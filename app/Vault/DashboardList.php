@@ -117,7 +117,7 @@ if ($activeVaultView !== 'records') {
         <?php if ($activeVaultFolder === '' && $activeCategoryFolders !== []): ?>
             <div class="vault-folder-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin:0 0 18px;">
                 <?php foreach ($activeCategoryFolders as $folder): ?>
-                    <div class="vault-folder-card" style="display:flex;align-items:center;gap:10px;padding:14px 16px;background:#fff;border:1px solid #e3e6f0;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.03);"><span aria-hidden="true" style="font-size:22px;">📁</span><span style="font-weight:600;color:#212529;overflow-wrap:anywhere;"> <?php echo htmlspecialchars($folder, ENT_QUOTES, 'UTF-8'); ?></span></div>
+                    <a href="index.php?pane=records&amp;vault_view=<?php echo rawurlencode($activeVaultView); ?>&amp;vault_folder=<?php echo rawurlencode($folder); ?>" class="vault-folder-card" style="display:flex;align-items:center;gap:10px;padding:14px 16px;background:#fff;border:1px solid #e3e6f0;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.03);text-decoration:none;"><span aria-hidden="true" style="font-size:22px;">📁</span><span style="font-weight:600;color:#212529;overflow-wrap:anywhere;"><?php echo htmlspecialchars($folder, ENT_QUOTES, 'UTF-8'); ?></span></a>
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
