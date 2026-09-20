@@ -33,20 +33,37 @@ $passwords = normalize_vault_records($rawVaultRecords);
 // Preserve the authoritative category/folder metadata from the decrypted records.
 // The normalizer may omit folder metadata from its presentation shape.
 $rawLocationById = [];
+$rawLocationByIdentity = [];
 foreach ($rawVaultRecords as $rawRow) {
     if (($rawRow['type'] ?? '') === 'system_config') continue;
     $rawId = trim((string)($rawRow['id'] ?? ''));
-    if ($rawId === '') continue;
-    $rawLocationById[$rawId] = [
+    $location = [
         'category' => trim((string)($rawRow['category'] ?? '')),
         'folder' => trim((string)($rawRow['folder'] ?? '')),
     ];
+    if ($rawId !== '') $rawLocationById[$rawId] = $location;
+    // Some legacy normalization paths do not carry the record id through.
+    $identity = implode("\x1f", [
+        trim((string)($rawRow['label'] ?? '')),
+        trim((string)($rawRow['username'] ?? '')),
+        trim((string)($rawRow['url'] ?? '')),
+    ]);
+    if ($identity !== "\x1f\x1f") $rawLocationByIdentity[$identity] = $location;
 }
 foreach ($passwords as $normalizedIndex => $normalizedRow) {
     $normalizedId = trim((string)($normalizedRow['id'] ?? ''));
-    if ($normalizedId !== '' && isset($rawLocationById[$normalizedId])) {
-        $passwords[$normalizedIndex]['category'] = $rawLocationById[$normalizedId]['category'];
-        $passwords[$normalizedIndex]['folder'] = $rawLocationById[$normalizedId]['folder'];
+    $location = $normalizedId !== '' && isset($rawLocationById[$normalizedId]) ? $rawLocationById[$normalizedId] : null;
+    if ($location === null) {
+        $identity = implode("\x1f", [
+            trim((string)($normalizedRow['label'] ?? '')),
+            trim((string)($normalizedRow['username'] ?? '')),
+            trim((string)($normalizedRow['url'] ?? '')),
+        ]);
+        $location = $rawLocationByIdentity[$identity] ?? null;
+    }
+    if ($location !== null) {
+        $passwords[$normalizedIndex]['category'] = $location['category'];
+        $passwords[$normalizedIndex]['folder'] = $location['folder'];
     }
 }
 $passwords = array_values(array_filter($passwords, static fn(array $row): bool => ($row['type'] ?? '') !== 'system_config'));
