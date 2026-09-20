@@ -32,18 +32,58 @@
 
         const csrfInput = form.querySelector('input[name="csrf_token"]');
         const csrf = csrfInput ? csrfInput.value : '';
+        const progress = document.getElementById('gallery-upload-progress');
+        const progressFile = document.getElementById('gallery-upload-progress-file');
+        const progressStatus = document.getElementById('gallery-upload-progress-status');
+        const progressBar = document.getElementById('gallery-upload-progress-bar');
+        const progressPercent = document.getElementById('gallery-upload-progress-percent');
+        const progressTrack = progress?.querySelector('[role="progressbar"]');
         const totals = { stored: 0, duplicate: 0, rejected: 0 };
         const failures = [];
 
+        let displayedPercent = 2;
+        let progressTimer = null;
+
+        function setProgress(percent) {
+            displayedPercent = Math.max(displayedPercent, Math.min(90, percent));
+            if (progressBar) progressBar.style.width = displayedPercent + '%';
+            if (progressPercent) progressPercent.textContent = displayedPercent + '%';
+            if (progressTrack) progressTrack.setAttribute('aria-valuenow', String(displayedPercent));
+        }
+
+        function startProgress() {
+            if (progress) {
+                progress.classList.add('active');
+                progress.style.display = 'block';
+            }
+            setProgress(2);
+            if (progressTimer !== null) window.clearInterval(progressTimer);
+            progressTimer = window.setInterval(function () {
+                if (displayedPercent < 88) setProgress(displayedPercent + 1);
+            }, 180);
+        }
+
+        function stopProgress() {
+            if (progressTimer !== null) {
+                window.clearInterval(progressTimer);
+                progressTimer = null;
+            }
+        }
+
         try {
+            startProgress();
+
             for (let index = 0; index < files.length; index++) {
                 const file = files[index];
-                if (message) message.textContent = `Uploading ${index + 1} of ${files.length}: ${file.name}`;
+                if (progressFile) progressFile.textContent = `Photo ${index + 1} of ${files.length}: ${file.name}`;
+                if (progressStatus) progressStatus.textContent = 'Preparing upload…';
+                if (message) message.textContent = `Uploading photo ${index + 1} of ${files.length}…`;
 
                 try {
                     // Safari/WebKit workaround: copy the picked File into a
                     // fresh in-memory Blob before appending it to FormData.
                     const bytes = await file.arrayBuffer();
+                    if (progressStatus) progressStatus.textContent = 'Uploading…';
                     const safeBlob = new Blob([bytes], { type: file.type || 'application/octet-stream' });
                     const uploadData = new FormData();
                     uploadData.append('csrf_token', csrf);
@@ -71,6 +111,8 @@
                     if (!response.ok || !Array.isArray(data.results)) {
                         totals.rejected++;
                         failures.push(`${file.name}: ${data.message || 'Upload failed.'}`);
+                        setProgress(100);
+                        if (progressPercent) progressPercent.textContent = 'Failed';
                         continue;
                     }
 
@@ -81,9 +123,18 @@
                         totals.rejected++;
                         failures.push(`${file.name}: ${result?.message || 'Upload rejected.'}`);
                     }
+                    setProgress(100);
+                    if (progressStatus) progressStatus.textContent = result?.status === 'stored'
+                        ? 'Uploaded and processed successfully.'
+                        : result?.status === 'duplicate'
+                            ? 'Already in the gallery (duplicate).'
+                            : 'Upload rejected.';
                 } catch (error) {
                     totals.rejected++;
                     failures.push(`${file.name}: ${error.message || 'Upload failed.'}`);
+                    setProgress(100);
+                    if (progressPercent) progressPercent.textContent = 'Failed';
+                    if (progressStatus) progressStatus.textContent = 'Upload failed.';
                 }
             }
 
@@ -100,6 +151,7 @@
 
             if (totals.stored > 0) setTimeout(() => window.location.reload(), 1200);
         } finally {
+            stopProgress();
             if (button) button.disabled = false;
             if (input) input.disabled = false;
         }
