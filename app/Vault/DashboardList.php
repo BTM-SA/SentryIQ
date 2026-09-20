@@ -103,7 +103,7 @@ if ($activeVaultView !== 'records') {
         <?php if ($activeVaultView !== 'records'): ?>
             <button type="button" class="btn" onclick="showCreateFolderForm()" style="background:#f1f3f5;color:#212529;border:1px solid #dee2e6;">📁 Create Folder</button>
         <?php endif; ?>
-        <a href="index.php?pane=add&amp;vault_view=<?php echo rawurlencode($activeVaultView); ?>" class="btn btn-primary vault-add-record-button" style="text-decoration:none;"><span class="vault-add-record-icon" aria-hidden="true">+</span> Add Vault Record</a>
+        <a href="index.php?pane=add&amp;vault_view=<?php echo rawurlencode($activeVaultView); ?><?php echo $activeVaultFolder !== '' ? '&amp;vault_folder=' . rawurlencode($activeVaultFolder) : ''; ?>" class="btn btn-primary vault-add-record-button" style="text-decoration:none;"><span class="vault-add-record-icon" aria-hidden="true">+</span> Add Vault Record</a>
     </div>
     <?php if ($activeVaultView !== 'records' && $activeVaultFolder === ''): ?>
         <form id="create-folder-form" method="POST" action="vault_category_actions.php" style="display:none;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 16px;padding:12px;background:#f8f9fa;border:1px solid #e3e6f0;border-radius:8px;">
