@@ -272,7 +272,11 @@
         return button;
     }
 
-    function wireCategoryHeaderOptions() {
+    function wireCategoryHeaderOptions(data) {
+        var storedCategories = Array.isArray(data && data.categories) ? data.categories : [];
+        var isStoredCategory = storedCategories.some(function (storedCategory) {
+            return String(storedCategory).trim().toLowerCase() === category.toLowerCase();
+        });
         var category = currentCategory() || 'records';
         var params = new URLSearchParams(window.location.search);
         var folder = params.get('vault_folder') || '';
@@ -372,7 +376,7 @@
                     postAction('delete_folder', { category: category, folder: folder });
                 });
             }, true));
-        } else if (category !== 'records') {
+        } else if (category !== 'records' || isStoredCategory) {
             menu.appendChild(menuButton('📁 Create Folder', function () {
                 menu.style.display = 'none';
                 optionsButton.setAttribute('aria-expanded', 'false');
@@ -422,7 +426,7 @@
 
         function applyOptionsVisibility() {
             var mobile = window.matchMedia('(max-width: 700px)').matches;
-            optionsButton.style.display = (browsingFolder || category !== 'records') ? 'inline-flex' : 'none';
+            optionsButton.style.display = (browsingFolder || category !== 'records' || isStoredCategory) ? 'inline-flex' : 'none';
             if (createFolderButton) createFolderButton.style.display = (mobile || browsingFolder) ? 'none' : '';
             if (addRecordButton) addRecordButton.style.display = mobile ? 'none' : '';
         }
@@ -441,7 +445,7 @@
         fetchFolderData().then(function (data) {
             wireAddAndEditForms(data);
             wireFolderCards();
-            wireCategoryHeaderOptions();
+            wireCategoryHeaderOptions(data);
             styleCreateFolderForm();
         }).catch(function (error) {
             console.error('SentryIQ Vault folder initialization failed:', error);
