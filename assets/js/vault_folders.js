@@ -422,7 +422,7 @@
 
         function applyOptionsVisibility() {
             var mobile = window.matchMedia('(max-width: 700px)').matches;
-            optionsButton.style.display = (browsingFolder || mobile) ? 'inline-flex' : 'none';
+            optionsButton.style.display = (browsingFolder || category !== 'records') ? 'inline-flex' : 'none';
             if (createFolderButton) createFolderButton.style.display = (mobile || browsingFolder) ? 'none' : '';
             if (addRecordButton) addRecordButton.style.display = mobile ? 'none' : '';
         }
