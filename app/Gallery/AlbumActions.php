@@ -11,6 +11,13 @@ header('Content-Type: application/json; charset=utf-8');
 try{
  $galleryRoot=$dataDir.'/gallery'; $store=new AlbumStore($galleryRoot.'/albums.json'); $action=(string)($_POST['action']??'');
  if($action==='create'){$store->create((string)($_POST['name']??''));log_security_event('GALLERY_ALBUM_CREATED',get_visitor_ip(),$_SESSION['app_username']??'unknown');echo json_encode(['status'=>'ok','albums'=>$store->albums()],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;}
+ if($action==='delete'){
+  $album=(string)($_POST['album']??'');
+  if(trim($album)===''||$album==='Unassigned')throw new RuntimeException('This album cannot be deleted.');
+  $movedToUnassigned=$store->delete($album);
+  log_security_event('GALLERY_ALBUM_DELETED',get_visitor_ip(),$_SESSION['app_username']??'unknown',['album'=>$album,'photos_moved_to_unassigned'=>$movedToUnassigned]);
+  echo json_encode(['status'=>'ok','album'=>$album,'photos_moved_to_unassigned'=>$movedToUnassigned,'albums'=>$store->albums()],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);exit;
+ }
  if($action==='move'){
   $photoId=(string)($_POST['photo_id']??''); $album=(string)($_POST['album']??''); if(!preg_match('/^[a-f0-9]{32}$/',$photoId))throw new RuntimeException('Invalid photo ID.');
   $metadata=(new PhotoMetadataStore($galleryRoot.'/metadata.json'))->find($photoId); $found=false;
