@@ -46,6 +46,27 @@ final class AlbumStore
         $this->write($albums);
     }
 
+    public function delete(string $name): int
+    {
+        $name = trim($name);
+        if ($name === '' || $name === 'Unassigned') {
+            throw new RuntimeException('This album cannot be deleted.');
+        }
+        $albums = $this->albums();
+        if (!array_key_exists($name, $albums) || !is_array($albums[$name])) {
+            throw new RuntimeException('Album does not exist.');
+        }
+        $photos = $albums[$name];
+        unset($albums[$name]);
+        if (!isset($albums['Unassigned']) || !is_array($albums['Unassigned'])) {
+            $albums['Unassigned'] = [];
+        }
+        $albums['Unassigned'] = array_values(array_unique(array_merge($albums['Unassigned'], $photos)));
+        ksort($albums, SORT_NATURAL | SORT_FLAG_CASE);
+        $this->write($albums);
+        return count($photos);
+    }
+
     public function move(string $photoId, string $album): void
     {
         $this->moveMany([$photoId], $album);
