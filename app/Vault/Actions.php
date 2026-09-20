@@ -95,7 +95,7 @@ if ($action === 'add') {
     $rawUrl = trim((string)($_POST['url'] ?? ''));
     $notes = trim((string)($_POST['notes'] ?? ''));
     $category = trim((string)($_POST['category'] ?? ''));
-    $folder = trim((string)($_POST['folder'] ?? ''));
+    $folder = trim((string)($_POST['folder'] ?? '')); $folderContext = trim((string)($_POST['vault_folder_context'] ?? '')); if ($folder === '' && $folderContext !== '') $folder = $folderContext;
     $validCategories = [];
     foreach ($passwords as $entry) if (($entry['type'] ?? '') === 'system_config' && is_array($entry['categories'] ?? null)) $validCategories = array_values(array_filter(array_map('strval', $entry['categories'])));
     if ($category === '' || !in_array($category, $validCategories, true)) { header('Location: index.php?status=error&pane=add'); exit; }
