@@ -30,6 +30,25 @@ if ($vaultFolders === [] && is_array($systemConfig ?? null) && is_array($systemC
     }
 }
 $passwords = normalize_vault_records($rawVaultRecords);
+// Preserve the authoritative category/folder metadata from the decrypted records.
+// The normalizer may omit folder metadata from its presentation shape.
+$rawLocationById = [];
+foreach ($rawVaultRecords as $rawRow) {
+    if (($rawRow['type'] ?? '') === 'system_config') continue;
+    $rawId = trim((string)($rawRow['id'] ?? ''));
+    if ($rawId === '') continue;
+    $rawLocationById[$rawId] = [
+        'category' => trim((string)($rawRow['category'] ?? '')),
+        'folder' => trim((string)($rawRow['folder'] ?? '')),
+    ];
+}
+foreach ($passwords as $normalizedIndex => $normalizedRow) {
+    $normalizedId = trim((string)($normalizedRow['id'] ?? ''));
+    if ($normalizedId !== '' && isset($rawLocationById[$normalizedId])) {
+        $passwords[$normalizedIndex]['category'] = $rawLocationById[$normalizedId]['category'];
+        $passwords[$normalizedIndex]['folder'] = $rawLocationById[$normalizedId]['folder'];
+    }
+}
 $passwords = array_values(array_filter($passwords, static fn(array $row): bool => ($row['type'] ?? '') !== 'system_config'));
 $activeVaultView = trim((string)($_GET['vault_view'] ?? 'records'));
 $activeVaultFolder = trim((string)($_GET['vault_folder'] ?? ''));
