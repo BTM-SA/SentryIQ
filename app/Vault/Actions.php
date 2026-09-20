@@ -110,7 +110,9 @@ if ($action === 'add') {
     $passwords[] = ['id'=>$entryId,'label'=>$label,'category'=>$category,'folder'=>$folder,'username'=>$username,'password'=>$password,'url'=>$url,'notes'=>$notes,'icon_type'=>$icon['icon_type'],'icon_path'=>$icon['icon_path'],'icon_source'=>$icon['icon_source'],'icon_fetched_at'=>$icon['icon_fetched_at'],'created_at'=>date('c'),'updated_at'=>null];
     if (!save_passwords($passwords)) { header('Location: index.php?status=error&pane=add'); exit; }
     log_security_event('VAULT_RECORD_CREATED', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown', ['entry_id'=>$entryId,'category'=>$category,'folder'=>$folder]);
-    header('Location: index.php?status=saved&pane=view'); exit;
+    $redirect = 'index.php?status=saved&pane=records&vault_view=' . rawurlencode($category);
+    if ($folder !== '') $redirect .= '&vault_folder=' . rawurlencode($folder);
+    header('Location: ' . $redirect); exit;
 }
 
 if ($action === 'edit') {
