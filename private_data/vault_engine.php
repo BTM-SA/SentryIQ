@@ -211,6 +211,7 @@ function normalize_vault_records(array $records): array
             'id' => $id,
             'label' => trim((string)($record['label'] ?? '')),
             'category' => trim((string)($record['category'] ?? '')),
+            'folder' => trim((string)($record['folder'] ?? '')),
             'username' => trim((string)($record['username'] ?? '')),
             'password' => (string)($record['password'] ?? ''),
             'url' => $url,
