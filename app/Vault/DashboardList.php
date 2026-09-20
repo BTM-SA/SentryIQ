@@ -124,7 +124,13 @@ if ($activeVaultView !== 'records') {
     <?php endif; ?>
     <?php $visiblePasswords = $activeVaultView === 'records' ? [] : array_values(array_filter($passwords, static function (array $row) use ($activeVaultView, $activeVaultFolder): bool {
         if (trim((string)($row['category'] ?? '')) !== $activeVaultView) return false;
-        if ($activeVaultFolder !== '' && trim((string)($row['folder'] ?? '')) !== $activeVaultFolder) return false;
+        $rowFolder = trim((string)($row['folder'] ?? ''));
+        if ($activeVaultFolder !== '') {
+            if ($rowFolder !== $activeVaultFolder) return false;
+        } elseif ($rowFolder !== '') {
+            // Folder records belong to their folder view, not the category-level record list.
+            return false;
+        }
         return true;
     })); ?>
     <?php if (empty($visiblePasswords)): ?>
