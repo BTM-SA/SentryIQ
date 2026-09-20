@@ -23,9 +23,17 @@ if ($passwords === false) {
 }
 
 $folders = [];
+$categories = [];
 $records = [];
 foreach ($passwords as $entry) {
     if (($entry['type'] ?? '') === 'system_config') {
+        if (is_array($entry['categories'] ?? null)) {
+            foreach ($entry['categories'] as $category) {
+                $category = trim((string)$category);
+                if ($category !== '') $categories[] = $category;
+            }
+            $categories = array_values(array_unique($categories));
+        }
         if (is_array($entry['folders'] ?? null)) {
             foreach ($entry['folders'] as $category => $folderList) {
                 if (!is_string($category) || !is_array($folderList)) continue;
@@ -49,4 +57,4 @@ foreach ($passwords as $entry) {
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: private, no-store, max-age=0');
-echo json_encode(['folders' => $folders, 'records' => $records], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+echo json_encode(['categories' => $categories, 'folders' => $folders, 'records' => $records], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
