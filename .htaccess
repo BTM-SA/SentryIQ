@@ -28,7 +28,7 @@ RewriteRule ^vault_category_actions\.php$ app/Vault/CategoryActions.php [L]
 RewriteRule ^vault_folder_data\.php$ app/Vault/FolderData.php [L]
 
 # Preserve existing browser asset URLs after moving static files under assets/.
-RewriteRule ^pm_style\.css$ assets/css/pm_style.css [L]
+RewriteRule ^pm_style\.css$ assets/css/sentryiq.css [L]
 RewriteRule ^vault_folders\.js$ assets/js/vault_folders.js [L]
 RewriteRule ^records_view\.js$ assets/js/records_view.js [L]
 RewriteRule ^safari\.js$ assets/js/safari.js [L]
