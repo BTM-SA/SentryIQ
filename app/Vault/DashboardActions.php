@@ -17,10 +17,11 @@
 
 <!-- PANEL SECTION 4: SYSTEM PANEL -->
 <div id="settings-panel" class="vault-panel <?php echo ($active_pane === 'settings') ? 'active' : ''; ?>">
-    <div id="application-settings-back" style="margin-bottom:16px;display:none;"><a href="index.php?pane=settings" class="btn" style="text-decoration:none;">← System Settings</a></div>
+    <div id="application-settings-back-mobile" style="margin-bottom:16px;display:none;"><a href="index.php?pane=settings" class="btn" style="text-decoration:none;">← System Settings</a></div>
     <div class="form-box">
-        <div style="margin-bottom:15px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:15px;flex-wrap:wrap;">
             <h3 style="margin:0;">⚙️ Application Settings</h3>
+            <a id="application-settings-back-desktop" href="index.php?pane=settings" class="btn" style="text-decoration:none;display:none;">← System Settings</a>
         </div>
         <form method="POST">
             <div class="form-group"><label>Application Username:</label><input type="text" name="app_username" class="input-field" value="<?php echo htmlspecialchars($sys_user); ?>" required></div>
