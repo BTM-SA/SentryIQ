@@ -24,7 +24,7 @@ $csrf = sentryiq_csrf_token();
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="csrf-token" content="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
 <title>SentryIQ — System Log</title>
-<link rel="stylesheet" href="assets/css/pm_style.css">
+<link rel="stylesheet" href="assets/css/sentryiq.css">
 </head>
 <body>
 <div class="box">
