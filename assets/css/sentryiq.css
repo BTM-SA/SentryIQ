@@ -165,13 +165,29 @@ body { background:var(--neo-bg); color:var(--neo-text); }
 /* Give category/folder section headings consistent breathing room. */
 #records-panel > div:first-child h3 { margin-top:1em !important; }
 
-/* Match the Application Settings mobile back button to the Vault back button. */
+/* Application Settings back button: match the Vault back button exactly on mobile. */
 @media (max-width:700px) {
-    #application-settings-back-mobile { margin-bottom:16px !important; }
+    #application-settings-back-mobile {
+        display:block !important;
+        margin-bottom:16px !important;
+    }
     #application-settings-back-mobile .btn {
         display:inline-block !important;
         width:auto !important;
         min-width:0 !important;
         padding:10px 20px !important;
+        background:#f1f3f5 !important;
+        color:#212529 !important;
+        border:1px solid #dee2e6 !important;
+        text-decoration:none !important;
+        box-shadow:none !important;
+    }
+    #application-settings-back-desktop {
+        display:none !important;
+    }
+}
+@media (min-width:701px) {
+    #application-settings-back-mobile {
+        display:none !important;
     }
 }
