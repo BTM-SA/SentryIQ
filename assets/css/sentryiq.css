@@ -170,11 +170,15 @@ body { background:var(--neo-bg); color:var(--neo-text); }
    the Application Settings sub-page. */
 @media (max-width:700px) {
     #application-settings-back-mobile {
+        display:block !important;
+        width:100% !important;
+        margin-top:16px !important;
         margin-bottom:16px !important;
     }
     #application-settings-back-mobile .btn {
-        display:inline-block !important;
-        width:auto !important;
+        display:block !important;
+        width:100% !important;
+        box-sizing:border-box !important;
         min-width:0 !important;
         padding:10px 20px !important;
         background:#f1f3f5 !important;
@@ -182,6 +186,7 @@ body { background:var(--neo-bg); color:var(--neo-text); }
         border:1px solid #dee2e6 !important;
         text-decoration:none !important;
         box-shadow:none !important;
+        text-align:center !important;
     }
 }
 @media (min-width:701px) {
