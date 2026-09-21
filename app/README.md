@@ -1,18 +1,22 @@
 # SentryIQ Application Code
 
-This directory contains internal application code grouped by responsibility.
+This directory contains the internal SentryIQ application layer, grouped by platform responsibility and user-facing domain.
 
-## Boundaries
+## Platform responsibilities
 
 - `Auth/` — authentication, passkeys, and access-flow logic.
-- `Vault/` — vault records, categories, folders, icons, and vault-specific services.
-- `Documents/` — document storage and document services.
-- `Gallery/` — gallery application services that are not public HTTP routes.
-- `Security/` — security bootstrap, first-run installation, auditing, and security services.
-- `Shared/` — small reusable application components that do not belong to one domain.
+- `Security/` — security bootstrap, first-run installation, auditing, logging, and security services.
 
-Public HTTP action endpoints are kept out of this directory. Their established URLs are routed by the repository `.htaccess` to the appropriate implementation under `app/`.
+## User-facing domains
 
-A small number of root-level PHP files remain as public entry points or shared bootstrap/includes where existing consumers still depend on them.
+- `Vault/` — secure structured information, records, categories, folders, and vault-specific services.
+- `Documents/` — document storage and document application services.
+- `Gallery/` — personal media management, currently focused on photos and albums and designed to expand to video and audio.
 
-The `cloud/` directory is a separate layer and should not be collapsed into `app/`.
+A future `Contacts/` domain may be added for structured personal contact data and import functionality.
+
+A future `Core/` area may be introduced when genuinely shared capabilities such as storage abstractions, metadata, search, audit, or common file handling are used across multiple domains. It should not become a general-purpose catch-all.
+
+Public HTTP action URLs are kept at the repository URL surface and routed through the repository `.htaccess` to their implementations under `app/`.
+
+The `cloud/` directory is a separate service layer and should not be collapsed into `app/`.
