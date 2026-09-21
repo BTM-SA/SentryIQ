@@ -214,8 +214,10 @@ if ($activeVaultView !== 'records') {
         var params=new URLSearchParams(window.location.search);
         var application=params.get('tool')==='application';
         boxes[0].style.display=application?'block':'none';
-        var back=document.getElementById('application-settings-back');
-        if(back) back.style.display=application?'block':'none';
+        var backMobile=document.getElementById('application-settings-back-mobile');
+        var backDesktop=document.getElementById('application-settings-back-desktop');
+        if(backMobile) backMobile.style.display=application?'block':'none';
+        if(backDesktop) backDesktop.style.display=application?'inline-block':'none';
         boxes[1].style.display='none';
         boxes[2].style.display='none';
         if(application){panel.dataset.optionsReady='1';return;}
