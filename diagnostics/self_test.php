@@ -177,6 +177,7 @@ $requiredFiles = [
     ],
     'Static assets' => ['assets/css/pm_style.css', 'assets/js/vault_folders.js', 'assets/js/records_view.js', 'assets/js/safari.js', 'assets/images/sentryiq-logo-wide.webp', '.htaccess'],
 ];
+
 foreach ($requiredFiles as $group => $paths) {
     foreach ($paths as $relative) add_required_file_check($group, $relative, $relative);
 }
@@ -342,12 +343,12 @@ $browserTests = [
         ['tag'=>'link','value'=>'assets/css/pm_style.css'],
         ['tag'=>'img','value'=>'assets/images/sentryiq-logo-wide.webp'],
     ]],
-    ['type' => 'page', 'label' => 'url' => 'expectedContentType' => 'text/html', 'requiredHtmlRefs' => [
+    ['type' => 'page', 'label' => 'passkey_setup.php', 'url' => 'passkey_setup.php', 'expectedContentType' => 'text/html', 'requiredHtmlRefs' => [
         ['tag'=>'link','value'=>'assets/css/pm_style.css'],
         ['tag'=>'img','value'=>'assets/images/sentryiq-logo-wide.webp'],
     ]],
-    ['type' => 'page', 'label' => 'url' => 'expectedFinalPath' => 'index.php', 'expectedContentType' => 'text/html'],
-    ['type' => 'page', 'label' => 'url' => 'expectedContentType' => 'text/html', 'requiredHtmlRefs' => [
+    ['type' => 'page', 'label' => 'passkey_login.php', 'url' => 'passkey_login.php', 'expectedFinalPath' => 'index.php', 'expectedContentType' => 'text/html'],
+    ['type' => 'page', 'label' => 'passkeys.php', 'url' => 'passkeys.php', 'expectedContentType' => 'text/html', 'requiredHtmlRefs' => [
         ['tag'=>'link','value'=>'assets/css/pm_style.css'],
         ['tag'=>'img','value'=>'assets/images/sentryiq-logo-wide.webp'],
     ]],
@@ -365,16 +366,16 @@ $browserTests = [
         ['selector'=>'.btn','property'=>'borderRadius','not'=>'0px'],
         ['selector'=>'.btn','property'=>'boxShadow','not'=>'none'],
     ]],
-    ['type' => 'data', 'label' => 'url' => 'expectedContentType' => 'application/json'],
-    ['type' => 'data', 'label' => 'url' => 'expectedContentType' => 'application/json'],
-    ['type' => 'page', 'label' => 'url' => 'expectedContentType' => 'text/html', 'requiredHtmlRefs' => [
+    ['type' => 'data', 'label' => 'records_view_data.php', 'url' => 'records_view_data.php', 'expectedContentType' => 'application/json'],
+    ['type' => 'data', 'label' => 'vault_folder_data.php', 'url' => 'vault_folder_data.php', 'expectedContentType' => 'application/json'],
+    ['type' => 'page', 'label' => 'security-features.php', 'url' => 'security-features.php', 'expectedContentType' => 'text/html', 'requiredHtmlRefs' => [
         ['tag'=>'link','value'=>'assets/css/pm_style.css'],
     ]],
-    ['type' => 'page', 'label' => 'url' => 'expectedContentType' => 'text/html', 'requiredHtmlRefs' => [
+    ['type' => 'page', 'label' => 'security_log.php', 'url' => 'security_log.php', 'expectedContentType' => 'text/html', 'requiredHtmlRefs' => [
         ['tag'=>'link','value'=>'assets/css/pm_style.css'],
         ['tag'=>'img','value'=>'assets/images/sentryiq-logo-wide.webp'],
     ]],
-    ['type' => 'page', 'label' => 'url' => 'expectedContentType' => 'text/html', 'requiredHtmlRefs' => [
+    ['type' => 'page', 'label' => 'system_log.php', 'url' => 'system_log.php', 'expectedContentType' => 'text/html', 'requiredHtmlRefs' => [
         ['tag'=>'link','value'=>'assets/css/pm_style.css'],
         ['tag'=>'img','value'=>'assets/images/sentryiq-logo-wide.webp'],
     ]],
@@ -384,10 +385,10 @@ $browserTests = [
     ['type' => 'not-tested', 'label' => 'gallery_bulk_delete.php', 'url' => 'gallery_bulk_delete.php', 'reason' => 'POST-only endpoint; browser GET is not a health test'],
     ['type' => 'not-tested', 'label' => 'gallery_delete.php', 'url' => 'gallery_delete.php', 'reason' => 'POST-only endpoint; browser GET is not a health test'],
     ['type' => 'not-tested', 'label' => 'gallery_upload.php', 'url' => 'gallery_upload.php', 'reason' => 'POST-only endpoint; browser GET is not a health test'],
-    ['type' => 'not-tested', 'label' => 'url' => 'reason' => 'POST-only endpoint; browser GET is not a health test'],
-    ['type' => 'not-tested', 'label' => 'url' => 'reason' => 'POST-only endpoint; browser GET is not a health test'],
-    ['type' => 'not-tested', 'label' => 'url' => 'reason' => 'POST-only endpoint; browser GET is not a health test'],
-    ['type' => 'not-tested', 'label' => 'url' => 'reason' => 'POST-only endpoint; browser GET is not a health test'],
+    ['type' => 'not-tested', 'label' => 'record_actions.php', 'url' => 'record_actions.php', 'reason' => 'POST-only endpoint; browser GET is not a health test'],
+    ['type' => 'not-tested', 'label' => 'records_category_actions.php', 'url' => 'records_category_actions.php', 'reason' => 'POST-only endpoint; browser GET is not a health test'],
+    ['type' => 'not-tested', 'label' => 'vault_actions.php', 'url' => 'vault_actions.php', 'reason' => 'POST-only endpoint; browser GET is not a health test'],
+    ['type' => 'not-tested', 'label' => 'vault_category_actions.php', 'url' => 'vault_category_actions.php', 'reason' => 'POST-only endpoint; browser GET is not a health test'],
     ['type' => 'not-tested', 'label' => 'document_download.php', 'url' => 'document_download.php', 'reason' => 'Requires a real document id; no-id GET is intentionally not a health test'],
     ['type' => 'not-tested', 'label' => 'gallery_image.php', 'url' => 'gallery_image.php', 'reason' => 'Requires a real photo id; no-id GET is intentionally not a health test'],
 ];
