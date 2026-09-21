@@ -166,8 +166,7 @@ $requiredFiles = [
     'Public entry points' => [
         'index.php', 'gallery.php', 'documents.php', 'first_run.php', 'sentryiq-icon.php', 'vault-icon.php',
         'auth_flow.php', 'security_bootstrap.php', 'passkey_setup.php', 'passkey_login.php', 'passkey_auth.php', 'passkeys.php',
-'gallery_album.php', 'gallery_bulk_delete.php',
-        'gallery_delete.php', 'gallery_image.php', 'gallery_settings.php', 'gallery_upload.php', 'record_actions.php',
+'record_actions.php',
         'records_category_actions.php', 'records_view_data.php', 'vault_actions.php', 'vault_category_actions.php', 'vault_folder_data.php',
         'security-features.php', 'security_log.php', 'system_log.php', 'sentryiq_diagnostic.php'
     ],
