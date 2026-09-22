@@ -43,7 +43,7 @@ $csrf = sentryiq_csrf_token();
 <link rel="apple-touch-icon" href="sentryiq-icon.php">
 <meta property="og:type" content="website"><meta property="og:title" content="SentryIQ"><meta property="og:description" content="SentryIQ secure password vault and credential management."><meta property="og:image" content="sentryiq-icon.php"><meta property="og:image:type" content="image/png"><meta property="og:image:alt" content="SentryIQ">
 <meta name="twitter:card" content="summary"><meta name="twitter:title" content="SentryIQ"><meta name="twitter:description" content="SentryIQ secure password vault and credential management."><meta name="twitter:image" content="sentryiq-icon.php">
-<title>SentryIQ</title><link rel="stylesheet" href="assets/css/sentryiq.css">
+<title>SentryIQ</title><link rel="stylesheet" href="assets/css/sentryiq.css?v=20260922-2">
 <style>
 #records-panel > div:first-child {
     margin: 2em 0 16px !important;
