@@ -202,3 +202,11 @@ body { background:var(--neo-bg); color:var(--neo-text); }
     .gallery-settings-back { width:100% !important; margin-top:16px !important; margin-bottom:16px !important; padding-top:16px; }
     .gallery-settings-back .btn { width:100% !important; min-width:0 !important; }
 }
+
+/* Application Settings back button: keep it below the mobile navigation and full width. */
+.application-settings-back { width:100%; margin-top:16px; margin-bottom:16px; clear:both; position:relative; z-index:1; }
+.application-settings-back .btn { display:block !important; width:100% !important; box-sizing:border-box !important; text-align:center; }
+@media (max-width:700px) {
+    .application-settings-back { width:100% !important; margin-top:16px !important; margin-bottom:16px !important; padding-top:16px; }
+    .application-settings-back .btn { width:100% !important; min-width:0 !important; }
+}
