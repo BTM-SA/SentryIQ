@@ -17,6 +17,9 @@
 
 <!-- PANEL SECTION 4: SYSTEM PANEL -->
 <div id="settings-panel" class="vault-panel <?php echo ($active_pane === 'settings') ? 'active' : ''; ?>">
+    <div class="application-settings-back" style="margin-bottom:16px;">
+        <a href="index.php?pane=settings" class="btn" style="text-decoration:none;">← System Settings</a>
+    </div>
     <div class="form-box">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:15px;flex-wrap:wrap;">
             <h3 style="margin:0;">⚙️ Application Settings</h3>
