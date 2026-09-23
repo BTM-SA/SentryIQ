@@ -16,7 +16,23 @@ if($_SERVER['REQUEST_METHOD']==='POST'){sentryiq_require_csrf();try{$savedQualit
 $settings=GallerySettings::load($dataDir);
 function gallerySettingValue(int $value,int $originalLabel=0):string{return $value===$originalLabel?'Original':(string)$value.' px';}
 ?>
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="csrf-token" content="<?php echo htmlspecialchars($csrf,ENT_QUOTES,'UTF-8'); ?>"><title>SentryIQ — Gallery Settings</title><link rel="stylesheet" href="assets/css/sentryiq.css?v=20260922-1"></head><body><div class="box">
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/images/sentryiq-icon.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/images/sentryiq-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/images/sentryiq-icon.png">
+<meta property="og:site_name" content="SentryIQ">
+<meta property="og:type" content="website">
+<meta property="og:title" content="SentryIQ — Gallery Settings">
+<meta property="og:description" content="SentryIQ Gallery settings.">
+<meta property="og:image" content="https://bichet.co.za/SentryIQ/assets/images/sentryiq-icon.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="1200">
+<meta property="og:image:alt" content="SentryIQ">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SentryIQ — Gallery Settings">
+<meta name="twitter:description" content="SentryIQ Gallery settings.">
+<meta name="twitter:image" content="https://bichet.co.za/SentryIQ/assets/images/sentryiq-icon.png"><meta name="csrf-token" content="<?php echo htmlspecialchars($csrf,ENT_QUOTES,'UTF-8'); ?>"><title>SentryIQ — Gallery Settings</title><link rel="stylesheet" href="assets/css/sentryiq.css?v=20260922-1"></head><body><div class="box">
 <div class="sentryiq-page-header"><div class="sentryiq-vault-brand-wrap"><img class="sentryiq-vault-banner" src="assets/images/sentryiq-logo-wide.webp" width="1952" height="588" alt="SentryIQ"><span class="sentryiq-vault-status">Gallery Settings</span></div><div class="sentryiq-mobile-header-actions"><form method="POST" class="sentryiq-lock-form"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf,ENT_QUOTES,'UTF-8'); ?>"><input type="hidden" name="lock_vault" value="1"><button type="submit" class="btn btn-primary sentryiq-lock-button">Lock Vault</button></form><div class="vault-mobile-menu-bar"><button type="button" class="vault-mobile-menu-toggle" aria-expanded="false" aria-controls="vault-mobile-menu"><span class="vault-mobile-menu-icon" aria-hidden="true">☰</span><span id="vault-mobile-menu-label">Menu</span></button></div></div></div>
 <div id="vault-mobile-menu" class="vault-tabs"><button class="tab-btn" type="button" onclick="window.location.href='index.php?pane=view'">📋 Vault</button><button class="tab-btn" type="button" onclick="window.location.href='documents.php'">📄 Docs</button><button class="tab-btn" type="button" onclick="window.location.href='gallery.php'">🖼️ Gallery</button><button class="tab-btn active" type="button" onclick="window.location.href='index.php?pane=settings'">⚙️ System</button><form method="POST" class="vault-menu-lock-form"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf,ENT_QUOTES,'UTF-8'); ?>"><input type="hidden" name="lock_vault" value="1"><button type="submit" class="tab-btn vault-menu-lock-button">🔒 Lock Vault</button></form></div>
 <div class="gallery-settings-back"><a href="index.php?pane=settings" class="btn" style="text-decoration:none;">← System Settings</a></div><div class="form-box"><div><h2 style="margin-bottom:6px;">🖼️ Gallery Settings</h2><p style="margin-top:0;color:#666;">Control the fixed resolution and encoding quality of saved images, thumbnails and previews.</p></div><?php if($message!==''): ?><p class="<?php echo htmlspecialchars($messageClass,ENT_QUOTES,'UTF-8'); ?>"><?php echo htmlspecialchars($message,ENT_QUOTES,'UTF-8'); ?></p><?php endif; ?><form method="POST" style="margin-top:20px;"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf,ENT_QUOTES,'UTF-8'); ?>">
