@@ -61,6 +61,22 @@ foreach ($photos as $photo) {
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/images/sentryiq-icon.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/images/sentryiq-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/images/sentryiq-icon.png">
+<meta property="og:site_name" content="SentryIQ">
+<meta property="og:type" content="website">
+<meta property="og:title" content="SentryIQ Gallery">
+<meta property="og:description" content="SentryIQ Gallery — private personal photo and media gallery.">
+<meta property="og:image" content="https://bichet.co.za/SentryIQ/assets/images/sentryiq-icon.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="1200">
+<meta property="og:image:alt" content="SentryIQ">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SentryIQ Gallery">
+<meta name="twitter:description" content="SentryIQ Gallery — private personal photo and media gallery.">
+<meta name="twitter:image" content="https://bichet.co.za/SentryIQ/assets/images/sentryiq-icon.png">
 <meta name="csrf-token" content="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
 <title>SentryIQ Gallery</title><link rel="stylesheet" href="assets/css/sentryiq.css">
 <style>
