@@ -31,7 +31,7 @@ $csrf = sentryiq_csrf_token();
 <meta property="og:type" content="website">
 <meta property="og:title" content="SentryIQ — Passkeys">
 <meta property="og:description" content="SentryIQ passkey management.">
-<meta property="og:image" content="https://bichet.co.za/SentryIQ/assets/images/sentryiq-icon.png">
+<meta property="og:image" content="https://bichet.co.za/SentryIQ/sentryiq-og.php">
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="1200">
@@ -39,7 +39,7 @@ $csrf = sentryiq_csrf_token();
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="SentryIQ — Passkeys">
 <meta name="twitter:description" content="SentryIQ passkey management.">
-<meta name="twitter:image" content="https://bichet.co.za/SentryIQ/assets/images/sentryiq-icon.png">
+<meta name="twitter:image" content="https://bichet.co.za/SentryIQ/sentryiq-og.php">
 <meta name="csrf-token" content="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
 <title>SentryIQ — Passkeys</title>
 <link rel="stylesheet" href="assets/css/sentryiq.css?v=20260922-3">
