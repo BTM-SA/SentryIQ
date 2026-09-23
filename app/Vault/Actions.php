@@ -301,6 +301,15 @@ if ($action === 'save_settings') {
         exit;
     }
 
+    if ($movedDirectory && !@copy(DATA_FILE, $effectiveDirectory . '/passwords.enc')) {
+        header('Location: index.php?status=error&pane=settings');
+        exit;
+    }
+
+    if ($movedDirectory) {
+        @chmod($effectiveDirectory . '/passwords.enc', 0600);
+    }
+
     $_SESSION['app_username'] = $username;
 
     $privateConfig = "<?php\nreturn [\n    'installed' => true,\n    'username' => " . var_export($username, true) . ",\n    'two_fa_email' => " . var_export((string)$email, true) . ",\n    'base_url' => " . var_export($requestedBaseUrl, true) . ",\n    'data_dir' => " . var_export($effectiveDirectory, true) . ",\n    'two_fa_token_expiry' => 300,\n];\n";
