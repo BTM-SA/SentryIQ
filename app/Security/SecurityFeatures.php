@@ -6,6 +6,22 @@ sentryiq_security_bootstrap();
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/images/sentryiq-icon.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/images/sentryiq-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/images/sentryiq-icon.png">
+<meta property="og:site_name" content="SentryIQ">
+<meta property="og:type" content="website">
+<meta property="og:title" content="SentryIQ — Security">
+<meta property="og:description" content="SentryIQ security architecture and controls.">
+<meta property="og:image" content="https://bichet.co.za/SentryIQ/assets/images/sentryiq-icon.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="1200">
+<meta property="og:image:alt" content="SentryIQ">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SentryIQ — Security">
+<meta name="twitter:description" content="SentryIQ security architecture and controls.">
+<meta name="twitter:image" content="https://bichet.co.za/SentryIQ/assets/images/sentryiq-icon.png">
 <title>SentryIQ — Security</title>
 <link rel="stylesheet" href="assets/css/sentryiq.css">
 <style>.security-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.security-card{background:#fff;border:1px solid #e1e4e8;border-radius:10px;padding:22px;box-shadow:0 3px 8px rgba(0,0,0,.04)}.security-card.full{grid-column:1/-1}.security-card h2{margin:0 0 8px}.security-card p{color:#555}.security-card li{margin:6px 0}@media(max-width:700px){.security-grid{grid-template-columns:1fr}.security-card.full{grid-column:auto}}</style>
