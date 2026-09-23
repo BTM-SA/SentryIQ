@@ -24,9 +24,9 @@ $csrf = sentryiq_csrf_token();
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" type="image/png" sizes="32x32" href="assets/images/sentryiq-icon.png">
-<link rel="icon" type="image/png" sizes="16x16" href="assets/images/sentryiq-icon.png">
-<link rel="apple-touch-icon" sizes="180x180" href="assets/images/sentryiq-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="sentryiq-icon.php?size=32">
+<link rel="icon" type="image/png" sizes="16x16" href="sentryiq-icon.php?size=16">
+<link rel="apple-touch-icon" sizes="180x180" href="sentryiq-icon.php?size=180">
 <meta property="og:site_name" content="SentryIQ">
 <meta property="og:type" content="website">
 <meta property="og:title" content="SentryIQ — Passkeys">
