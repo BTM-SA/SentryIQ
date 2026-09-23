@@ -39,7 +39,23 @@ function docs_size(int $bytes): string {
 }
 ?>
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="csrf-token" content="<?php echo htmlspecialchars($csrf,ENT_QUOTES,'UTF-8'); ?>"><title>SentryIQ Documents</title><link rel="stylesheet" href="assets/css/sentryiq.css"><style>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/images/sentryiq-icon.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/images/sentryiq-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/images/sentryiq-icon.png">
+<meta property="og:site_name" content="SentryIQ">
+<meta property="og:type" content="website">
+<meta property="og:title" content="SentryIQ Documents">
+<meta property="og:description" content="SentryIQ Documents — private personal document storage.">
+<meta property="og:image" content="https://bichet.co.za/SentryIQ/assets/images/sentryiq-icon.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="1200">
+<meta property="og:image:alt" content="SentryIQ">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SentryIQ Documents">
+<meta name="twitter:description" content="SentryIQ Documents — private personal document storage.">
+<meta name="twitter:image" content="https://bichet.co.za/SentryIQ/assets/images/sentryiq-icon.png"><meta name="csrf-token" content="<?php echo htmlspecialchars($csrf,ENT_QUOTES,'UTF-8'); ?>"><title>SentryIQ Documents</title><link rel="stylesheet" href="assets/css/sentryiq.css"><style>
 .docs-upload{margin-top:18px;padding:18px;border:1px solid #e9ecef;border-radius:12px;background:#fafbfc}.docs-file-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0 12px}.docs-file-input{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.docs-file-label{display:inline-flex;align-items:center;justify-content:center;padding:9px 14px;border:1px solid #0066cc;border-radius:8px;background:#0066cc;color:#fff;font-size:14px;font-weight:600;cursor:pointer}.docs-file-name{font-size:13px;color:#6c757d;min-width:0;word-break:break-word}.docs-list{margin-top:20px;border:1px solid #e9ecef;border-radius:12px;overflow:hidden;background:#fff}.docs-row{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 16px;border-bottom:1px solid #eef0f2}.docs-row:last-child{border-bottom:0}.docs-icon{font-size:28px;text-align:center}.docs-name{font-size:14px;font-weight:600;color:#212529;word-break:break-word}.docs-meta{margin-top:3px;font-size:12px;color:#777}.docs-actions{display:flex;align-items:center;gap:7px}.docs-action{display:inline-flex;align-items:center;justify-content:center;padding:7px 10px;border:1px solid #d9dee5;border-radius:7px;background:#fff;color:#212529;text-decoration:none;font-size:13px;cursor:pointer}.docs-delete{border-color:#dc3545;color:#dc3545}.docs-empty{text-align:center;padding:44px 20px;color:#777}.docs-message{margin-top:12px}.docs-note{margin:0;color:#6c757d;font-size:13px;line-height:1.5}@media(max-width:600px){.docs-file-row{flex-direction:column;align-items:stretch}.docs-file-label,.docs-upload .btn{width:100%;box-sizing:border-box}.docs-file-name{text-align:center}.docs-list{border-radius:10px}.docs-row{grid-template-columns:38px minmax(0,1fr);gap:10px;padding:13px 12px}.docs-actions{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:7px}.docs-action{min-height:36px;box-sizing:border-box}.docs-icon{font-size:24px}}
 </style></head><body><div class="box">
 <div class="sentryiq-page-header"><div class="sentryiq-vault-brand-wrap"><img class="sentryiq-vault-banner" src="assets/images/sentryiq-logo-wide.webp" width="1952" height="588" alt="SentryIQ"><span class="sentryiq-vault-status">Docs</span></div><div class="sentryiq-mobile-header-actions"><form method="POST" class="sentryiq-lock-form"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf,ENT_QUOTES,'UTF-8'); ?>"><input type="hidden" name="lock_vault" value="1"><button type="submit" class="btn btn-primary sentryiq-lock-button">Lock Vault</button></form><div class="vault-mobile-menu-bar"><button type="button" class="vault-mobile-menu-toggle" aria-expanded="false" aria-controls="vault-mobile-menu"><span class="vault-mobile-menu-icon" aria-hidden="true">☰</span><span>Menu</span></button></div></div></div>
