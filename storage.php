@@ -143,25 +143,45 @@ function sentryiq_storage_extract_quota(array $decoded): ?array
         return null;
     }
 
-    $usedMb = isset($data['megabytes_used']) && is_numeric($data['megabytes_used'])
-        ? (float)$data['megabytes_used']
+    $usedBytes = isset($data['bytes_used']) && is_numeric($data['bytes_used'])
+        ? max(0, (int)$data['bytes_used'])
         : null;
 
-    $limitMb = isset($data['megabyte_limit']) && is_numeric($data['megabyte_limit'])
-        ? (float)$data['megabyte_limit']
+    $limitBytes = isset($data['byte_limit']) && is_numeric($data['byte_limit'])
+        ? max(0, (int)$data['byte_limit'])
         : null;
 
-    $remainMb = isset($data['megabytes_remain']) && is_numeric($data['megabytes_remain'])
-        ? (float)$data['megabytes_remain']
+    $remainBytes = isset($data['bytes_remain']) && is_numeric($data['bytes_remain'])
+        ? max(0, (int)$data['bytes_remain'])
         : null;
 
-    if ($usedMb === null || $limitMb === null) {
-        return null;
+    if ($usedBytes === null || $limitBytes === null) {
+        $usedMb = isset($data['megabytes_used']) && is_numeric($data['megabytes_used'])
+            ? (float)$data['megabytes_used']
+            : null;
+
+        $limitMb = isset($data['megabyte_limit']) && is_numeric($data['megabyte_limit'])
+            ? (float)$data['megabyte_limit']
+            : null;
+
+        $remainMb = isset($data['megabytes_remain']) && is_numeric($data['megabytes_remain'])
+            ? (float)$data['megabytes_remain']
+            : null;
+
+        if ($usedMb === null || $limitMb === null) {
+            return null;
+        }
+
+        $usedBytes = (int)round(max(0, $usedMb) * 1024 * 1024);
+        $limitBytes = $limitMb > 0
+            ? (int)round($limitMb * 1024 * 1024)
+            : 0;
+        $remainBytes = $remainMb !== null
+            ? (int)round(max(0, $remainMb) * 1024 * 1024)
+            : null;
     }
 
-    $usedBytes = (int)round(max(0, $usedMb) * 1024 * 1024);
-
-    if ($limitMb <= 0) {
+    if ($limitBytes <= 0) {
         return [
             'available' => null,
             'limit' => null,
@@ -170,13 +190,12 @@ function sentryiq_storage_extract_quota(array $decoded): ?array
         ];
     }
 
-    $limitBytes = (int)round($limitMb * 1024 * 1024);
-    $availableMb = $remainMb !== null
-        ? max(0, $remainMb)
-        : max(0, $limitMb - $usedMb);
+    $availableBytes = $remainBytes !== null
+        ? $remainBytes
+        : max(0, $limitBytes - $usedBytes);
 
     return [
-        'available' => (int)round($availableMb * 1024 * 1024),
+        'available' => $availableBytes,
         'limit' => $limitBytes,
         'used' => $usedBytes,
         'unlimited' => false,
