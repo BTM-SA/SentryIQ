@@ -213,7 +213,26 @@ function sentryiq_storage_extract_quota(array $decoded): ?array
 
 function sentryiq_storage_read_cpanel_quota(array $config): ?array
 {
-    $token = trim((string)($config['cpanel_api_token'] ?? ''));
+    $token = '';
+
+    $dataDir = sentryiq_data_dir();
+    if ($dataDir !== '') {
+        $tokenFile = rtrim($dataDir, '/') . '/cpanel_api_token.php';
+
+        if (is_file($tokenFile) && !is_link($tokenFile)) {
+            $tokenValue = require $tokenFile;
+
+            if (is_string($tokenValue)) {
+                $token = trim($tokenValue);
+            }
+        }
+    }
+
+    // Backward-compatible fallback for installations that already configured
+    // the token in the ignored SentryIQ configuration file.
+    if ($token === '') {
+        $token = trim((string)($config['cpanel_api_token'] ?? ''));
+    }
 
     if ($token === '') {
         return null;
@@ -235,6 +254,24 @@ function sentryiq_storage_read_cpanel_quota(array $config): ?array
     return is_array($decoded)
         ? sentryiq_storage_extract_quota($decoded)
         : null;
+}
+
+function sentryiq_storage_has_cpanel_token(array $config): bool
+{
+    $dataDir = sentryiq_data_dir();
+
+    if ($dataDir !== '') {
+        $tokenFile = rtrim($dataDir, '/') . '/cpanel_api_token.php';
+
+        if (is_file($tokenFile) && !is_link($tokenFile)) {
+            $tokenValue = require $tokenFile;
+            if (is_string($tokenValue) && trim($tokenValue) !== '') {
+                return true;
+            }
+        }
+    }
+
+    return trim((string)($config['cpanel_api_token'] ?? '')) !== '';
 }
 
 
@@ -363,7 +400,7 @@ $csrf = sentryiq_csrf_token();
 
             <?php if ($quota === null): ?>
                 <p class="storage-warning">
-                    <?php if (trim((string)($config['cpanel_api_token'] ?? '')) === ''): ?>
+                    <?php if (!sentryiq_storage_has_cpanel_token($config)): ?>
                         A cPanel API token has not been configured yet. Add one to the SentryIQ configuration to enable account quota reporting.
                     <?php else: ?>
                         SentryIQ could not retrieve the cPanel account quota through the authenticated cPanel API.
