@@ -69,47 +69,77 @@ function sentryiq_storage_directory_size(string $directory, array $excludedNames
     return $size;
 }
 
-function sentryiq_storage_read_cpanel_quota(): ?array
+function sentryiq_storage_run_uapi(string $uapi, string $cpanelUser, string $module, string $function): ?array
 {
-    if (!function_exists('shell_exec')) {
+    $command = escapeshellarg($uapi)
+        . ' --user=' . escapeshellarg($cpanelUser)
+        . ' --output=json '
+        . escapeshellarg($module)
+        . ' '
+        . escapeshellarg($function)
+        . ' 2>/dev/null';
+
+    if (function_exists('exec')) {
+        $disabledFunctions = array_map(
+            static fn(string $value): string => strtolower(trim($value)),
+            explode(',', (string)ini_get('disable_functions'))
+        );
+
+        if (!in_array('exec', $disabledFunctions, true)) {
+            $lines = [];
+            $exitCode = 0;
+            exec($command, $lines, $exitCode);
+
+            if ($exitCode === 0 && $lines !== []) {
+                $decoded = json_decode(implode("\n", $lines), true);
+                if (is_array($decoded)) {
+                    return $decoded;
+                }
+            }
+        }
+    }
+
+    if (function_exists('shell_exec')) {
+        $disabledFunctions = array_map(
+            static fn(string $value): string => strtolower(trim($value)),
+            explode(',', (string)ini_get('disable_functions'))
+        );
+
+        if (!in_array('shell_exec', $disabledFunctions, true)) {
+            $output = shell_exec($command);
+
+            if (is_string($output) && trim($output) !== '') {
+                $decoded = json_decode($output, true);
+                if (is_array($decoded)) {
+                    return $decoded;
+                }
+            }
+        }
+    }
+
+    return null;
+}
+
+function sentryiq_storage_extract_quota(array $decoded): ?array
+{
+    $result = $decoded['result'] ?? null;
+
+    if (is_array($result) && isset($result['data']) && is_array($result['data'])) {
+        $data = $result['data'];
+    } elseif (
+        isset($decoded['cpanelresult']['result']['data']) &&
+        is_array($decoded['cpanelresult']['result']['data'])
+    ) {
+        $data = $decoded['cpanelresult']['result']['data'];
+    } else {
         return null;
     }
 
-    $disabledFunctions = array_map(
-        static fn(string $value): string => strtolower(trim($value)),
-        explode(',', (string)ini_get('disable_functions'))
-    );
-
-    if (in_array('shell_exec', $disabledFunctions, true)) {
-        return null;
-    }
-
-    $uapi = '/usr/local/cpanel/bin/uapi';
-
-    if (!is_file($uapi) || !is_executable($uapi)) {
-        return null;
-    }
-
-    $command = escapeshellarg($uapi) . ' --output=json Quota get_quota_info 2>/dev/null';
-    $output = shell_exec($command);
-
-    if (!is_string($output) || trim($output) === '') {
-        return null;
-    }
-
-    $decoded = json_decode($output, true);
-
-    if (!is_array($decoded)) {
-        return null;
-    }
-
-    $data = $decoded['result']['data'] ?? null;
-
-    if (!is_array($data)) {
-        $data = $decoded['cpanelresult']['result']['data'] ?? null;
-    }
-
-    if (!is_array($data)) {
+    if (
+        isset($result['errors']) &&
+        is_array($result['errors']) &&
+        $result['errors'] !== []
+    ) {
         return null;
     }
 
@@ -151,6 +181,42 @@ function sentryiq_storage_read_cpanel_quota(): ?array
         'used' => $usedBytes,
         'unlimited' => false,
     ];
+}
+
+function sentryiq_storage_read_cpanel_quota(): ?array
+{
+    $uapi = '/usr/local/cpanel/bin/uapi';
+
+    if (!is_file($uapi) || !is_executable($uapi)) {
+        return null;
+    }
+
+    $cpanelUser = trim((string)(
+        getenv('CPANEL_USER')
+        ?: getenv('USER')
+        ?: getenv('LOGNAME')
+        ?: get_current_user()
+    ));
+
+    if ($cpanelUser === '' || !preg_match('/^[A-Za-z0-9._-]+$/', $cpanelUser)) {
+        return null;
+    }
+
+    $decoded = sentryiq_storage_run_uapi($uapi, $cpanelUser, 'Quota', 'get_quota_info');
+    if (is_array($decoded)) {
+        $quota = sentryiq_storage_extract_quota($decoded);
+        if ($quota !== null) {
+            return $quota;
+        }
+    }
+
+    // Some cPanel environments expose local quota information more reliably.
+    $decoded = sentryiq_storage_run_uapi($uapi, $cpanelUser, 'Quota', 'get_local_quota_info');
+    if (is_array($decoded)) {
+        return sentryiq_storage_extract_quota($decoded);
+    }
+
+    return null;
 }
 
 $appRoot = __DIR__;
