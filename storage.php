@@ -292,6 +292,10 @@ $gallerySize = ($galleryPath !== '' && is_dir($galleryPath))
     ? sentryiq_storage_directory_size($galleryPath)
     : 0;
 
+// Gallery storage is contained within the private data directory, so subtract
+// it from the private-data total when presenting user account data.
+$userAccountDataSize = max(0, $privateSize - $gallerySize);
+
 $quota = sentryiq_storage_read_cpanel_quota($config);
 
 $quotaPercent = null;
@@ -453,8 +457,8 @@ $csrf = sentryiq_csrf_token();
                 </div>
 
                 <div class="storage-row">
-                    <span class="storage-row-name">Private Data</span>
-                    <span class="storage-row-size"><?php echo htmlspecialchars(sentryiq_storage_format_bytes($privateSize), ENT_QUOTES, 'UTF-8'); ?></span>
+                    <span class="storage-row-name">User Account Data</span>
+                    <span class="storage-row-size"><?php echo htmlspecialchars(sentryiq_storage_format_bytes($userAccountDataSize), ENT_QUOTES, 'UTF-8'); ?></span>
                 </div>
 
                 <div class="storage-row">
