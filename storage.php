@@ -6,6 +6,19 @@ require_once __DIR__ . '/security_bootstrap.php';
 sentryiq_security_bootstrap();
 sentryiq_require_auth();
 
+define('SENTRYIQ_CONFIG_FILE', __DIR__ . '/sentryiq_config.php');
+
+if (!is_file(SENTRYIQ_CONFIG_FILE) || is_link(SENTRYIQ_CONFIG_FILE)) {
+    http_response_code(503);
+    exit('SentryIQ configuration is unavailable.');
+}
+
+$config = require SENTRYIQ_CONFIG_FILE;
+if (!is_array($config)) {
+    http_response_code(503);
+    exit('SentryIQ configuration is unavailable.');
+}
+
 function sentryiq_storage_format_bytes(int $bytes): string
 {
     if ($bytes < 1024) {
