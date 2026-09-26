@@ -99,8 +99,19 @@ use SentryIQCloud\Gallery\Storage\PhotoNameAllocator;
 use SentryIQCloud\Gallery\Storage\PhotoStorage;
 use SentryIQCloud\Gallery\UploadService;
 
-$files = $_FILES['photos'] ?? null;
+$files = $_FILES['photos'] ?? ($_FILES['photo'] ?? null);
 if (!is_array($files) || !isset($files['tmp_name'], $files['error'])) gallery_upload_json(['status' => 'error', 'message' => 'No photos were supplied.'], 400);
+// The Gallery UI uploads one file per XHR so that each photo can have its own progress.
+// Accept both the original photos[] field and the single-photo field used by that flow.
+if (isset($_FILES['photo']) && !isset($_FILES['photos'])) {
+    $files = [
+        'name' => [(string)($_FILES['photo']['name'] ?? '')],
+        'type' => [(string)($_FILES['photo']['type'] ?? '')],
+        'tmp_name' => [(string)($_FILES['photo']['tmp_name'] ?? '')],
+        'error' => [(int)($_FILES['photo']['error'] ?? UPLOAD_ERR_NO_FILE)],
+        'size' => [(int)($_FILES['photo']['size'] ?? 0)],
+    ];
+}
 $tmpNames = $files['tmp_name']; $errors = $files['error']; $names = $files['name'] ?? [];
 if (!is_array($tmpNames) || !is_array($errors)) gallery_upload_json(['status' => 'error', 'message' => 'Invalid photo upload data.'], 400);
 
