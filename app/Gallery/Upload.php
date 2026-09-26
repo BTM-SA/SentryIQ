@@ -120,6 +120,7 @@ if ((!is_array($files) || !isset($files['tmp_name'], $files['error']))
                 'tmp_name' => [$rawUploadPath],
                 'error' => [UPLOAD_ERR_OK],
                 'size' => [strlen($rawBody)],
+                'trusted_temp_source' => true,
             ];
             gallery_upload_log(sprintf('RAW_BINARY_UPLOAD name=%s size=%d type=%s', $rawName, strlen($rawBody), $rawType));
         } elseif ($rawUploadPath !== false) {
@@ -185,6 +186,7 @@ if (!is_array($files) || !isset($files['tmp_name'], $files['error'])) {
                     'tmp_name' => $parsedTmp,
                     'error' => $parsedErrors,
                     'size' => $parsedSizes,
+                    'trusted_temp_source' => true,
                 ];
                 gallery_upload_log('FILES fallback parsed multipart body entries=' . count($parsedTmp));
             }
@@ -241,7 +243,7 @@ try {
         }
         gallery_upload_log(sprintf('START index=%s name=%s upload_error=%s size=%s mime=%s dimensions=%s', (string)$index, $currentUploadName !== '' ? $currentUploadName : '-', (string)$error, $currentUploadSize === null ? '-' : (string)$currentUploadSize, $mime ?? '-', $dimensions ?? '-'));
         $currentUploadStage = 'processing';
-        $result = $service->upload(['name' => $currentUploadName, 'tmp_name' => $tmpPath, 'error' => $error]);
+        $result = $service->upload(['name' => $currentUploadName, 'tmp_name' => $tmpPath, 'error' => $error, 'trusted_temp_source' => (($files['trusted_temp_source'] ?? false) === true)]);
         $results[] = $result;
         $currentUploadStage = 'complete';
         gallery_upload_log(sprintf('RESULT name=%s status=%s message=%s', $currentUploadName !== '' ? $currentUploadName : '-', (string)($result['status'] ?? '-'), trim((string)($result['message'] ?? ''))));
