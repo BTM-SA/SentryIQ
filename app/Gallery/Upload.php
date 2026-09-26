@@ -100,6 +100,14 @@ use SentryIQCloud\Gallery\Storage\PhotoStorage;
 use SentryIQCloud\Gallery\UploadService;
 
 $files = $_FILES['photos'] ?? ($_FILES['photo'] ?? null);
+if (!is_array($files) || !isset($files['tmp_name'], $files['error'])) {
+    foreach ($_FILES as $candidate) {
+        if (is_array($candidate) && isset($candidate['tmp_name'], $candidate['error'])) {
+            $files = $candidate;
+            break;
+        }
+    }
+}
 
 // Some cPanel/PHP configurations can leave $_FILES empty for an XMLHttpRequest
 // multipart upload even though the raw multipart body is present. Recover the
@@ -167,7 +175,9 @@ if (isset($_FILES['photo']) && !isset($_FILES['photos']) && empty($manualUploadP
     ];
 }
 $tmpNames = $files['tmp_name']; $errors = $files['error']; $names = $files['name'] ?? [];
-if (!is_array($tmpNames) || !is_array($errors)) gallery_upload_json(['status' => 'error', 'message' => 'Invalid photo upload data.'], 400);
+if (!is_array($tmpNames)) $tmpNames = [$tmpNames];
+if (!is_array($errors)) $errors = [$errors];
+if (!is_array($names)) $names = [$names];
 
 gallery_upload_log('FILES entries=' . count($errors));
 
