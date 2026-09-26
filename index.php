@@ -31,6 +31,38 @@ $sys_email = trim((string)($systemConfig['2fa_email'] ?? TWO_FA_EMAIL));
 $active_pane = (string)($_GET['pane'] ?? 'view');
 if (!in_array($active_pane, ['view','records','add','settings','details','edit'], true)) $active_pane = 'view';
 $csrf = sentryiq_csrf_token();
+
+if (($_GET['setup'] ?? '') === 'complete' && isset($_SESSION['first_run_recovery_key']) && is_string($_SESSION['first_run_recovery_key'])) {
+    if (isset($_GET['recovery_seen']) && $_GET['recovery_seen'] === '1') {
+        unset($_SESSION['first_run_recovery_key']);
+        header('Location: index.php');
+        exit;
+    }
+    $recoveryKey = $_SESSION['first_run_recovery_key'];
+    $recoveryDisplay = trim(chunk_split($recoveryKey, 4, ' '));
+    ?>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SentryIQ — Recovery Key</title>
+    <link rel="stylesheet" href="assets/css/sentryiq.css">
+    </head>
+    <body>
+    <div class="box" style="max-width:720px;margin:40px auto;">
+        <h2>🔐 Your SentryIQ Recovery Key</h2>
+        <p><strong>Save this key before continuing.</strong> It is generated once for this fresh vault and is designed to recover access to the same Vault Master Key.</p>
+        <div style="padding:20px;margin:20px 0;background:#f8f9fa;border:1px solid #dee2e6;border-radius:10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:18px;line-height:1.8;word-break:break-word;text-align:center;"><?php echo htmlspecialchars($recoveryDisplay, ENT_QUOTES, 'UTF-8'); ?></div>
+        <p style="font-size:13px;color:#666;">Store it offline or in a trusted password manager. Do not send it by email or store it in the SentryIQ vault itself.</p>
+        <p style="font-size:13px;color:#b02a37;"><strong>Important:</strong> SentryIQ will not be able to recreate this exact recovery key if you lose it.</p>
+        <a href="index.php?recovery_seen=1" class="btn btn-primary" style="display:block;text-align:center;text-decoration:none;margin-top:20px;">I Have Saved My Recovery Key → Continue</a>
+    </div>
+    </body>
+    </html>
+    <?php
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
