@@ -99,56 +99,114 @@ use SentryIQCloud\Gallery\Storage\PhotoNameAllocator;
 use SentryIQCloud\Gallery\Storage\PhotoStorage;
 use SentryIQCloud\Gallery\UploadService;
 
-$files = $_FILES['photos'] ?? null;
+$files = $_FILES['photos'] ?? ($_FILES['photo'] ?? null);
 
-if (!is_array($files) || !isset($files['tmp_name'], $files['error'])) {
-    $contentType = (string)($_SERVER['CONTENT_TYPE'] ?? '');
-    $contentLength = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
-    $rawInputLength = 0;
-    $rawInputPrefix = '';
-    $rawInput = @file_get_contents('php://input');
-    if (is_string($rawInput)) {
-        $rawInputLength = strlen($rawInput);
-        $rawInputPrefix = substr($rawInput, 0, 120);
-    }
-    $clientDiagnostics = null;
-    $clientHeader = (string)($_SERVER['HTTP_X_SENTRYIQ_CLIENT_DIAGNOSTICS'] ?? '');
-    if ($clientHeader !== '') {
-        $decodedClientHeader = base64_decode($clientHeader, true);
-        if (is_string($decodedClientHeader)) {
-            $parsedClientHeader = json_decode(urldecode($decodedClientHeader), true);
-            if (is_array($parsedClientHeader)) $clientDiagnostics = $parsedClientHeader;
+// The Gallery UI uses a raw binary XHR upload so PHP's multipart parser cannot
+// discard the file before the application sees it. Build a normal upload shape
+// directly from php://input when that request format is used.
+$rawUploadPath = null;
+if ((!is_array($files) || !isset($files['tmp_name'], $files['error']))
+    && isset($_SERVER['HTTP_X_SENTRYIQ_UPLOAD'], $_SERVER['CONTENT_TYPE'])
+    && strtolower((string)$_SERVER['HTTP_X_SENTRYIQ_UPLOAD']) === 'binary') {
+    $rawBody = file_get_contents('php://input');
+    if (is_string($rawBody) && $rawBody !== '') {
+        $rawUploadPath = tempnam(sys_get_temp_dir(), 'sentryiq-upload-');
+        if ($rawUploadPath !== false && @file_put_contents($rawUploadPath, $rawBody) !== false) {
+            $rawName = basename(str_replace('\\\\', '/', rawurldecode((string)($_SERVER['HTTP_X_SENTRYIQ_FILENAME'] ?? 'upload'))));
+            $rawType = strtolower(trim((string)($_SERVER['CONTENT_TYPE'] ?? 'application/octet-stream')));
+            $files = [
+                'name' => [$rawName !== '' ? $rawName : 'upload'],
+                'type' => [$rawType],
+                'tmp_name' => [$rawUploadPath],
+                'error' => [UPLOAD_ERR_OK],
+                'size' => [strlen($rawBody)],
+            ];
+            gallery_upload_log(sprintf('RAW_BINARY_UPLOAD name=%s size=%d type=%s', $rawName, strlen($rawBody), $rawType));
+        } elseif ($rawUploadPath !== false) {
+            @unlink($rawUploadPath);
+            $rawUploadPath = null;
         }
     }
-    $requestDiagnostics = [
-        'request_method' => (string)($_SERVER['REQUEST_METHOD'] ?? ''),
-        'content_type' => $contentType,
-        'content_length' => $contentLength,
-        'post_max_size' => $postMaxSize,
-        'upload_max_filesize' => (string)ini_get('upload_max_filesize'),
-        'files_keys' => array_keys($_FILES),
-        'post_keys' => array_keys($_POST),
-        'photos_present' => array_key_exists('photos', $_FILES),
-        'client_diagnostics' => $clientDiagnostics,
-        'php_input_length' => $rawInputLength,
-        'php_input_prefix' => $rawInputPrefix,
-    ];
-    $diagnosticText = json_encode($requestDiagnostics, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    if (!is_string($diagnosticText)) {
-        $diagnosticText = '{}';
+}
+
+if (!is_array($files) || !isset($files['tmp_name'], $files['error'])) {
+    foreach ($_FILES as $candidate) {
+        if (is_array($candidate) && isset($candidate['tmp_name'], $candidate['error'])) {
+            $files = $candidate;
+            break;
+        }
     }
-    gallery_upload_log('NO_FILES ' . $diagnosticText);
-    gallery_upload_json([
-        'status' => 'error',
-        'message' => 'No photos were supplied. [SENTRYIQ_UPLOAD_DIAGNOSTIC_V2] Diagnostics: ' . $diagnosticText,
-        'error_code' => 'NO_FILES',
-        'runtime_marker' => 'SENTRYIQ_UPLOAD_DIAGNOSTIC_V2',
-        'runtime_file' => __FILE__,
-        'request_diagnostics' => $requestDiagnostics,
-    ], 400);
+}
+
+// Some cPanel/PHP configurations can leave $_FILES empty for an XMLHttpRequest
+// multipart upload even though the raw multipart body is present. Recover the
+// uploaded file(s) directly from the request body in that case.
+$manualUploadPaths = [];
+if (!is_array($files) || !isset($files['tmp_name'], $files['error'])) {
+    $contentType = (string)($_SERVER['CONTENT_TYPE'] ?? '');
+    if (preg_match('/^multipart\\/form-data;\\s*boundary=(?:"([^"]+)"|([^;]+))/i', $contentType, $boundaryMatch)) {
+        $boundary = $boundaryMatch[1] !== '' ? $boundaryMatch[1] : trim($boundaryMatch[2]);
+        $body = file_get_contents('php://input');
+        if (is_string($body) && $body !== '') {
+            $parsedNames = [];
+            $parsedTypes = [];
+            $parsedTmp = [];
+            $parsedErrors = [];
+            $parsedSizes = [];
+            $delimiter = '--' . $boundary;
+            foreach (explode($delimiter, $body) as $part) {
+                $part = ltrim($part, "\r\n");
+                if ($part === '' || $part === '--' || str_starts_with($part, '--\r\n')) continue;
+                $headerEnd = strpos($part, "\r\n\r\n");
+                if ($headerEnd === false) continue;
+                $headers = substr($part, 0, $headerEnd);
+                $payload = substr($part, $headerEnd + 4);
+                $payload = preg_replace("/\r\n--$/", '', $payload);
+                $payload = preg_replace("/\r\n$/", '', $payload);
+                if (!is_string($payload)) continue;
+                if (!preg_match('/name="([^"]+)"/i', $headers, $nameMatch)) continue;
+                if (!preg_match('/filename="([^"]*)"/i', $headers, $fileMatch) || $fileMatch[1] === '') continue;
+                $tmpPath = tempnam(sys_get_temp_dir(), 'sentryiq-upload-');
+                if ($tmpPath === false || @file_put_contents($tmpPath, $payload) === false) {
+                    if ($tmpPath !== false) @unlink($tmpPath);
+                    continue;
+                }
+                $manualUploadPaths[] = $tmpPath;
+                $parsedNames[] = basename(str_replace("\\\\", '/', $fileMatch[1]));
+                $parsedTypes[] = preg_match('/(?:^|\\r\\n)Content-Type:\\s*([^\\r\\n]+)/i', $headers, $typeMatch) ? trim($typeMatch[1]) : 'application/octet-stream';
+                $parsedTmp[] = $tmpPath;
+                $parsedErrors[] = UPLOAD_ERR_OK;
+                $parsedSizes[] = strlen($payload);
+            }
+            if ($parsedTmp !== []) {
+                $files = [
+                    'name' => $parsedNames,
+                    'type' => $parsedTypes,
+                    'tmp_name' => $parsedTmp,
+                    'error' => $parsedErrors,
+                    'size' => $parsedSizes,
+                ];
+                gallery_upload_log('FILES fallback parsed multipart body entries=' . count($parsedTmp));
+            }
+        }
+    }
+}
+if (!is_array($files) || !isset($files['tmp_name'], $files['error'])) gallery_upload_json(['status' => 'error', 'message' => 'No photos were supplied.'], 400);
+// The Gallery UI uploads one file per XHR so that each photo can have its own progress.
+// Accept both the original photos[] field and the single-photo field used by that flow.
+if (isset($_FILES['photo']) && !isset($_FILES['photos']) && empty($manualUploadPaths)) {
+    $files = [
+        'name' => [(string)($_FILES['photo']['name'] ?? '')],
+        'type' => [(string)($_FILES['photo']['type'] ?? '')],
+        'tmp_name' => [(string)($_FILES['photo']['tmp_name'] ?? '')],
+        'error' => [(int)($_FILES['photo']['error'] ?? UPLOAD_ERR_NO_FILE)],
+        'size' => [(int)($_FILES['photo']['size'] ?? 0)],
+    ];
 }
 $tmpNames = $files['tmp_name']; $errors = $files['error']; $names = $files['name'] ?? [];
-if (!is_array($tmpNames) || !is_array($errors)) gallery_upload_json(['status' => 'error', 'message' => 'Invalid photo upload data.'], 400);
+if (!is_array($tmpNames)) $tmpNames = [$tmpNames];
+if (!is_array($errors)) $errors = [$errors];
+if (!is_array($names)) $names = [$names];
 
 gallery_upload_log('FILES entries=' . count($errors));
 
@@ -192,9 +250,11 @@ try {
         try { log_security_event('GALLERY_UPLOAD', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown'); }
         catch (Throwable $exception) { error_log('SentryIQ Gallery audit logging failed: ' . $exception->getMessage()); }
     }
+    foreach ($manualUploadPaths as $manualPath) { @unlink($manualPath); }\n    if ($rawUploadPath !== null) @unlink($rawUploadPath);
     gallery_upload_log('REQUEST_COMPLETE');
     gallery_upload_json(['status' => 'complete', 'results' => $results]);
 } catch (Throwable $exception) {
+    foreach ($manualUploadPaths as $manualPath) { @unlink($manualPath); }
     $exceptionClass = $exception::class;
     $exceptionMessage = trim($exception->getMessage());
     gallery_upload_log(sprintf('EXCEPTION class=%s name=%s size=%s stage=%s message=%s', $exceptionClass, $currentUploadName ?? '-', $currentUploadSize === null ? '-' : (string)$currentUploadSize, $currentUploadStage, $exceptionMessage));
