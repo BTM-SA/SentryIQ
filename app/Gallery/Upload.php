@@ -100,6 +100,35 @@ use SentryIQCloud\Gallery\Storage\PhotoStorage;
 use SentryIQCloud\Gallery\UploadService;
 
 $files = $_FILES['photos'] ?? ($_FILES['photo'] ?? null);
+
+// The Gallery UI uses a raw binary XHR upload so PHP's multipart parser cannot
+// discard the file before the application sees it. Build a normal upload shape
+// directly from php://input when that request format is used.
+$rawUploadPath = null;
+if ((!is_array($files) || !isset($files['tmp_name'], $files['error']))
+    && isset($_SERVER['HTTP_X_SENTRYIQ_UPLOAD'], $_SERVER['CONTENT_TYPE'])
+    && strtolower((string)$_SERVER['HTTP_X_SENTRYIQ_UPLOAD']) === 'binary') {
+    $rawBody = file_get_contents('php://input');
+    if (is_string($rawBody) && $rawBody !== '') {
+        $rawUploadPath = tempnam(sys_get_temp_dir(), 'sentryiq-upload-');
+        if ($rawUploadPath !== false && @file_put_contents($rawUploadPath, $rawBody) !== false) {
+            $rawName = basename(str_replace('\\\\', '/', (string)($_SERVER['HTTP_X_SENTRYIQ_FILENAME'] ?? 'upload')));
+            $rawType = strtolower(trim((string)($_SERVER['CONTENT_TYPE'] ?? 'application/octet-stream')));
+            $files = [
+                'name' => [$rawName !== '' ? $rawName : 'upload'],
+                'type' => [$rawType],
+                'tmp_name' => [$rawUploadPath],
+                'error' => [UPLOAD_ERR_OK],
+                'size' => [strlen($rawBody)],
+            ];
+            gallery_upload_log(sprintf('RAW_BINARY_UPLOAD name=%s size=%d type=%s', $rawName, strlen($rawBody), $rawType));
+        } elseif ($rawUploadPath !== false) {
+            @unlink($rawUploadPath);
+            $rawUploadPath = null;
+        }
+    }
+}
+
 if (!is_array($files) || !isset($files['tmp_name'], $files['error'])) {
     foreach ($_FILES as $candidate) {
         if (is_array($candidate) && isset($candidate['tmp_name'], $candidate['error'])) {
@@ -221,7 +250,7 @@ try {
         try { log_security_event('GALLERY_UPLOAD', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown'); }
         catch (Throwable $exception) { error_log('SentryIQ Gallery audit logging failed: ' . $exception->getMessage()); }
     }
-    foreach ($manualUploadPaths as $manualPath) { @unlink($manualPath); }
+    foreach ($manualUploadPaths as $manualPath) { @unlink($manualPath); }\n    if ($rawUploadPath !== null) @unlink($rawUploadPath);
     gallery_upload_log('REQUEST_COMPLETE');
     gallery_upload_json(['status' => 'complete', 'results' => $results]);
 } catch (Throwable $exception) {
