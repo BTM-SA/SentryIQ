@@ -66,11 +66,7 @@ function first_run_write_config(string $path, string $username, string $email, s
 
 function first_run_initialize(string $password, string $dataFile): void
 {
-    first_run_log('VAULT_INITIALIZATION_STARTED', ['data_file' => $dataFile]);
-    $salt = random_bytes(SODIUM_CRYPTO_PWHASH_SALTBYTES);
-    $key = vault_derive_key($password, $salt, SENTRYIQ_KDF_OPSLIMIT, SENTRYIQ_KDF_MEMLIMIT);
-    $kdf = vault_kdf_metadata($salt, SENTRYIQ_KDF_OPSLIMIT, SENTRYIQ_KDF_MEMLIMIT);
-    $aad = vault_build_aad($kdf);
+    first_run_log('VAULT_INITIALIZATION_STARTED', ['data_file' => $dataFile, 'format_version' => SENTRYIQ_VAULT_VERSION]);
     $records = [[
         'id' => 'sys_config_node',
         'type' => 'system_config',
@@ -78,93 +74,27 @@ function first_run_initialize(string $password, string $dataFile): void
         '2fa_email' => (string)($_POST['setup_email'] ?? ''),
         'imap_password' => '',
     ]];
-    $plaintext = json_encode($records, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
-    $nonce = random_bytes(SENTRYIQ_GCM_NONCE_BYTES);
-    $tag = '';
-    $ciphertext = openssl_encrypt($plaintext, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $nonce, $tag, $aad, SENTRYIQ_GCM_TAG_BYTES);
-    if ($ciphertext === false || strlen($tag) !== SENTRYIQ_GCM_TAG_BYTES) throw new RuntimeException('gcm_encrypt_failed');
-
-    $envelope = [
-        'version' => SENTRYIQ_VAULT_VERSION,
-        'kdf' => $kdf,
-        'cipher' => ['name' => 'aes-256-gcm', 'nonce_bytes' => SENTRYIQ_GCM_NONCE_BYTES, 'tag_bytes' => SENTRYIQ_GCM_TAG_BYTES],
-        'aad' => base64_encode($aad),
-        'nonce' => base64_encode($nonce),
-        'tag' => base64_encode($tag),
-        'ciphertext' => base64_encode($ciphertext),
-    ];
-    $encoded = json_encode($envelope, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
-    $tmp = $dataFile . '.tmp-' . bin2hex(random_bytes(12));
-    $handle = @fopen($tmp, 'xb');
-    if ($handle === false) throw new RuntimeException('vault_temp_create_failed');
-    try {
-        @chmod($tmp, 0600);
-        if (fwrite($handle, $encoded) !== strlen($encoded)) throw new RuntimeException('vault_write_failed');
-        if (function_exists('fflush')) fflush($handle);
-        if (function_exists('fsync')) @fsync($handle);
-    } finally { fclose($handle); }
-    @chmod($tmp, 0600);
-    if (!@rename($tmp, $dataFile)) { @unlink($tmp); throw new RuntimeException('vault_rename_failed'); }
-    @chmod($dataFile, 0600);
-    first_run_log('VAULT_FILE_WRITE_COMPLETED', ['file_permissions' => decoct((int)(fileperms($dataFile) & 0x01ff))]);
+    if (!vault_initialize($password, $records)) {
+        throw new RuntimeException('vault_initialization_failed');
+    }
+    first_run_log('VAULT_FILE_WRITE_COMPLETED', ['format_version' => SENTRYIQ_VAULT_VERSION]);
 }
 
 function first_run_direct_crypto_verify(string $password, string $dataFile): void
 {
-    first_run_log('DIRECT_CRYPTO_VERIFY_STARTED');
+    first_run_log('DIRECT_CRYPTO_VERIFY_STARTED', ['data_file' => $dataFile]);
     clearstatcache(true, $dataFile);
-    $raw = @file_get_contents($dataFile);
-    if (!is_string($raw) || $raw === '') throw new RuntimeException('direct_file_read_failed');
-    first_run_log('DIRECT_FILE_READ_OK', ['bytes' => strlen($raw)]);
+    if (!is_file($dataFile) || is_link($dataFile)) throw new RuntimeException('direct_file_invalid');
 
-    try {
-        $envelope = json_decode($raw, true, 16, JSON_THROW_ON_ERROR);
-    } catch (Throwable $exception) {
-        first_run_log('DIRECT_JSON_DECODE_FAILED', ['exception_class' => $exception::class]);
-        throw new RuntimeException('direct_json_decode_failed');
+    $unlocked = vault_unlock($password);
+    if (!is_array($unlocked) || !isset($unlocked['key']) || strlen((string)$unlocked['key']) !== 32) {
+        throw new RuntimeException('direct_vault_unlock_failed');
     }
-    if (!is_array($envelope)) throw new RuntimeException('direct_envelope_not_array');
 
-    $version = $envelope['version'] ?? null;
-    $kdfName = $envelope['kdf']['name'] ?? null;
-    $cipherName = $envelope['cipher']['name'] ?? null;
-    first_run_log('DIRECT_ENVELOPE_METADATA', ['version' => $version, 'kdf_name' => $kdfName, 'cipher_name' => $cipherName]);
-
-    $salt = base64_decode((string)($envelope['kdf']['salt'] ?? ''), true);
-    $nonce = base64_decode((string)($envelope['nonce'] ?? ''), true);
-    $tag = base64_decode((string)($envelope['tag'] ?? ''), true);
-    $ciphertext = base64_decode((string)($envelope['ciphertext'] ?? ''), true);
-    $aad = base64_decode((string)($envelope['aad'] ?? ''), true);
-    if ($salt === false) throw new RuntimeException('direct_salt_decode_failed');
-    if ($nonce === false) throw new RuntimeException('direct_nonce_decode_failed');
-    if ($tag === false) throw new RuntimeException('direct_tag_decode_failed');
-    if ($ciphertext === false) throw new RuntimeException('direct_ciphertext_decode_failed');
-    if ($aad === false) throw new RuntimeException('direct_aad_decode_failed');
-    first_run_log('DIRECT_BASE64_DECODE_OK', ['salt_length' => strlen($salt), 'nonce_length' => strlen($nonce), 'tag_length' => strlen($tag), 'ciphertext_length' => strlen($ciphertext), 'aad_length' => strlen($aad), 'aad_sha256' => hash('sha256', $aad)]);
-
-    $opslimit = (int)($envelope['kdf']['opslimit'] ?? 0);
-    $memlimit = (int)($envelope['kdf']['memlimit'] ?? 0);
-    $key = vault_derive_key($password, $salt, $opslimit, $memlimit);
-    first_run_log('DIRECT_KEY_DERIVATION_OK', ['key_sha256' => hash('sha256', $key)]);
-
-    while (openssl_error_string() !== false) { }
-    $plaintext = openssl_decrypt($ciphertext, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $nonce, $tag, $aad);
-    if ($plaintext === false) {
-        $errors = [];
-        while (($opensslError = openssl_error_string()) !== false) $errors[] = $opensslError;
-        first_run_log('DIRECT_GCM_DECRYPT_FAILED', ['openssl_errors' => $errors]);
-        throw new RuntimeException('direct_gcm_decrypt_failed');
-    }
-    first_run_log('DIRECT_GCM_DECRYPT_OK', ['plaintext_length' => strlen($plaintext), 'plaintext_sha256' => hash('sha256', $plaintext)]);
-
-    try {
-        $records = json_decode($plaintext, true, 16, JSON_THROW_ON_ERROR);
-    } catch (Throwable $exception) {
-        first_run_log('DIRECT_PLAINTEXT_JSON_FAILED', ['exception_class' => $exception::class]);
-        throw new RuntimeException('direct_plaintext_json_failed');
-    }
-    if (!is_array($records)) throw new RuntimeException('direct_plaintext_not_array');
-    first_run_log('DIRECT_CRYPTO_VERIFY_COMPLETED', ['record_count' => count($records)]);
+    first_run_log('DIRECT_CRYPTO_VERIFY_COMPLETED', [
+        'format_version' => SENTRYIQ_VAULT_VERSION,
+        'record_count' => count($unlocked['records']),
+    ]);
 }
 
 function first_run_cleanup(): bool
