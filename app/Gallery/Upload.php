@@ -125,6 +125,7 @@ if (!is_array($files) || !isset($files['tmp_name'], $files['error'])) {
                 $headers = substr($part, 0, $headerEnd);
                 $payload = substr($part, $headerEnd + 4);
                 $payload = preg_replace("/\r\n--$/", '', $payload);
+                $payload = preg_replace("/\r\n$/", '', $payload);
                 if (!is_string($payload)) continue;
                 if (!preg_match('/name="([^"]+)"/i', $headers, $nameMatch)) continue;
                 if (!preg_match('/filename="([^"]*)"/i', $headers, $fileMatch) || $fileMatch[1] === '') continue;
