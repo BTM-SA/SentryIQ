@@ -77,7 +77,16 @@ function first_run_initialize(string $password, string $dataFile): void
     if (!vault_initialize($password, $records)) {
         throw new RuntimeException('vault_initialization_failed');
     }
-    first_run_log('VAULT_FILE_WRITE_COMPLETED', ['format_version' => SENTRYIQ_VAULT_VERSION]);
+    $verified = vault_unlock($password);
+    if (!is_array($verified) || !isset($verified['key']) || strlen((string)$verified['key']) !== 32) {
+        throw new RuntimeException('vault_verification_failed');
+    }
+    $recoveryKey = vault_generate_recovery_key();
+    if (!vault_add_recovery_wrapper((string)$verified['key'], $recoveryKey)) {
+        throw new RuntimeException('recovery_wrapper_failed');
+    }
+    $_SESSION['first_run_recovery_key'] = $recoveryKey;
+    first_run_log('VAULT_FILE_WRITE_COMPLETED', ['format_version' => SENTRYIQ_VAULT_VERSION, 'recovery_wrapper' => true]);
 }
 
 function first_run_direct_crypto_verify(string $password, string $dataFile): void
