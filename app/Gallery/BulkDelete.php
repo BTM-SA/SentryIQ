@@ -16,9 +16,16 @@ if ($dataDir === '' || !str_starts_with($dataDir, '/') || !is_dir($dataDir) || i
 }
 
 require_once dirname(__DIR__, 2) . '/cloud/Gallery/Storage/PhotoMetadataStore.php';
+require_once dirname(__DIR__, 2) . '/cloud/Gallery/Albums/AlbumStore.php';
 use SentryIQCloud\Gallery\Storage\PhotoMetadataStore;
+use SentryIQCloud\Gallery\Albums\AlbumStore;
 
 header('Content-Type: application/json; charset=utf-8');
+
+$requestedAlbum = trim((string)($_POST['album'] ?? ''));
+if ($requestedAlbum === 'Unassigned') {
+    $requestedAlbum = '';
+}
 
 $photoIds = $_POST['photo_ids'] ?? [];
 if (!is_array($photoIds)) {
@@ -133,6 +140,26 @@ if ($deleted !== [] && is_file($albumsFile)) {
     }
 }
 
+if ($requestedAlbum !== '' && $deleted !== [] && is_file($albumsFile)) {
+    try {
+        $albumStore = new AlbumStore($albumsFile);
+        $albumsAfterDelete = $albumStore->albums();
+        if (array_key_exists($requestedAlbum, $albumsAfterDelete)
+            && is_array($albumsAfterDelete[$requestedAlbum])
+            && $albumsAfterDelete[$requestedAlbum] === []) {
+            $albumStore->delete($requestedAlbum);
+            $albumDeleted = true;
+        } else {
+            $albumDeleted = false;
+        }
+    } catch (RuntimeException $exception) {
+        $albumDeleted = false;
+        $failed[] = ['message' => 'Photos were deleted but the album could not be deleted.'];
+    }
+} else {
+    $albumDeleted = false;
+}
+
 $duplicateFile = $galleryRoot . '/duplicate-index.json';
 if ($deleted !== [] && is_file($duplicateFile)) {
     $json = @file_get_contents($duplicateFile);
@@ -187,6 +214,7 @@ if ($status === 'partial') {
 
 echo json_encode([
     'status' => $status,
+    'album_deleted' => $albumDeleted,
     'deleted' => $deleted,
     'deleted_count' => count($deleted),
     'failed' => $failed,
