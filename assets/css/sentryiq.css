@@ -195,6 +195,25 @@ body { background:var(--neo-bg); color:var(--neo-text); }
     }
 }
 
+/* Mobile hamburger menu backdrop: softly blur and dim the page behind the open menu. */
+@media (max-width:700px) {
+    body:has(.vault-tabs.mobile-open)::before {
+        content:"";
+        position:fixed;
+        inset:0;
+        z-index:1000;
+        background:rgba(37,48,65,.12);
+        -webkit-backdrop-filter:blur(4px);
+        backdrop-filter:blur(4px);
+        pointer-events:auto;
+    }
+    body:has(.vault-tabs.mobile-open) .sentryiq-page-header,
+    body:has(.vault-tabs.mobile-open) .vault-tabs.mobile-open {
+        position:relative;
+        z-index:1002;
+    }
+}
+
 /* Gallery Settings back button: keep it clearly below the mobile navigation and full width. */
 .gallery-settings-back { width:100%; margin-top:16px; margin-bottom:16px; clear:both; position:relative; z-index:1; }
 .gallery-settings-back .btn { display:block !important; width:100% !important; box-sizing:border-box !important; text-align:center; }
