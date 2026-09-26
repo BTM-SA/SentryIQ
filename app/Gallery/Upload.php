@@ -250,7 +250,8 @@ try {
         try { log_security_event('GALLERY_UPLOAD', get_visitor_ip(), $_SESSION['app_username'] ?? 'unknown'); }
         catch (Throwable $exception) { error_log('SentryIQ Gallery audit logging failed: ' . $exception->getMessage()); }
     }
-    foreach ($manualUploadPaths as $manualPath) { @unlink($manualPath); }\n    if ($rawUploadPath !== null) @unlink($rawUploadPath);
+    foreach ($manualUploadPaths as $manualPath) { @unlink($manualPath); }
+    if ($rawUploadPath !== null) @unlink($rawUploadPath);
     gallery_upload_log('REQUEST_COMPLETE');
     gallery_upload_json(['status' => 'complete', 'results' => $results]);
 } catch (Throwable $exception) {
