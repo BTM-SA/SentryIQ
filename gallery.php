@@ -385,6 +385,7 @@ async function bulkDeleteSelected(){
     const form=new FormData();
     form.append('csrf_token',csrf);
     ids.forEach(function(id){form.append('photo_ids[]',id);});
+    if(selectedAlbumForDelete!==null)form.append('album',selectedAlbumForDelete);
     const response=await fetch('gallery_bulk_delete.php',{method:'POST',body:form,credentials:'same-origin',headers:{Accept:'application/json'}});
     const data=await responseJson(response,'The delete request returned an invalid response.');
     if(!response.ok||!['ok','partial'].includes(data.status))throw new Error(data.message||'Unable to delete selected photos.');
