@@ -104,6 +104,15 @@ $files = $_FILES['photos'] ?? null;
 if (!is_array($files) || !isset($files['tmp_name'], $files['error'])) {
     $contentType = (string)($_SERVER['CONTENT_TYPE'] ?? '');
     $contentLength = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
+    $clientDiagnostics = null;
+    $clientHeader = (string)($_SERVER['HTTP_X_SENTRYIQ_CLIENT_DIAGNOSTICS'] ?? '');
+    if ($clientHeader !== '') {
+        $decodedClientHeader = base64_decode($clientHeader, true);
+        if (is_string($decodedClientHeader)) {
+            $parsedClientHeader = json_decode(urldecode($decodedClientHeader), true);
+            if (is_array($parsedClientHeader)) $clientDiagnostics = $parsedClientHeader;
+        }
+    }
     $requestDiagnostics = [
         'request_method' => (string)($_SERVER['REQUEST_METHOD'] ?? ''),
         'content_type' => $contentType,
@@ -113,6 +122,7 @@ if (!is_array($files) || !isset($files['tmp_name'], $files['error'])) {
         'files_keys' => array_keys($_FILES),
         'post_keys' => array_keys($_POST),
         'photos_present' => array_key_exists('photos', $_FILES),
+        'client_diagnostics' => $clientDiagnostics,
     ];
     $diagnosticText = json_encode($requestDiagnostics, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     if (!is_string($diagnosticText)) {
