@@ -169,8 +169,19 @@ function viewRecordDetails(label,username,password,url,notes,id,category){if(Arr
 <?php if (!$vault_authenticated): ?>
 <img class="sentryiq-brand-banner" src="assets/images/sentryiq-logo-wide.webp" width="1952" height="588" alt="SentryIQ" fetchpriority="high">
 <?php if ($vault_error): ?><p class="error">The secure vault could not be opened. No changes have been made.</p>
+<?php elseif (($_GET['recovery'] ?? '') === '1'): ?>
+<h2>🛟 Recover SentryIQ Vault</h2>
+<p>Enter the 64-character recovery key that was generated when this vault was created.</p>
+<?php if ($recovery_failed): ?><p class="error">The recovery key could not unlock this vault.</p><?php endif; ?>
+<form method="POST" autocomplete="off">
+<input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>">
+<div class="form-group"><label>Recovery Key:</label><input type="text" name="recovery_key" class="input-field" autocomplete="off" autocapitalize="characters" spellcheck="false" required autofocus></div>
+<button type="submit" name="recovery_login" class="btn btn-primary">Recover Vault</button>
+</form>
+<p style="margin-top:15px;text-align:center;"><a href="index.php">← Back to Password Login</a></p>
 <?php elseif (!isset($_SESSION['pending_key'])): ?>
 <?php if ($decryption_failed): ?><p class="error">Unable to verify the master vault password.</p><?php endif; ?><form method="POST" autocomplete="off"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>"><div class="form-group"><label>Master Vault Password:</label><input type="password" name="master_password" class="input-field" autocomplete="current-password" required autofocus></div><button type="submit" name="login_step_1" class="btn btn-primary">Unlock</button></form>
+<p style="margin-top:15px;text-align:center;"><a href="index.php?recovery=1">🛟 Use Recovery Key</a></p>
 <?php else: ?><h2>🔐 Verification</h2><p>A temporary verification code has been sent to the configured 2FA email address.</p><?php if ($error_step_2 !== ''): ?><p class="error"><?php echo htmlspecialchars($error_step_2, ENT_QUOTES, 'UTF-8'); ?></p><?php endif; ?><form method="POST" autocomplete="off"><input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES, 'UTF-8'); ?>"><div class="form-group"><label>Enter 6-Digit Code:</label><input type="text" name="verification_code" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" autocomplete="one-time-code" class="input-field" required autofocus></div><button type="submit" name="login_step_2" class="btn btn-primary">Verify &amp; Unlock</button></form><?php endif; ?>
 <?php else: ?>
 <?php require_once __DIR__ . '/app/Vault/DashboardList.php'; ?>
