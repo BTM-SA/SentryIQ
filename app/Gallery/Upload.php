@@ -112,7 +112,7 @@ if ((!is_array($files) || !isset($files['tmp_name'], $files['error']))
     if (is_string($rawBody) && $rawBody !== '') {
         $rawUploadPath = tempnam(sys_get_temp_dir(), 'sentryiq-upload-');
         if ($rawUploadPath !== false && @file_put_contents($rawUploadPath, $rawBody) !== false) {
-            $rawName = basename(str_replace('\\\\', '/', (string)($_SERVER['HTTP_X_SENTRYIQ_FILENAME'] ?? 'upload')));
+            $rawName = basename(str_replace('\\\\', '/', rawurldecode((string)($_SERVER['HTTP_X_SENTRYIQ_FILENAME'] ?? 'upload'))));
             $rawType = strtolower(trim((string)($_SERVER['CONTENT_TYPE'] ?? 'application/octet-stream')));
             $files = [
                 'name' => [$rawName !== '' ? $rawName : 'upload'],
