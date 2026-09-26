@@ -104,6 +104,13 @@ $files = $_FILES['photos'] ?? null;
 if (!is_array($files) || !isset($files['tmp_name'], $files['error'])) {
     $contentType = (string)($_SERVER['CONTENT_TYPE'] ?? '');
     $contentLength = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
+    $rawInputLength = 0;
+    $rawInputPrefix = '';
+    $rawInput = @file_get_contents('php://input');
+    if (is_string($rawInput)) {
+        $rawInputLength = strlen($rawInput);
+        $rawInputPrefix = substr($rawInput, 0, 120);
+    }
     $clientDiagnostics = null;
     $clientHeader = (string)($_SERVER['HTTP_X_SENTRYIQ_CLIENT_DIAGNOSTICS'] ?? '');
     if ($clientHeader !== '') {
@@ -123,6 +130,8 @@ if (!is_array($files) || !isset($files['tmp_name'], $files['error'])) {
         'post_keys' => array_keys($_POST),
         'photos_present' => array_key_exists('photos', $_FILES),
         'client_diagnostics' => $clientDiagnostics,
+        'php_input_length' => $rawInputLength,
+        'php_input_prefix' => $rawInputPrefix,
     ];
     $diagnosticText = json_encode($requestDiagnostics, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     if (!is_string($diagnosticText)) {
