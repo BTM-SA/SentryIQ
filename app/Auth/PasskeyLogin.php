@@ -71,7 +71,7 @@ if (isset($_SESSION['master_key']) && is_string($_SESSION['master_key']) && strl
             }) });
             var result = await resultResponse.json();
             if (!resultResponse.ok || result.status !== 'ok') throw new Error(result.message || 'Passkey authentication failed.');
-            window.location.href = 'index.php';
+            window.location.href = 'welcome.php';
         } catch (error) {
             showError(error && error.message ? error.message : 'Passkey authentication was cancelled or failed.');
             button.disabled = false;
