@@ -34,7 +34,8 @@ final class UploadService
         }
 
         $temporaryPath = $upload['tmp_name'] ?? '';
-        if (!is_string($temporaryPath) || $temporaryPath === '' || !is_uploaded_file($temporaryPath)) {
+        $trustedTemporarySource = ($upload['trusted_temp_source'] ?? false) === true;
+        if (!is_string($temporaryPath) || $temporaryPath === '' || (!is_uploaded_file($temporaryPath) && !($trustedTemporarySource && is_file($temporaryPath) && is_readable($temporaryPath)))) {
             return ['status' => 'rejected', 'message' => 'Invalid upload source.'];
         }
 
