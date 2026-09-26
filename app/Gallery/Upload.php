@@ -117,8 +117,10 @@ if (!is_array($files) || !isset($files['tmp_name'], $files['error'])) {
     gallery_upload_log('NO_FILES ' . json_encode($requestDiagnostics, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
     gallery_upload_json([
         'status' => 'error',
-        'message' => 'No photos were supplied.',
+        'message' => 'No photos were supplied. [SENTRYIQ_UPLOAD_DIAGNOSTIC_V2]',
         'error_code' => 'NO_FILES',
+        'runtime_marker' => 'SENTRYIQ_UPLOAD_DIAGNOSTIC_V2',
+        'runtime_file' => __FILE__,
         'request_diagnostics' => $requestDiagnostics,
     ], 400);
 }
