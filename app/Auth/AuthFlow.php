@@ -189,7 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login_step_2'])) {
             sentryiq_throttle_clear('2fa', $ip);
             sentryiq_mark_authenticated($key, $username);
             log_security_event('SUCCESSFUL_VAULT_LOGIN', $ip, $username, ['stage'=>'2fa']);
-            header('Location: index.php');
+            header('Location: welcome.php');
             exit;
         }
 
