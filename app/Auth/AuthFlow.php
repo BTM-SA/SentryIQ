@@ -86,6 +86,43 @@ function sentryiq_get_system_config(array $records): array
 
 $decryption_failed = false;
 $error_step_2 = '';
+$recovery_failed = false;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['recovery_login'])) {
+    sentryiq_require_csrf();
+    $ip = get_visitor_ip();
+    if (sentryiq_throttle_blocked('recovery', $ip, 5, 900)) {
+        $recovery_failed = true;
+    } else {
+        $recoveryKey = (string)($_POST['recovery_key'] ?? '');
+        try {
+            $parts = vault_read_envelope();
+            $vmk = vault_unwrap_vmk_with_recovery_key($parts['envelope'], $recoveryKey);
+        } catch (Throwable) {
+            $vmk = false;
+        }
+        if ($vmk === false) {
+            sentryiq_throttle_failure('recovery', $ip, 5, 900, 900);
+            log_security_event('FAILED_VAULT_RECOVERY', $ip, 'unknown', ['stage'=>'recovery_key']);
+            $recovery_failed = true;
+        } else {
+            $records = load_passwords($vmk);
+            if ($records === false) {
+                sentryiq_throttle_failure('recovery', $ip, 5, 900, 900);
+                log_security_event('FAILED_VAULT_RECOVERY', $ip, 'unknown', ['stage'=>'recovery_decrypt']);
+                $recovery_failed = true;
+            } else {
+                $system = sentryiq_get_system_config($records);
+                $username = trim((string)($system['app_username'] ?? 'unknown')) ?: 'unknown';
+                sentryiq_throttle_clear('recovery', $ip);
+                sentryiq_mark_authenticated($vmk, $username);
+                log_security_event('SUCCESSFUL_VAULT_RECOVERY', $ip, $username, ['stage'=>'recovery_key']);
+                header('Location: welcome.php');
+                exit;
+            }
+        }
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login_step_1'])) {
     sentryiq_require_csrf();
