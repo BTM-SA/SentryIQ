@@ -100,7 +100,28 @@ use SentryIQCloud\Gallery\Storage\PhotoStorage;
 use SentryIQCloud\Gallery\UploadService;
 
 $files = $_FILES['photos'] ?? null;
-if (!is_array($files) || !isset($files['tmp_name'], $files['error'])) gallery_upload_json(['status' => 'error', 'message' => 'No photos were supplied.'], 400);
+
+if (!is_array($files) || !isset($files['tmp_name'], $files['error'])) {
+    $contentType = (string)($_SERVER['CONTENT_TYPE'] ?? '');
+    $contentLength = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
+    $requestDiagnostics = [
+        'request_method' => (string)($_SERVER['REQUEST_METHOD'] ?? ''),
+        'content_type' => $contentType,
+        'content_length' => $contentLength,
+        'post_max_size' => $postMaxSize,
+        'upload_max_filesize' => (string)ini_get('upload_max_filesize'),
+        'files_keys' => array_keys($_FILES),
+        'post_keys' => array_keys($_POST),
+        'photos_present' => array_key_exists('photos', $_FILES),
+    ];
+    gallery_upload_log('NO_FILES ' . json_encode($requestDiagnostics, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    gallery_upload_json([
+        'status' => 'error',
+        'message' => 'No photos were supplied.',
+        'error_code' => 'NO_FILES',
+        'request_diagnostics' => $requestDiagnostics,
+    ], 400);
+}
 $tmpNames = $files['tmp_name']; $errors = $files['error']; $names = $files['name'] ?? [];
 if (!is_array($tmpNames) || !is_array($errors)) gallery_upload_json(['status' => 'error', 'message' => 'Invalid photo upload data.'], 400);
 
