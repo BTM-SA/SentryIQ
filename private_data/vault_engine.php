@@ -395,6 +395,79 @@ function vault_unwrap_vmk_with_password(array $envelope, string $password): stri
     return is_string($vmk) && strlen($vmk) === 32 ? $vmk : false;
 }
 
+function vault_build_recovery_aad(): string
+{
+    return 'SentryIQ VMK recovery wrap v1';
+}
+
+function vault_generate_recovery_key(): string
+{
+    return strtoupper(bin2hex(random_bytes(32)));
+}
+
+function vault_normalize_recovery_key(string $recoveryKey): string
+{
+    return strtoupper(preg_replace('/[^A-F0-9]/i', '', $recoveryKey) ?? '');
+}
+
+function vault_wrap_vmk_with_recovery_key(string $vmk, string $recoveryKey): array
+{
+    if (strlen($vmk) !== 32) throw new RuntimeException('Invalid Vault Master Key.');
+    $recoveryKey = vault_normalize_recovery_key($recoveryKey);
+    if (strlen($recoveryKey) !== 64) throw new RuntimeException('Invalid recovery key.');
+    $salt = random_bytes(SODIUM_CRYPTO_PWHASH_SALTBYTES);
+    $kdf = vault_kdf_metadata($salt, SENTRYIQ_KDF_OPSLIMIT, SENTRYIQ_KDF_MEMLIMIT);
+    $key = vault_derive_key($recoveryKey, $salt, SENTRYIQ_KDF_OPSLIMIT, SENTRYIQ_KDF_MEMLIMIT);
+    $aad = vault_build_recovery_aad();
+    $nonce = random_bytes(SENTRYIQ_GCM_NONCE_BYTES);
+    $tag = '';
+    $ciphertext = openssl_encrypt($vmk, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $nonce, $tag, $aad, SENTRYIQ_GCM_TAG_BYTES);
+    if ($ciphertext === false || strlen($tag) !== SENTRYIQ_GCM_TAG_BYTES) throw new RuntimeException('Unable to protect the Vault Master Key with recovery material.');
+    return ['version'=>1,'cipher'=>'aes-256-gcm','kdf'=>$kdf,'aad'=>base64_encode($aad),'nonce'=>base64_encode($nonce),'tag'=>base64_encode($tag),'ciphertext'=>base64_encode($ciphertext)];
+}
+
+function vault_add_recovery_wrapper(string $vmk, string $recoveryKey): bool
+{
+    if (strlen($vmk) !== 32) return false;
+    $parts = vault_read_envelope();
+    $parts['envelope']['recovery_wrap'] = vault_wrap_vmk_with_recovery_key($vmk, $recoveryKey);
+    $encoded = json_encode($parts['envelope'], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+    $tmp = DATA_FILE . '.tmp-' . bin2hex(random_bytes(12));
+    $handle = @fopen($tmp, 'xb');
+    if ($handle === false) return false;
+    try {
+        @chmod($tmp, 0600);
+        if (fwrite($handle, $encoded) !== strlen($encoded)) return false;
+        if (function_exists('fflush')) fflush($handle);
+        if (function_exists('fsync')) @fsync($handle);
+    } finally { fclose($handle); }
+    @chmod($tmp, 0600);
+    if (!@rename($tmp, DATA_FILE)) { @unlink($tmp); return false; }
+    @chmod(DATA_FILE, 0600);
+    return true;
+}
+
+function vault_unwrap_vmk_with_recovery_key(array $envelope, string $recoveryKey): string|false
+{
+    $wrap = $envelope['recovery_wrap'] ?? null;
+    if (!is_array($wrap)) return false;
+    if (($wrap['version'] ?? null) !== 1 || ($wrap['cipher'] ?? '') !== 'aes-256-gcm') return false;
+    $kdf = $wrap['kdf'] ?? null;
+    if (!is_array($kdf)) return false;
+    $recoveryKey = vault_normalize_recovery_key($recoveryKey);
+    if (strlen($recoveryKey) !== 64) return false;
+    $salt = vault_decode_base64((string)($kdf['salt'] ?? ''), SODIUM_CRYPTO_PWHASH_SALTBYTES);
+    $nonce = vault_decode_base64((string)($wrap['nonce'] ?? ''), SENTRYIQ_GCM_NONCE_BYTES);
+    $tag = vault_decode_base64((string)($wrap['tag'] ?? ''), SENTRYIQ_GCM_TAG_BYTES);
+    $ciphertext = vault_decode_base64((string)($wrap['ciphertext'] ?? ''));
+    $aad = vault_decode_base64((string)($wrap['aad'] ?? ''));
+    if ($salt === false || $nonce === false || $tag === false || $ciphertext === false || $aad === false) return false;
+    if (!hash_equals(vault_build_recovery_aad(), $aad)) return false;
+    $key = vault_derive_key($recoveryKey, $salt, (int)($kdf['opslimit'] ?? 0), (int)($kdf['memlimit'] ?? 0));
+    $vmk = openssl_decrypt($ciphertext, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $nonce, $tag, $aad);
+    return is_string($vmk) && strlen($vmk) === 32 ? $vmk : false;
+}
+
 function vault_unlock(string $password): array|false
 {
     $parts = vault_read_envelope();
