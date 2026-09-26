@@ -423,10 +423,12 @@ function vault_initialize(string $password, array $records = []): bool
         return false;
     }
 }
-function vault_write_encrypted_records(array $dataMatrix, string $masterKey, array $kdf, array $keyWrap): bool
+function vault_write_encrypted_records(array $dataMatrix, string $masterKey, array $kdf, ?array $keyWrap = null): bool
 {
     if(strlen($masterKey)!==32||!ensure_sentryiq_data_directory()) return false;
     if(!isset($kdf['salt'],$kdf['opslimit'],$kdf['memlimit'])) return false;
+    if($keyWrap===null){$existing=vault_read_envelope();$keyWrap=is_array($existing['envelope']['key_wrap']??null)?$existing['envelope']['key_wrap']:null;}
+    if(!is_array($keyWrap)) return false;
     $aad=vault_build_aad($kdf);
     $nonce=random_bytes(SENTRYIQ_GCM_NONCE_BYTES);
     $plaintext=json_encode(normalize_vault_records($dataMatrix),JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
