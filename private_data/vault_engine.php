@@ -27,7 +27,8 @@ define('LOG_FILE', SENTRYIQ_DATA_DIR . '/security_audit.log');
 define('DIAGNOSTIC_LOG_FILE', SENTRYIQ_DATA_DIR . '/diagnostic.log');
 define('TWO_FA_EMAIL', trim((string)($config['two_fa_email'] ?? '')));
 define('TWO_FA_TOKEN_LIFETIME', 300);
-define('SENTRYIQ_VAULT_VERSION', 2);
+define('SENTRYIQ_VAULT_VERSION', 3);
+define('SENTRYIQ_KEY_WRAP_VERSION', 1);
 define('SENTRYIQ_KDF_OPSLIMIT', 3);
 define('SENTRYIQ_KDF_MEMLIMIT', 32 * 1024 * 1024);
 define('SENTRYIQ_GCM_NONCE_BYTES', 12);
@@ -357,130 +358,90 @@ function vault_read_envelope(): array|false
     ];
 }
 
+function vault_build_key_wrap_aad(): string
+{
+    return 'SentryIQ VMK password wrap v1';
+}
+
+function vault_wrap_vmk_with_password(string $vmk, string $password, array $kdf): array
+{
+    if (strlen($vmk) !== 32) throw new RuntimeException('Invalid Vault Master Key.');
+    $salt = vault_decode_base64((string)($kdf['salt'] ?? ''), SODIUM_CRYPTO_PWHASH_SALTBYTES);
+    if ($salt === false) throw new RuntimeException('Invalid Vault KDF salt.');
+    $key = vault_derive_key($password, $salt, (int)$kdf['opslimit'], (int)$kdf['memlimit']);
+    $aad = vault_build_key_wrap_aad();
+    $nonce = random_bytes(SENTRYIQ_GCM_NONCE_BYTES);
+    $tag = '';
+    $ciphertext = openssl_encrypt($vmk, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $nonce, $tag, $aad, SENTRYIQ_GCM_TAG_BYTES);
+    if ($ciphertext === false || strlen($tag) !== SENTRYIQ_GCM_TAG_BYTES) throw new RuntimeException('Unable to protect the Vault Master Key.');
+    return ['version'=>SENTRYIQ_KEY_WRAP_VERSION,'cipher'=>'aes-256-gcm','aad'=>base64_encode($aad),'nonce'=>base64_encode($nonce),'tag'=>base64_encode($tag),'ciphertext'=>base64_encode($ciphertext)];
+}
+
+function vault_unwrap_vmk_with_password(array $envelope, string $password): string|false
+{
+    $kdf = $envelope['kdf'] ?? null;
+    $wrap = $envelope['key_wrap'] ?? null;
+    if (!is_array($kdf) || !is_array($wrap)) return false;
+    if (($wrap['version'] ?? null) !== SENTRYIQ_KEY_WRAP_VERSION || ($wrap['cipher'] ?? '') !== 'aes-256-gcm') return false;
+    $salt = vault_decode_base64((string)($kdf['salt'] ?? ''), SODIUM_CRYPTO_PWHASH_SALTBYTES);
+    $nonce = vault_decode_base64((string)($wrap['nonce'] ?? ''), SENTRYIQ_GCM_NONCE_BYTES);
+    $tag = vault_decode_base64((string)($wrap['tag'] ?? ''), SENTRYIQ_GCM_TAG_BYTES);
+    $ciphertext = vault_decode_base64((string)($wrap['ciphertext'] ?? ''));
+    $aad = vault_decode_base64((string)($wrap['aad'] ?? ''));
+    if ($salt === false || $nonce === false || $tag === false || $ciphertext === false || $aad === false) return false;
+    if (!hash_equals(vault_build_key_wrap_aad(), $aad)) return false;
+    $key = vault_derive_key($password, $salt, (int)($kdf['opslimit'] ?? 0), (int)($kdf['memlimit'] ?? 0));
+    $vmk = openssl_decrypt($ciphertext, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $nonce, $tag, $aad);
+    return is_string($vmk) && strlen($vmk) === 32 ? $vmk : false;
+}
+
 function vault_unlock(string $password): array|false
 {
-    try {
-        $parts = vault_read_envelope();
-    } catch (Throwable $exception) {
-        throw new RuntimeException('vault_unlock:envelope:' . $exception->getMessage());
-    }
-
-    try {
-        $key = vault_derive_key(
-            $password,
-            $parts['salt'],
-            (int)$parts['kdf']['opslimit'],
-            (int)$parts['kdf']['memlimit']
-        );
-    } catch (Throwable $exception) {
-        throw new RuntimeException('vault_unlock:kdf:' . $exception->getMessage());
-    }
-
-    $plaintext = openssl_decrypt(
-        $parts['ciphertext'],
-        'aes-256-gcm',
-        $key,
-        OPENSSL_RAW_DATA,
-        $parts['nonce'],
-        $parts['tag'],
-        $parts['aad']
-    );
-    if ($plaintext === false) {
-        $errors = [];
-        while (($opensslError = openssl_error_string()) !== false) $errors[] = $opensslError;
-        $suffix = $errors === [] ? '' : ':' . implode('|', $errors);
-        throw new RuntimeException('vault_unlock:gcm_decrypt_failed' . $suffix);
-    }
-
-    try {
-        $records = json_decode($plaintext, true, 16, JSON_THROW_ON_ERROR);
-    } catch (Throwable $exception) {
-        throw new RuntimeException('vault_unlock:plaintext_json_failed');
-    }
+    $parts = vault_read_envelope();
+    $vmk = vault_unwrap_vmk_with_password($parts['envelope'], $password);
+    if ($vmk === false) throw new RuntimeException('vault_unlock:key_wrap_failed');
+    $plaintext = openssl_decrypt($parts['ciphertext'], 'aes-256-gcm', $vmk, OPENSSL_RAW_DATA, $parts['nonce'], $parts['tag'], $parts['aad']);
+    if ($plaintext === false) throw new RuntimeException('vault_unlock:gcm_decrypt_failed');
+    try { $records = json_decode($plaintext, true, 16, JSON_THROW_ON_ERROR); }
+    catch (Throwable) { throw new RuntimeException('vault_unlock:plaintext_json_failed'); }
     if (!is_array($records)) throw new RuntimeException('vault_unlock:plaintext_not_array');
-
-    return [
-        'key' => $key,
-        'records' => normalize_vault_records($records),
-        'kdf' => $parts['kdf'],
-    ];
+    return ['key'=>$vmk,'records'=>normalize_vault_records($records),'kdf'=>$parts['kdf']];
 }
 
 function vault_initialize(string $password, array $records = []): bool
 {
     if (strlen($password) < 12) return false;
     if (!ensure_sentryiq_data_directory()) return false;
-
     try {
-        $salt = random_bytes(SODIUM_CRYPTO_PWHASH_SALTBYTES);
-        $key = vault_derive_key($password, $salt, SENTRYIQ_KDF_OPSLIMIT, SENTRYIQ_KDF_MEMLIMIT);
-        $kdf = vault_kdf_metadata($salt, SENTRYIQ_KDF_OPSLIMIT, SENTRYIQ_KDF_MEMLIMIT);
-        return vault_write_encrypted_records(normalize_vault_records($records), $key, $kdf);
-    } catch (Throwable $exception) {
-        error_log('SentryIQ vault initialization failure: ' . $exception::class . ': ' . $exception->getMessage());
+        $salt=random_bytes(SODIUM_CRYPTO_PWHASH_SALTBYTES);
+        $kdf=vault_kdf_metadata($salt,SENTRYIQ_KDF_OPSLIMIT,SENTRYIQ_KDF_MEMLIMIT);
+        $vmk=random_bytes(32);
+        $wrapped=vault_wrap_vmk_with_password($vmk,$password,$kdf);
+        return vault_write_encrypted_records(normalize_vault_records($records),$vmk,$kdf,$wrapped);
+    } catch(Throwable $exception) {
+        error_log('SentryIQ vault initialization failure: '.$exception::class.': '.$exception->getMessage());
         return false;
     }
 }
-
-function vault_write_encrypted_records(array $dataMatrix, string $masterKey, array $kdf): bool
+function vault_write_encrypted_records(array $dataMatrix, string $masterKey, array $kdf, array $keyWrap): bool
 {
-    if (strlen($masterKey) !== 32 || !ensure_sentryiq_data_directory()) return false;
-    if (!isset($kdf['salt'], $kdf['opslimit'], $kdf['memlimit'])) return false;
-
-    $aad = vault_build_aad($kdf);
-    $nonce = random_bytes(SENTRYIQ_GCM_NONCE_BYTES);
-    $plaintext = json_encode(normalize_vault_records($dataMatrix), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
-    $tag = '';
-
-    $ciphertext = openssl_encrypt(
-        $plaintext,
-        'aes-256-gcm',
-        $masterKey,
-        OPENSSL_RAW_DATA,
-        $nonce,
-        $tag,
-        $aad,
-        SENTRYIQ_GCM_TAG_BYTES
-    );
-    if ($ciphertext === false || strlen($tag) !== SENTRYIQ_GCM_TAG_BYTES) return false;
-
-    $envelope = [
-        'version' => SENTRYIQ_VAULT_VERSION,
-        'kdf' => $kdf,
-        'cipher' => [
-            'name' => 'aes-256-gcm',
-            'nonce_bytes' => SENTRYIQ_GCM_NONCE_BYTES,
-            'tag_bytes' => SENTRYIQ_GCM_TAG_BYTES,
-        ],
-        'aad' => base64_encode($aad),
-        'nonce' => base64_encode($nonce),
-        'tag' => base64_encode($tag),
-        'ciphertext' => base64_encode($ciphertext),
-    ];
-
-    $encoded = json_encode($envelope, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
-    $tmp = DATA_FILE . '.tmp-' . bin2hex(random_bytes(12));
-
-    if (is_link(DATA_FILE)) return false;
-    $handle = @fopen($tmp, 'xb');
-    if ($handle === false) return false;
-
-    try {
-        @chmod($tmp, 0600);
-        $written = fwrite($handle, $encoded);
-        if ($written !== strlen($encoded)) return false;
-        if (function_exists('fflush')) fflush($handle);
-        if (function_exists('fsync')) @fsync($handle);
-    } finally {
-        fclose($handle);
-    }
-
-    @chmod($tmp, 0600);
-    if (!@rename($tmp, DATA_FILE)) {
-        @unlink($tmp);
-        return false;
-    }
-    @chmod(DATA_FILE, 0600);
+    if(strlen($masterKey)!==32||!ensure_sentryiq_data_directory()) return false;
+    if(!isset($kdf['salt'],$kdf['opslimit'],$kdf['memlimit'])) return false;
+    $aad=vault_build_aad($kdf);
+    $nonce=random_bytes(SENTRYIQ_GCM_NONCE_BYTES);
+    $plaintext=json_encode(normalize_vault_records($dataMatrix),JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
+    $tag='';
+    $ciphertext=openssl_encrypt($plaintext,'aes-256-gcm',$masterKey,OPENSSL_RAW_DATA,$nonce,$tag,$aad,SENTRYIQ_GCM_TAG_BYTES);
+    if($ciphertext===false||strlen($tag)!==SENTRYIQ_GCM_TAG_BYTES) return false;
+    $envelope=['version'=>SENTRYIQ_VAULT_VERSION,'kdf'=>$kdf,'key_wrap'=>$keyWrap,'cipher'=>['name'=>'aes-256-gcm','nonce_bytes'=>SENTRYIQ_GCM_NONCE_BYTES,'tag_bytes'=>SENTRYIQ_GCM_TAG_BYTES],'aad'=>base64_encode($aad),'nonce'=>base64_encode($nonce),'tag'=>base64_encode($tag),'ciphertext'=>base64_encode($ciphertext)];
+    $encoded=json_encode($envelope,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
+    $tmp=DATA_FILE.'.tmp-'.bin2hex(random_bytes(12));
+    if(is_link(DATA_FILE)) return false;
+    $handle=@fopen($tmp,'xb'); if($handle===false) return false;
+    try{ @chmod($tmp,0600); if(fwrite($handle,$encoded)!==strlen($encoded)) return false; if(function_exists('fflush')) fflush($handle); if(function_exists('fsync')) @fsync($handle); } finally{fclose($handle);}
+    @chmod($tmp,0600);
+    if(!@rename($tmp,DATA_FILE)){@unlink($tmp);return false;}
+    @chmod(DATA_FILE,0600);
     return true;
 }
 
