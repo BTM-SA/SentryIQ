@@ -114,10 +114,14 @@ if (!is_array($files) || !isset($files['tmp_name'], $files['error'])) {
         'post_keys' => array_keys($_POST),
         'photos_present' => array_key_exists('photos', $_FILES),
     ];
-    gallery_upload_log('NO_FILES ' . json_encode($requestDiagnostics, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    $diagnosticText = json_encode($requestDiagnostics, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    if (!is_string($diagnosticText)) {
+        $diagnosticText = '{}';
+    }
+    gallery_upload_log('NO_FILES ' . $diagnosticText);
     gallery_upload_json([
         'status' => 'error',
-        'message' => 'No photos were supplied. [SENTRYIQ_UPLOAD_DIAGNOSTIC_V2]',
+        'message' => 'No photos were supplied. [SENTRYIQ_UPLOAD_DIAGNOSTIC_V2] Diagnostics: ' . $diagnosticText,
         'error_code' => 'NO_FILES',
         'runtime_marker' => 'SENTRYIQ_UPLOAD_DIAGNOSTIC_V2',
         'runtime_file' => __FILE__,
