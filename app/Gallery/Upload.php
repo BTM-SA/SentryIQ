@@ -79,6 +79,10 @@ if (!is_array($config)) gallery_upload_json(['status' => 'error', 'message' => '
 $dataDir = rtrim((string)($config['data_dir'] ?? ''), '/');
 if ($dataDir === '' || !str_starts_with($dataDir, '/') || !is_dir($dataDir) || is_link($dataDir)) gallery_upload_json(['status' => 'error', 'message' => 'SentryIQ secure runtime is unavailable.'], 503);
 
+$vaultEngine = $dataDir . '/vault_engine.php';
+if (!is_file($vaultEngine) || is_link($vaultEngine)) gallery_upload_json(['status' => 'error', 'message' => 'SentryIQ secure vault engine is unavailable.'], 503);
+require_once $vaultEngine;
+
 require_once dirname(__DIR__, 2) . '/cloud/Gallery/Image/GallerySettings.php';
 require_once dirname(__DIR__, 2) . '/cloud/Gallery/Image/ImageProcessor.php';
 require_once dirname(__DIR__, 2) . '/cloud/Gallery/Image/ImageDerivativeGenerator.php';
