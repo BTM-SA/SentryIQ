@@ -15,7 +15,6 @@ final class PhotoStorage
         if (strlen($this->masterKey) !== 32) {
             throw new RuntimeException('Gallery storage requires the Vault Master Key.');
         }
-    {
         if ($this->root === '' || !str_starts_with($this->root, '/')) {
             throw new RuntimeException('Gallery storage root must be an absolute path.');
         }
