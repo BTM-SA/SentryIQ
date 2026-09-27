@@ -54,7 +54,7 @@ $raw = @file_get_contents($path);
 if (!is_string($raw) || $raw === '') { http_response_code(404); exit('Image not found.'); }
 
 $context = 'gallery:photo:' . $id . ':' . ($thumbnail ? 'thumbnail' : 'original');
-$webp = \\vault_decrypt_blob_with_key($raw, $context, $masterKey);
+$webp = \vault_decrypt_blob_with_key($raw, $context, $masterKey);
 $encrypted = $webp !== false;
 if (!$encrypted) {
     // Fresh vaults use encrypted Gallery objects. Retain read compatibility for
@@ -93,8 +93,3 @@ header('X-Content-Type-Options: nosniff');
 echo $webp;
 exit;
 
-header('Content-Type: image/webp');
-header('Content-Length: ' . (string)filesize($path));
-header('Cache-Control: private, max-age=300');
-header('X-Content-Type-Options: nosniff');
-readfile($path);
