@@ -12,6 +12,11 @@ $config = is_file($configFile) ? require $configFile : null;
 if (!is_array($config)) { http_response_code(503); exit('SentryIQ configuration is unavailable.'); }
 $dataDir = rtrim((string)($config['data_dir'] ?? ''), '/');
 if ($dataDir === '' || !str_starts_with($dataDir, '/') || !is_dir($dataDir) || is_link($dataDir)) { http_response_code(503); exit('SentryIQ secure runtime is unavailable.'); }
+$engine = $dataDir . '/vault_engine.php';
+if (!is_file($engine) || is_link($engine)) { http_response_code(503); exit('SentryIQ secure runtime is unavailable.'); }
+require_once $engine;
+$masterKey = $_SESSION['master_key'] ?? null;
+if (!is_string($masterKey) || strlen($masterKey) !== 32) { http_response_code(403); exit('Authentication required.'); }
 
 require_once dirname(__DIR__, 2) . '/cloud/Documents/DocumentStore.php';
 use SentryIQCloud\Documents\DocumentStore;
@@ -57,9 +62,17 @@ foreach ($names as $i => $originalName) {
     $extension = $allowed[$mime];
     $id = bin2hex(random_bytes(16));
     $path = $filesDir . '/' . $id . '.' . $extension;
-    if (!@move_uploaded_file($tmp, $path)) { $failed++; continue; }
-    @chmod($path, 0600);
+    $raw = @file_get_contents($tmp);
+    if (!is_string($raw) || strlen($raw) !== $size) { $failed++; continue; }
     try {
+        $encrypted = \vault_encrypt_blob_with_key($raw, 'document:' . $id, $masterKey);
+        $temporary = $path . '.tmp-' . bin2hex(random_bytes(8));
+        if (@file_put_contents($temporary, $encrypted, LOCK_EX) === false || !@rename($temporary, $path)) {
+            @unlink($temporary);
+            throw new RuntimeException('Unable to store encrypted document.');
+        }
+        @chmod($path, 0600);
+
         $safeName = trim(basename((string)$originalName));
         if ($safeName === '') $safeName = 'Document.' . $extension;
         $store->put($id, [
