@@ -74,4 +74,8 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="$(tr -d '\r\n' < VERSION)"
-          gh release create "v${VERSION}" "sentryiq-${VERSION}.zip" "sentryiq-${VERSION}.zip.sha256" --title "SentryIQ ${VERSION}" --generate-notes
+          if gh release view "v${VERSION}" >/dev/null 2>&1; then
+            gh release upload "v${VERSION}" "sentryiq-${VERSION}.zip" "sentryiq-${VERSION}.zip.sha256" --clobber
+          else
+            gh release create "v${VERSION}" "sentryiq-${VERSION}.zip" "sentryiq-${VERSION}.zip.sha256" --title "SentryIQ ${VERSION}" --generate-notes
+          fi
