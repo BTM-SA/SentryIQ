@@ -194,11 +194,21 @@ final class UpdateManager
                     'backup' => basename($backupRoot),
                 ];
             } catch (\Throwable $exception) {
-                foreach (array_keys($backedPublic) as $relative) {
-                    $this->replaceFile($backupRoot . '/public/' . $relative, $this->applicationRoot . '/' . $relative);
+                foreach ($publicFiles as $relative) {
+                    $target = $this->applicationRoot . '/' . $relative;
+                    if (isset($backedPublic[$relative])) {
+                        $this->replaceFile($backupRoot . '/public/' . $relative, $target);
+                    } elseif (is_file($target) && !is_link($target)) {
+                        @unlink($target);
+                    }
                 }
-                foreach (array_keys($backedRuntime) as $relative) {
-                    $this->replaceFile($backupRoot . '/runtime/' . $relative, $this->dataDir . '/' . $relative, 0600);
+                foreach ($runtimeFiles as $relative) {
+                    $target = $this->dataDir . '/' . $relative;
+                    if (isset($backedRuntime[$relative])) {
+                        $this->replaceFile($backupRoot . '/runtime/' . $relative, $target, 0600);
+                    } elseif (is_file($target) && !is_link($target)) {
+                        @unlink($target);
+                    }
                 }
                 $this->invalidateOpcache($publicFiles, $runtimeFiles);
                 throw $exception;
