@@ -85,6 +85,15 @@ function first_run_initialize(string $password, string $dataFile): void
     if (!vault_add_recovery_wrapper((string)$verified['key'], $recoveryKey)) {
         throw new RuntimeException('recovery_wrapper_failed');
     }
+    $recoveryEnvelope = vault_read_envelope();
+    $recoveredKey = vault_unwrap_vmk_with_recovery_key($recoveryEnvelope['envelope'], $recoveryKey);
+    if ($recoveredKey === false || !hash_equals((string)$verified['key'], $recoveredKey)) {
+        throw new RuntimeException('recovery_wrapper_verification_failed');
+    }
+    $recoveredRecords = load_passwords($recoveredKey);
+    if ($recoveredRecords === false) {
+        throw new RuntimeException('recovery_data_verification_failed');
+    }
     $_SESSION['first_run_recovery_key'] = $recoveryKey;
     first_run_log('VAULT_FILE_WRITE_COMPLETED', ['format_version' => SENTRYIQ_VAULT_VERSION, 'recovery_wrapper' => true]);
 }
