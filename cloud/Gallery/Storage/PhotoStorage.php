@@ -8,7 +8,13 @@ use RuntimeException;
 
 final class PhotoStorage
 {
-    public function __construct(private readonly string $root)
+    public function __construct(
+        private readonly string $root,
+        private readonly string $masterKey,
+    ) {
+        if (strlen($this->masterKey) !== 32) {
+            throw new RuntimeException('Gallery storage requires the Vault Master Key.');
+        }
     {
         if ($this->root === '' || !str_starts_with($this->root, '/')) {
             throw new RuntimeException('Gallery storage root must be an absolute path.');
@@ -22,6 +28,8 @@ final class PhotoStorage
         }
         $photoId = bin2hex(random_bytes(16));
         $bucket = substr($contentHash, 0, 2);
+        $encryptedWebp = \vault_encrypt_blob_with_key($webp, 'gallery:photo:' . $photoId . ':original', $this->masterKey);
+        $encryptedThumbnail = \vault_encrypt_blob_with_key($thumbnail, 'gallery:photo:' . $photoId . ':thumbnail', $this->masterKey);
         $directory = rtrim($this->root, '/') . '/photos/' . $bucket;
         $thumbDirectory = rtrim($this->root, '/') . '/thumbnails/' . $bucket;
         $this->ensureDirectory($directory);
@@ -31,10 +39,10 @@ final class PhotoStorage
         if (file_exists($path) || file_exists($thumbnailPath)) {
             throw new RuntimeException('Gallery filename already exists.');
         }
-        if (file_put_contents($path, $webp, LOCK_EX) === false) {
+        if (file_put_contents($path, $encryptedWebp, LOCK_EX) === false) {
             throw new RuntimeException('Unable to store gallery image.');
         }
-        if (file_put_contents($thumbnailPath, $thumbnail, LOCK_EX) === false) {
+        if (file_put_contents($thumbnailPath, $encryptedThumbnail, LOCK_EX) === false) {
             @unlink($path);
             throw new RuntimeException('Unable to store gallery thumbnail.');
         }
