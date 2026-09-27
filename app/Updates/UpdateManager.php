@@ -42,7 +42,28 @@ final class UpdateManager
             }
         }
 
-        $release = $this->httpJson('https://api.github.com/repos/' . self::REPOSITORY . '/releases/latest');
+        try {
+            $release = $this->httpJson('https://api.github.com/repos/' . self::REPOSITORY . '/releases/latest');
+        } catch (RuntimeException $exception) {
+            if (str_starts_with($exception->getMessage(), 'github_http_status:404')) {
+                return [
+                    'checked_at' => time(),
+                    'current_version' => $this->currentVersion(),
+                    'latest_version' => $this->currentVersion(),
+                    'update_available' => false,
+                    'release_available' => false,
+                    'name' => '',
+                    'published_at' => '',
+                    'html_url' => '',
+                    'body' => '',
+                    'tag_name' => '',
+                    'assets' => [],
+                    'message' => 'No stable SentryIQ release has been published yet.',
+                ];
+            }
+            throw $exception;
+        }
+
         if (($release['draft'] ?? false) || ($release['prerelease'] ?? false)) {
             throw new RuntimeException('No stable SentryIQ release is currently available.');
         }
@@ -242,7 +263,7 @@ final class UpdateManager
         $error = curl_error($ch);
         curl_close($ch);
         if (!is_string($body) || $status < 200 || $status >= 300) {
-            throw new RuntimeException('Unable to check GitHub releases.' . ($error !== '' ? ' ' . $error : ''));
+            throw new RuntimeException('github_http_status:' . $status . ($error !== '' ? ' ' . $error : ''));
         }
         $data = json_decode($body, true);
         if (!is_array($data)) throw new RuntimeException('GitHub returned an invalid release response.');
