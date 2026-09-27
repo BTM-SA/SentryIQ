@@ -61,7 +61,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['check_updates'])) {
         <?php if ($error !== ''): ?>
             <div class="error"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></div>
         <?php elseif (is_array($result)): ?>
-            <?php if (!empty($result['update_available'])): ?>
+            <?php if (empty($result['release_available']) && !empty($result['message'])): ?>
+                <div class="update-warning"><?php echo htmlspecialchars((string)$result['message'], ENT_QUOTES, 'UTF-8'); ?></div>
+                <p class="update-meta">Installed version: <strong><?php echo htmlspecialchars($current, ENT_QUOTES, 'UTF-8'); ?></strong></p>
+            <?php elseif (!empty($result['update_available'])): ?>
                 <div class="update-warning"><strong>Update available:</strong> SentryIQ <?php echo htmlspecialchars((string)$result['latest_version'], ENT_QUOTES, 'UTF-8'); ?></div>
                 <p class="update-meta"><?php echo htmlspecialchars((string)$result['name'], ENT_QUOTES, 'UTF-8'); ?> · <?php echo htmlspecialchars((string)$result['published_at'], ENT_QUOTES, 'UTF-8'); ?></p>
                 <?php if ((string)($result['body'] ?? '') !== ''): ?><div class="update-notes"><?php echo htmlspecialchars((string)$result['body'], ENT_QUOTES, 'UTF-8'); ?></div><?php endif; ?>
