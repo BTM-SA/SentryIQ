@@ -39,7 +39,8 @@ body{display:flex;align-items:center;justify-content:center;min-height:100vh;box
 @keyframes sentryiqWelcomeOut{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-8px)}}
 @keyframes sentryiqWelcomeLogoOut{from{opacity:1}to{opacity:0}}
 @media(prefers-reduced-motion:reduce){
- .sentryiq-welcome-message,.sentryiq-welcome.fade-out .sentryiq-welcome-message,.sentryiq-welcome.fade-out .sentryiq-welcome-logo{animation:none!important}
+ .sentryiq-welcome-message{opacity:1;transform:none;animation:none!important}
+ .sentryiq-welcome.fade-out .sentryiq-welcome-message,.sentryiq-welcome.fade-out .sentryiq-welcome-logo{animation:none!important}
 }
 </style>
 </head>
