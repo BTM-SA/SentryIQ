@@ -15,6 +15,9 @@ if ($dataDir === '' || !str_starts_with($dataDir, '/') || !is_dir($dataDir) || i
 require_once dirname(__DIR__, 2) . '/cloud/Gallery/Storage/PhotoMetadataStore.php';
 require_once dirname(__DIR__, 2) . '/cloud/Gallery/Image/GallerySettings.php';
 require_once dirname(__DIR__, 2) . '/cloud/Gallery/Image/ImageDerivativeGenerator.php';
+$configEngine = $dataDir . '/vault_engine.php';
+if (!is_file($configEngine) || is_link($configEngine)) { http_response_code(503); exit('SentryIQ secure runtime is unavailable.'); }
+require_once $configEngine;
 use SentryIQCloud\Gallery\Storage\PhotoMetadataStore;
 use SentryIQCloud\Gallery\Image\GallerySettings;
 use SentryIQCloud\Gallery\Image\ImageDerivativeGenerator;
@@ -44,21 +47,51 @@ if ($path === null) {
 
 if ($path === null) { http_response_code(404); exit('Image not found.'); }
 
+$masterKey = $_SESSION['master_key'] ?? null;
+if (!is_string($masterKey) || strlen($masterKey) !== 32) { http_response_code(403); exit('Authentication required.'); }
+
+$raw = @file_get_contents($path);
+if (!is_string($raw) || $raw === '') { http_response_code(404); exit('Image not found.'); }
+
+$context = 'gallery:photo:' . $id . ':' . ($thumbnail ? 'thumbnail' : 'original');
+$webp = \\vault_decrypt_blob_with_key($raw, $context, $masterKey);
+$encrypted = $webp !== false;
+if (!$encrypted) {
+    // Fresh vaults use encrypted Gallery objects. Retain read compatibility for
+    // photos created before the encrypted storage rollout so an update cannot
+    // make existing Gallery entries disappear.
+    $webp = $raw;
+}
+
 if (!$thumbnail) {
     $settings = GallerySettings::load($dataDir);
-    $webp = @file_get_contents($path);
-    if (!is_string($webp) || $webp === '') { http_response_code(404); exit('Image not found.'); }
     try {
-        $preview = (new ImageDerivativeGenerator((int)$settings['preview_max_dimension'], (int)$settings['preview_quality'], (bool)$settings['preserve_transparency'], true))->fromWebp($webp);
+        $preview = (new ImageDerivativeGenerator(
+            (int)$settings['preview_max_dimension'],
+            (int)$settings['preview_quality'],
+            (bool)$settings['preserve_transparency'],
+            true
+        ))->fromWebp($webp);
         header('Content-Type: image/webp');
         header('Content-Length: ' . (string)strlen($preview));
-        header('Cache-Control: private, max-age=300');
+        header('Cache-Control: private, no-store');
         header('X-Content-Type-Options: nosniff');
         echo $preview;
         exit;
     } catch (Throwable $exception) {
+        if ($encrypted) {
+            http_response_code(404);
+            exit('Image not found.');
+        }
     }
 }
+
+header('Content-Type: image/webp');
+header('Content-Length: ' . (string)strlen($webp));
+header('Cache-Control: private, no-store');
+header('X-Content-Type-Options: nosniff');
+echo $webp;
+exit;
 
 header('Content-Type: image/webp');
 header('Content-Length: ' . (string)filesize($path));
