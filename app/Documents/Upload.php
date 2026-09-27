@@ -15,6 +15,7 @@ if ($dataDir === '' || !str_starts_with($dataDir, '/') || !is_dir($dataDir) || i
 $engine = $dataDir . '/vault_engine.php';
 if (!is_file($engine) || is_link($engine)) { http_response_code(503); exit('SentryIQ secure runtime is unavailable.'); }
 require_once $engine;
+if (!function_exists('vault_encrypt_blob_with_key')) { http_response_code(503); exit('SentryIQ secure vault engine is out of date. Replace private_data/vault_engine.php with the current version.'); }
 $masterKey = $_SESSION['master_key'] ?? null;
 if (!is_string($masterKey) || strlen($masterKey) !== 32) { http_response_code(403); exit('Authentication required.'); }
 
@@ -87,6 +88,9 @@ foreach ($names as $i => $originalName) {
     } catch (Throwable $e) {
         @unlink($path);
         $failed++;
+        $logPath = $dataDir . '/documents_upload.log';
+        @file_put_contents($logPath, '[' . date('c') . '] name=' . basename((string)$originalName) . ' class=' . $e::class . ' message=' . trim($e->getMessage()) . PHP_EOL, FILE_APPEND | LOCK_EX);
+        @chmod($logPath, 0600);
     }
 }
 
