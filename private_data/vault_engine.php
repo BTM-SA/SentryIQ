@@ -468,6 +468,85 @@ function vault_unwrap_vmk_with_recovery_key(array $envelope, string $recoveryKey
     return is_string($vmk) && strlen($vmk) === 32 ? $vmk : false;
 }
 
+function vault_blob_aad(string $context): string
+{
+    $context = trim($context);
+    if ($context === '' || strlen($context) > 255 || preg_match('/[\\x00-\\x1F\\x7F]/', $context)) {
+        throw new RuntimeException('Invalid encrypted object context.');
+    }
+    return 'SentryIQ object v1:' . $context;
+}
+
+function vault_encrypt_blob(string $plaintext, string $context): string
+{
+    $key = $_SESSION['master_key'] ?? null;
+    if (!is_string($key) || strlen($key) !== 32) throw new RuntimeException('Vault Master Key is unavailable.');
+    if ($plaintext === '') throw new RuntimeException('Cannot encrypt an empty object.');
+
+    $aad = vault_blob_aad($context);
+    $nonce = random_bytes(SENTRYIQ_GCM_NONCE_BYTES);
+    $tag = '';
+    $ciphertext = openssl_encrypt($plaintext, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $nonce, $tag, $aad, SENTRYIQ_GCM_TAG_BYTES);
+    if ($ciphertext === false || strlen($tag) !== SENTRYIQ_GCM_TAG_BYTES) throw new RuntimeException('Unable to encrypt the secure object.');
+
+    return json_encode([
+        'version' => 1,
+        'cipher' => 'aes-256-gcm',
+        'aad' => base64_encode($aad),
+        'nonce' => base64_encode($nonce),
+        'tag' => base64_encode($tag),
+        'ciphertext' => base64_encode($ciphertext),
+    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+}
+
+function vault_encrypt_blob_with_key(string $plaintext, string $context, string $key): string
+{
+    if (strlen($key) !== 32) throw new RuntimeException('Invalid Vault Master Key.');
+    if ($plaintext === '') throw new RuntimeException('Cannot encrypt an empty object.');
+
+    $aad = vault_blob_aad($context);
+    $nonce = random_bytes(SENTRYIQ_GCM_NONCE_BYTES);
+    $tag = '';
+    $ciphertext = openssl_encrypt($plaintext, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $nonce, $tag, $aad, SENTRYIQ_GCM_TAG_BYTES);
+    if ($ciphertext === false || strlen($tag) !== SENTRYIQ_GCM_TAG_BYTES) throw new RuntimeException('Unable to encrypt the secure object.');
+
+    return json_encode([
+        'version' => 1,
+        'cipher' => 'aes-256-gcm',
+        'aad' => base64_encode($aad),
+        'nonce' => base64_encode($nonce),
+        'tag' => base64_encode($tag),
+        'ciphertext' => base64_encode($ciphertext),
+    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+}
+
+function vault_decrypt_blob_with_key(string $envelopeJson, string $context, string $key): string|false
+{
+    if (strlen($key) !== 32 || $envelopeJson === '') return false;
+
+    try {
+        $envelope = json_decode($envelopeJson, true, 16, JSON_THROW_ON_ERROR);
+    } catch (Throwable) {
+        return false;
+    }
+    if (!is_array($envelope) || ($envelope['version'] ?? null) !== 1 || ($envelope['cipher'] ?? '') !== 'aes-256-gcm') return false;
+
+    $aad = vault_decode_base64((string)($envelope['aad'] ?? ''));
+    $nonce = vault_decode_base64((string)($envelope['nonce'] ?? ''), SENTRYIQ_GCM_NONCE_BYTES);
+    $tag = vault_decode_base64((string)($envelope['tag'] ?? ''), SENTRYIQ_GCM_TAG_BYTES);
+    $ciphertext = vault_decode_base64((string)($envelope['ciphertext'] ?? ''));
+    if ($aad === false || $nonce === false || $tag === false || $ciphertext === false) return false;
+
+    try {
+        if (!hash_equals(vault_blob_aad($context), $aad)) return false;
+    } catch (Throwable) {
+        return false;
+    }
+
+    $plaintext = openssl_decrypt($ciphertext, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $nonce, $tag, $aad);
+    return is_string($plaintext) ? $plaintext : false;
+}
+
 function vault_unlock(string $password): array|false
 {
     $parts = vault_read_envelope();
