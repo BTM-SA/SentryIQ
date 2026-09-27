@@ -217,12 +217,17 @@ try {
     $settings = GallerySettings::load($dataDir);
     gallery_upload_log(sprintf('SETTINGS saved_quality=%d saved_max_dimension=%d thumbnail_quality=%d thumbnail_max_dimension=%d preview_quality=%d preview_max_dimension=%d preserve_transparency=%s', (int)$settings['saved_quality'], (int)$settings['saved_max_dimension'], (int)$settings['thumbnail_quality'], (int)$settings['thumbnail_max_dimension'], (int)$settings['preview_quality'], (int)$settings['preview_max_dimension'], $settings['preserve_transparency'] ? 'true' : 'false'));
 
+    $masterKey = $_SESSION['master_key'] ?? null;
+    if (!is_string($masterKey) || strlen($masterKey) !== 32) {
+        gallery_upload_json(['status' => 'error', 'message' => 'The Vault Master Key is unavailable.'], 403);
+    }
+
     $service = new UploadService(
         new ImageProcessor($settings['saved_quality'], $settings['preserve_transparency']),
         new ImageDerivativeGenerator($settings['saved_max_dimension'], $settings['saved_quality'], $settings['preserve_transparency']),
         new ThumbnailGenerator($settings['thumbnail_max_dimension'], $settings['thumbnail_quality'], $settings['preserve_transparency']),
         new DuplicateIndex($galleryRoot . '/duplicate-index.json'),
-        new PhotoStorage($galleryRoot),
+        new PhotoStorage($galleryRoot, $masterKey),
         new PhotoMetadataStore($galleryRoot . '/metadata.json'),
         new PhotoNameAllocator($galleryRoot, $galleryRoot . '/photo-name.lock'),
     );
