@@ -13,6 +13,11 @@ $config = is_file($configFile) ? require $configFile : null;
 if (!is_array($config)) { http_response_code(503); exit('SentryIQ configuration is unavailable.'); }
 $dataDir = rtrim((string)($config['data_dir'] ?? ''), '/');
 if ($dataDir === '' || !str_starts_with($dataDir, '/') || !is_dir($dataDir) || is_link($dataDir)) { http_response_code(503); exit('SentryIQ secure runtime is unavailable.'); }
+$engine = $dataDir . '/vault_engine.php';
+if (!is_file($engine) || is_link($engine)) { http_response_code(503); exit('SentryIQ secure runtime is unavailable.'); }
+require_once $engine;
+$masterKey = $_SESSION['master_key'] ?? null;
+if (!is_string($masterKey) || strlen($masterKey) !== 32) { http_response_code(403); exit('Authentication required.'); }
 
 $id = (string)($_GET['id'] ?? '');
 if (!preg_match('/^[a-f0-9]{32}$/', $id)) { http_response_code(404); exit('Document not found.'); }
@@ -28,9 +33,18 @@ $downloadName = (string)($metadata['original_name'] ?? 'Document');
 $downloadName = preg_replace('/[\x00-\x1F\x7F]+/', '', $downloadName) ?: 'Document';
 $disposition = in_array($mime, ['application/pdf', 'text/plain', 'text/csv'], true) ? 'inline' : 'attachment';
 
+$encrypted = @file_get_contents($path);
+if (!is_string($encrypted) || $encrypted === '') { http_response_code(404); exit('Document not found.'); }
+$contents = \vault_decrypt_blob_with_key($encrypted, 'document:' . $id, $masterKey);
+if ($contents === false) {
+    http_response_code(404);
+    exit('Document could not be decrypted.');
+}
+
 header('Content-Type: ' . $mime);
-header('Content-Length: ' . (string)filesize($path));
+header('Content-Length: ' . (string)strlen($contents));
 header('Content-Disposition: ' . $disposition . '; filename="' . addcslashes($downloadName, "\\\"") . '"');
+header('Cache-Control: private, no-store');
 header('X-Content-Type-Options: nosniff');
-readfile($path);
+echo $contents;
 exit;
