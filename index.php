@@ -32,6 +32,11 @@ $active_pane = (string)($_GET['pane'] ?? 'view');
 if (!in_array($active_pane, ['view','records','add','settings','details','edit'], true)) $active_pane = 'view';
 $csrf = sentryiq_csrf_token();
 
+$show_login_splash = !$vault_authenticated
+    && $vault_error === false
+    && (($_GET['recovery'] ?? '') !== '1')
+    && !isset($_SESSION['pending_key']);
+
 if (($_GET['setup'] ?? '') === 'complete' && isset($_SESSION['first_run_recovery_key']) && is_string($_SESSION['first_run_recovery_key'])) {
     if (isset($_GET['recovery_seen']) && $_GET['recovery_seen'] === '1') {
         unset($_SESSION['first_run_recovery_key']);
@@ -89,6 +94,15 @@ if (($_GET['setup'] ?? '') === 'complete' && isset($_SESSION['first_run_recovery
 <meta name="description" content="SentryIQ secure password vault and credential management.">
 <title>SentryIQ</title><link rel="stylesheet" href="assets/css/sentryiq.css?v=20260922-2">
 <style>
+.sentryiq-login-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--neo-bg,#f4f6f9);opacity:1;visibility:visible;transition:opacity .45s ease,visibility .45s ease}
+.sentryiq-login-splash img{display:block;width:min(520px,82vw);height:auto}
+body.sentryiq-login-ready .sentryiq-login-splash{opacity:0;visibility:hidden;pointer-events:none}
+body.sentryiq-login-splash-active > .box{opacity:0;pointer-events:none}
+body.sentryiq-login-ready > .box{opacity:1;transition:opacity .45s ease}
+@media(prefers-reduced-motion:reduce){
+ .sentryiq-login-splash{transition:none}
+ body.sentryiq-login-ready > .box{transition:none}
+}
 #records-panel > div:first-child {
     margin: 2em 0 16px !important;
 }
@@ -164,7 +178,12 @@ function parseVaultCsv(value){var fields=[],field='',quoted=false;for(var i=0;i<
 function viewRecordDetails(label,username,password,url,notes,id,category){if(Array.isArray(label)){var args=label;label=args[0]||'';username=args[1]||'';password=args[2]||'';url=args[3]||'';notes=args[4]||'';id=args[5]||'';category=args[6]||'';}if(!username&&!password&&!url&&!notes&&typeof label==='string'){var packed=parseVaultCsv(label);if(packed.length>=5&&packed.length<=7){label=packed[0]||'';username=packed[1]||'';password=packed[2]||'';url=packed[3]||'';notes=packed[4]||'';if(!id&&packed[5])id=packed[5];if(!category&&packed[6])category=packed[6];}}document.getElementById('det-label').textContent=label;var detailCategory=document.getElementById('det-category');if(detailCategory){detailCategory.textContent=category||'Uncategorized';}document.getElementById('det-username').textContent=username?username:'[None Stored]';document.getElementById('det-password').textContent=password;document.getElementById('det-notes').textContent=notes?notes:'[No Notes]';var urlLink=document.getElementById('det-url');try{var parsed=url?new URL(url,window.location.origin):null;if(parsed&&parsed.protocol==='https:'){urlLink.href=parsed.href;urlLink.textContent=parsed.href;urlLink.style.display='inline';urlLink.rel='noopener noreferrer';}else{throw new Error('Unsafe URL');}}catch(e){urlLink.textContent=url?'[Unsafe URL Blocked]':'[None Stored]';urlLink.removeAttribute('href');urlLink.style.display='inline';}var icon=document.getElementById('det-icon');if(id){icon.src='vault-icon.php?id='+encodeURIComponent(id);icon.style.display='block';icon.onerror=function(){this.style.display='none';};}else{icon.removeAttribute('src');icon.style.display='none';}document.getElementById('det-delete-id').value=id;switchVaultTab('details');}
 </script>
 </head>
-<body>
+<body<?php echo $show_login_splash ? ' class="sentryiq-login-splash-active"' : ''; ?>>
+<?php if ($show_login_splash): ?>
+<div class="sentryiq-login-splash" aria-hidden="true">
+    <img src="assets/images/sentryiq-logo-wide.webp" width="1952" height="588" alt="SentryIQ">
+</div>
+<?php endif; ?>
 <div class="box">
 <?php if (!$vault_authenticated): ?>
 <img class="sentryiq-brand-banner" src="assets/images/sentryiq-logo-wide.webp" width="1952" height="588" alt="SentryIQ" fetchpriority="high">
@@ -189,6 +208,18 @@ function viewRecordDetails(label,username,password,url,notes,id,category){if(Arr
 <?php endif; ?>
 </div>
 <script>
+<?php if ($show_login_splash): ?>
+(function(){
+    var start=function(){
+        window.setTimeout(function(){
+            document.body.classList.remove('sentryiq-login-splash-active');
+            document.body.classList.add('sentryiq-login-ready');
+        },2000);
+    };
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded',start,{once:true});
+    else start();
+}());
+<?php endif; ?>
 document.addEventListener('DOMContentLoaded',function(){var csrf=document.querySelector('meta[name="csrf-token"]');var token=csrf?csrf.content:'';document.querySelectorAll('form[method="POST"]').forEach(function(form){if(!form.querySelector('input[name="csrf_token"]')&&token){var input=document.createElement('input');input.type='hidden';input.name='csrf_token';input.value=token;form.appendChild(input);}if(form.querySelector('button[name="add_entry"]')){form.action='vault_actions.php';var action=document.createElement('input');action.type='hidden';action.name='action';action.value='add';form.appendChild(action);}if(form.querySelector('button[name="save_vault_settings"]')){form.action='vault_actions.php';var action2=document.createElement('input');action2.type='hidden';action2.name='action';action2.value='save_settings';form.appendChild(action2);}if(form.querySelector('button[name="edit_entry"]')){form.action='vault_actions.php';var action3=document.createElement('input');action3.type='hidden';action3.name='action';action3.value='edit';form.appendChild(action3);}if(form.querySelector('button[name="delete_entry"]')){form.action='vault_actions.php';var action4=document.createElement('input');action4.type='hidden';action4.name='action';action4.value='delete';form.appendChild(action4);}});document.querySelectorAll('a[target="_blank"]').forEach(function(a){a.rel='noopener noreferrer';});var lock=document.querySelector('a[href="?action=logout"]');if(lock){var form=document.createElement('form');form.method='POST';form.style.display='inline';var tokenInput=document.createElement('input');tokenInput.type='hidden';tokenInput.name='csrf_token';tokenInput.value=token;var actionInput=document.createElement('input');actionInput.type='hidden';actionInput.name='lock_vault';actionInput.value='1';var button=document.createElement('button');button.type='submit';button.className=lock.className;button.style.cssText=lock.getAttribute('style')||'';button.textContent=lock.textContent;form.appendChild(tokenInput);form.appendChild(actionInput);form.appendChild(button);lock.replaceWith(form);}switchVaultTab('<?php echo htmlspecialchars($active_pane, ENT_QUOTES, 'UTF-8'); ?>');});
 </script>
 </body></html>
