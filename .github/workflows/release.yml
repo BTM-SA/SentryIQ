@@ -1,0 +1,77 @@
+name: Build SentryIQ Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate version
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME#v}"
+          VERSION="$(tr -d '\r\n' < VERSION)"
+          test "$TAG" = "$VERSION"
+
+      - name: Build update package
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '\r\n' < VERSION)"
+          PACKAGE="sentryiq-${VERSION}.zip"
+          WORK="release-root"
+          rm -rf "$WORK"
+          mkdir -p "$WORK"
+          git archive --format=tar.gz "$GITHUB_REF_NAME" | tar -xz -C "$WORK"
+          rm -rf "$WORK/private_data" "$WORK/.git" "$WORK/.github"
+          mkdir -p "$WORK/runtime"
+          cp private_data/vault_engine.php "$WORK/runtime/vault_engine.php"
+          cp private_data/email_template.php "$WORK/runtime/email_template.php"
+          cp private_data/vault_icon_cache.php "$WORK/runtime/vault_icon_cache.php"
+          python3 - "$WORK" "$VERSION" <<'PY'
+          import json, os, pathlib, sys
+          root = pathlib.Path(sys.argv[1])
+          version = sys.argv[2]
+          public_files = []
+          for path in sorted(root.rglob('*')):
+              if not path.is_file():
+                  continue
+              rel = path.relative_to(root).as_posix()
+              if rel == 'update-manifest.json' or rel.startswith('runtime/'):
+                  continue
+              public_files.append(rel)
+          runtime_files = [p.relative_to(root / 'runtime').as_posix() for p in sorted((root / 'runtime').iterdir()) if p.is_file()]
+          manifest = {
+              "format": 1,
+              "version": version,
+              "public_files": public_files,
+              "runtime_files": runtime_files
+          }
+          (root / 'update-manifest.json').write_text(json.dumps(manifest, indent=2) + "\n", encoding='utf-8')
+          PY
+          (
+            cd "$WORK"
+            zip -qr "../$PACKAGE" .
+          )
+          sha256sum "$PACKAGE" > "$PACKAGE.sha256"
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '\r\n' < VERSION)"
+          gh release create "v${VERSION}" "sentryiq-${VERSION}.zip" "sentryiq-${VERSION}.zip.sha256" --title "SentryIQ ${VERSION}" --generate-notes
