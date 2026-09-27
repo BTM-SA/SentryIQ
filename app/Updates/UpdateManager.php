@@ -115,7 +115,7 @@ final class UpdateManager
 
             $assets = $release['assets'] ?? [];
             $packageAsset = $this->findAsset($assets, 'sentryiq-' . $latest . '.zip');
-            $checksumAsset = $this->findAsset($assets, 'sentryiq-' . $latest . '.sha256');
+            $checksumAsset = $this->findAsset($assets, 'sentryiq-' . $latest . '.zip.sha256');
             if ($packageAsset === null || $checksumAsset === null) {
                 throw new RuntimeException('The release package or checksum is missing.');
             }
