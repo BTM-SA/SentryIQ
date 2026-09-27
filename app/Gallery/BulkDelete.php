@@ -38,9 +38,56 @@ $photoIds = array_values(array_unique(array_filter(
 )));
 
 if ($photoIds === []) {
-    http_response_code(400);
-    echo json_encode(['status' => 'error', 'message' => 'No valid photos were selected.']);
-    exit;
+    if ($requestedAlbum === '') {
+        http_response_code(400);
+        echo json_encode(['status' => 'error', 'message' => 'No valid photos were selected.']);
+        exit;
+    }
+
+    $albumsFile = $galleryRoot . '/albums.json';
+    $albumStore = new AlbumStore($albumsFile);
+    $albums = $albumStore->albums();
+
+    if (!array_key_exists($requestedAlbum, $albums) || !is_array($albums[$requestedAlbum])) {
+        http_response_code(400);
+        echo json_encode(['status' => 'error', 'message' => 'Album does not exist.']);
+        exit;
+    }
+
+    if ($albums[$requestedAlbum] !== []) {
+        http_response_code(400);
+        echo json_encode(['status' => 'error', 'message' => 'The selected album still contains photos.']);
+        exit;
+    }
+
+    try {
+        $albumStore->delete($requestedAlbum);
+        try {
+            if (function_exists('log_security_event') && function_exists('get_visitor_ip')) {
+                log_security_event(
+                    'GALLERY_ALBUM_DELETED',
+                    get_visitor_ip(),
+                    $_SESSION['app_username'] ?? 'unknown',
+                    ['album' => $requestedAlbum, 'photos_deleted' => 0],
+                );
+            }
+        } catch (Throwable $exception) {
+            error_log('SentryIQ Gallery empty album audit logging failed: ' . $exception->getMessage());
+        }
+
+        echo json_encode([
+            'status' => 'ok',
+            'album_deleted' => true,
+            'deleted' => [],
+            'deleted_count' => 0,
+            'failed' => [],
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        exit;
+    } catch (RuntimeException $exception) {
+        http_response_code(400);
+        echo json_encode(['status' => 'error', 'message' => $exception->getMessage()]);
+        exit;
+    }
 }
 
 if (count($photoIds) > 500) {
