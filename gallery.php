@@ -263,7 +263,7 @@ function selectedCheckboxes(){return Array.from(document.querySelectorAll('.gall
 function updateSelectionUi(){
   const selected=selectedCheckboxes();
   selectionCount.textContent=`${selected.length} selected`;
-  bulkDeleteButton.disabled=selected.length===0;
+  bulkDeleteButton.disabled=selected.length===0 && selectedAlbumForDelete===null;
   bulkMoveButton.disabled=selected.length===0;
   document.querySelectorAll('[data-photo-card]').forEach(function(card){
     const checkbox=card.querySelector('.gallery-photo-check');
@@ -375,8 +375,14 @@ moveSubmit.addEventListener('click',async function(){
 
 async function bulkDeleteSelected(){
   const ids=selectedPhotoIds();
-  if(ids.length===0)return;
-  if(!window.confirm(`Delete ${ids.length} selected photo${ids.length===1?'':'s'} permanently?`))return;
+  if(ids.length===0 && selectedAlbumForDelete===null)return;
+  const albumDelete=selectedAlbumForDelete!==null;
+  const confirmation=albumDelete
+    ? (ids.length>0
+      ? `Delete the album "${selectedAlbumForDelete}" and its ${ids.length} photo${ids.length===1?'':'s'} permanently?`
+      : `Delete the empty album "${selectedAlbumForDelete}"?`)
+    : `Delete ${ids.length} selected photo${ids.length===1?'':'s'} permanently?`;
+  if(!window.confirm(confirmation))return;
   bulkDeleteButton.disabled=true;
   selectVisibleButton.disabled=true;
   clearSelectionButton.disabled=true;
